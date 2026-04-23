@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { GeneratedQuestions } from '@/lib/claude';
+import SpeechPlayer from '@/components/SpeechPlayer';
 
 function renderPassageWithBlanks(passage: string) {
   const parts = passage.split(/(\(\d+\))/g);
@@ -109,6 +110,7 @@ export default function QuizPage() {
                   <p key={i} className={para.trim() ? 'mb-4' : ''}>{isFillInBlank ? renderPassageWithBlanks(para) : para}</p>
                 ))}
               </div>
+              <SpeechPlayer text={data.readingPassage} label="長文を読み上げ" />
               {showJa && data.readingPassageJa && (
                 <div className="no-print bg-purple-50 border border-purple-200 rounded p-6 mb-6 leading-relaxed text-sm text-gray-700">
                   <p className="font-bold text-purple-800 mb-3">【日本語訳】</p>

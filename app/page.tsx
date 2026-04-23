@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { GeneratedQuestions } from '@/lib/claude';
+import SpeechPlayer from '@/components/SpeechPlayer';
 
 function renderPassageWithBlanks(passage: string) {
   // (1), (2)... を太字の下線付きに変換
@@ -145,9 +146,10 @@ export default function Home() {
               </p>
               {data.vocabQuestions.map((q) => (
                 <div key={q.number} className="mb-8">
-                  <p className="font-medium mb-3">
+                  <p className="font-medium mb-2">
                     ({q.number}) {q.sentence.replace('____', '（　　　　）')}
                   </p>
+                  <SpeechPlayer text={q.sentence.replace('____', 'blank')} label="例文を読み上げ" />
                   <div className="grid grid-cols-2 gap-2 ml-4">
                     {(['A', 'B', 'C', 'D'] as const).map((key, i) => (
                       <div key={key} className="flex items-start gap-2">
@@ -186,6 +188,9 @@ export default function Home() {
                       <p key={i} className={para.trim() ? 'mb-4' : ''}>{para}</p>
                     ))}
               </div>
+
+              {/* 読み上げ */}
+              <SpeechPlayer text={data.readingPassage} label="長文を読み上げ" />
 
               {/* 日本語訳（トグル） */}
               {showJa && data.readingPassageJa && (
