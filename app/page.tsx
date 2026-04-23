@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { GeneratedQuestions } from '@/lib/claude';
 
 function renderPassageWithBlanks(passage: string) {
@@ -69,6 +70,9 @@ export default function Home() {
           >
             {showJa ? '日本語訳を隠す' : '日本語訳を表示'}
           </button>
+          <Link href="/history" className="px-4 py-2 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">
+            過去の問題
+          </Link>
           <button
             onClick={() => fetchQuestions(true)}
             disabled={loading}
