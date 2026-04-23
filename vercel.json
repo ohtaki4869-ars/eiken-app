@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/generate?refresh=true",
+      "schedule": "0 23 * * *"
+    }
+  ]
+}

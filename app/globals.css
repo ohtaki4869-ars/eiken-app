@@ -24,3 +24,39 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 印刷・PDF用スタイル */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+    color: black;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 「問題を印刷」ボタン押下時：解答欄を非表示 */
+  body[data-print="questions"] .print-answers {
+    display: none !important;
+  }
+
+  /* 「解答・解説を印刷」ボタン押下時：問題欄を非表示 */
+  body[data-print="answers"] .print-questions {
+    display: none !important;
+  }
+
+  /* 別紙の先頭で改ページ */
+  .print-answers {
+    page-break-before: always;
+  }
+}
