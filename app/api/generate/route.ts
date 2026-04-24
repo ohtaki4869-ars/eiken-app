@@ -36,20 +36,28 @@ async function saveQuestions(dateKey: string, data: GeneratedQuestions) {
   try {
     const kv = await getKV();
     if (kv) {
-      // 30日間保持
       await kv.set(`questions:${dateKey}`, data, { ex: 60 * 60 * 24 * 30 });
-      // 日付リストを更新（最新30件）
       const dates: string[] = (await kv.get<string[]>('question_dates')) || [];
       if (!dates.includes(dateKey)) {
         const updated = [dateKey, ...dates].slice(0, 30);
         await kv.set('question_dates', updated, { ex: 60 * 60 * 24 * 30 });
       }
+      // 翌日の復習用に単語カードを保存
+      const nextDay = new Date(dateKey + 'T00:00:00+09:00');
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextKey = nextDay.toISOString().split('T')[0];
+      await kv.set(`flashcards:${nextKey}`, data.vocabQuestions, { ex: 60 * 60 * 24 * 30 });
     } else {
       const fs = await import('fs');
       const path = await import('path');
       const dir = path.join(process.cwd(), '.cache');
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, `${dateKey}.json`), JSON.stringify(data));
+      // ローカル：翌日分フラッシュカード保存
+      const nextDay = new Date(dateKey + 'T00:00:00+09:00');
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextKey = nextDay.toISOString().split('T')[0];
+      fs.writeFileSync(path.join(dir, `flashcards-${nextKey}.json`), JSON.stringify(data.vocabQuestions));
     }
   } catch (e) {
     console.error('Cache save failed:', e);
