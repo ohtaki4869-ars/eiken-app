@@ -127,10 +127,15 @@ export default function Home() {
 
         {data && !loading && (
           <>
-            <div className="mb-6 flex items-center gap-3 no-print">
+            <div className="mb-6 flex items-center gap-3 flex-wrap no-print">
               <span className={`text-xs font-bold px-2 py-1 rounded ${formatBadgeColor}`}>
                 本日の形式: {formatLabel}
               </span>
+              {'genre' in data.article && (
+                <span className="text-xs font-bold px-2 py-1 rounded bg-green-100 text-green-800">
+                  ジャンル: {(data.article as {genre: string}).genre}
+                </span>
+              )}
               <span className="text-sm text-gray-500">
                 出典: {data.article.source} —{' '}
                 <a href={data.article.link} target="_blank" rel="noopener noreferrer" className="underline">
