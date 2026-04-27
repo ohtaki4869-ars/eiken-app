@@ -148,19 +148,42 @@ export async function generateQuestions(
   article: Article,
   format: ReadingFormat
 ): Promise<GeneratedQuestions> {
-  const prompt = buildPrompt(article, format);
+  // 記事内容を2000文字に制限してトークン超過を防ぐ
+  const trimmedArticle = {
+    ...article,
+    content: article.content.slice(0, 2000),
+  };
+  const prompt = buildPrompt(trimmedArticle, format);
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 5000,
+    max_tokens: 6000,
     messages: [{ role: 'user', content: prompt }],
   });
 
   const text = response.content[0].type === 'text' ? response.content[0].text : '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Failed to parse JSON from Claude response');
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  // JSON部分を抽出（複数の方法を試みる）
+  let parsed;
+  try {
+    // まずテキスト全体をJSONとして試みる
+    parsed = JSON.parse(text);
+  } catch {
+    // 次に最初の { から最後の } までを抽出
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) {
+      console.error('Claude response:', text.slice(0, 500));
+      throw new Error('Failed to parse JSON from Claude response');
+    }
+    try {
+      parsed = JSON.parse(text.slice(start, end + 1));
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      console.error('Claude response:', text.slice(0, 500));
+      throw new Error('Failed to parse JSON from Claude response');
+    }
+  }
 
   return {
     article,
