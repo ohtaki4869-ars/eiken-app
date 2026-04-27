@@ -47,16 +47,17 @@ function buildPrompt(article: Article, format: ReadingFormat): string {
    - A 300-400 word passage based on or inspired by the article topic
    - Written at EIKEN Grade 1 difficulty level
    - Insert exactly 4 blanks into the passage, marked as (1), (2), (3), (4)
-   - Each blank should be a word or short phrase that fits the context
-   - The blanks should test EIKEN Grade 1 level vocabulary or grammar
+   - Each blank should be a phrase or clause (NOT a single word) — like actual EIKEN Grade 1 format
+   - The blank phrase should be 3-8 words long and fit naturally into the sentence
 
 3. **Japanese translation** of the reading passage (日本語訳):
    - Natural, accurate Japanese translation of the full passage including the blank positions
    - Use __(1)__, __(2)__ etc. to mark blank positions in the Japanese translation
 
 4. **4 Fill-in-the-blank Questions** (穴埋め問題):
-   - One question per blank: "Which word best fits blank (N)?"
-   - 4 choices each (A, B, C, D) — all plausible but only one correct
+   - One question per blank: "Which phrase best fits blank (N)?"
+   - 4 choices each (A, B, C, D) — all are phrases of similar length, only one is correct
+   - Choices should be plausible but clearly distinguishable — like actual EIKEN Grade 1
    - The correct answer and a brief Japanese explanation`
       : `
 2. **1 Reading Passage** (長文):
@@ -74,20 +75,20 @@ function buildPrompt(article: Article, format: ReadingFormat): string {
 
   const readingJsonExample =
     format === 'fill-in-blank'
-      ? `  "readingPassage": "Global temperatures have risen at an (1) rate over the past century, causing widespread concern among scientists. The primary driver is the (2) of greenhouse gases, particularly carbon dioxide from fossil fuel combustion. Governments worldwide have attempted to (3) these emissions through various policies. However, achieving meaningful reductions remains (4) due to economic and political pressures.",
-  "readingPassageJa": "過去1世紀にわたって世界の気温が__(1)__な速度で上昇しており、科学者の間で広く懸念されている。主な原因は温室効果ガス、特に化石燃料の燃焼による二酸化炭素の__(2)__である。世界各国の政府はさまざまな政策でこれらの排出量を__(3)__しようとしてきた。しかし、経済的・政治的な圧力から、意味のある削減の達成は__(4)__のままである。",
+      ? `  "readingPassage": "Global temperatures have risen (1) over the past century, causing widespread concern among scientists. The primary driver is the emission of greenhouse gases, particularly carbon dioxide. Governments worldwide have attempted to (2) through various international agreements. However, progress has been slow, partly because many nations (3) when economic growth is at stake. Scientists warn that without immediate action, the consequences (4) for future generations.",
+  "readingPassageJa": "世界の気温は過去1世紀にわたって__(1)__上昇しており、科学者の間で広く懸念されている。主な原因は温室効果ガスの排出、特に二酸化炭素である。世界各国の政府はさまざまな国際協定を通じて__(2)__しようとしてきた。しかし、多くの国が経済成長が危ぶまれると__(3)__ため、進展は遅い。科学者たちは、即座の行動なしには、将来世代への影響が__(4)__と警告している。",
   "readingQuestions": [
     {
       "number": 1,
-      "question": "Which word best fits blank (1)?",
+      "question": "Which phrase best fits blank (1)?",
       "choices": {
-        "A": "unprecedented",
-        "B": "gradual",
-        "C": "negligible",
-        "D": "predictable"
+        "A": "at an unprecedented rate",
+        "B": "in a gradual and predictable manner",
+        "C": "with negligible consequences",
+        "D": "due to natural climate cycles"
       },
       "answer": "A",
-      "explanation": "unprecedented（前例のない）が文脈に合う。気候変動の急激な進行を表す。"
+      "explanation": "「前例のない速さで」が文脈に最も合う。急激な気候変動の深刻さを表す表現。"
     }
   ]`
       : `  "readingPassage": "The passage text here...",

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { GeneratedQuestions } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
 
+const KEY_TO_NUM: Record<string, string> = { A: '1', B: '2', C: '3', D: '4' };
+
 function renderPassageWithBlanks(passage: string) {
   const parts = passage.split(/(\(\d+\))/g);
   return parts.map((part, i) =>
@@ -159,7 +161,7 @@ export default function QuizPage() {
                   {[...data.vocabQuestions.map((q, i) => ({ label: `語彙${i + 1}`, answer: q.answer })), ...data.readingQuestions.map((q, i) => ({ label: `読解${i + 1}`, answer: q.answer }))].map((item, i) => (
                     <div key={i} className="border border-gray-300 bg-white">
                       <div className="bg-gray-200 px-1 py-0.5 text-xs">{item.label}</div>
-                      <div className="py-1 font-bold text-blue-700">{item.answer}</div>
+                      <div className="py-1 font-bold text-blue-700">{KEY_TO_NUM[item.answer] ?? item.answer}</div>
                     </div>
                   ))}
                 </div>
@@ -172,7 +174,7 @@ export default function QuizPage() {
                     <div className="grid grid-cols-2 gap-1 text-sm text-gray-600 mb-2">
                       {(['A', 'B', 'C', 'D'] as const).map((key, i) => (
                         <div key={key} className={`flex gap-2 ${q.answer === key ? 'font-bold text-blue-700' : ''}`}>
-                          <span>{i + 1}</span><span>{q.choices[key]}{q.answer === key ? ' ✓' : ''}</span>
+                          <span>{i + 1}</span><span>{q.choices[key]}{q.answer === key ? ` （正解: ${KEY_TO_NUM[key]}）` : ''}</span>
                         </div>
                       ))}
                     </div>
@@ -202,7 +204,7 @@ export default function QuizPage() {
                     <div className="grid grid-cols-1 gap-1 text-sm text-gray-600 mb-2">
                       {(['A', 'B', 'C', 'D'] as const).map((key, i) => (
                         <div key={key} className={`flex gap-2 ${q.answer === key ? 'font-bold text-green-700' : ''}`}>
-                          <span>{i + 1}</span><span>{q.choices[key]}{q.answer === key ? ' ✓' : ''}</span>
+                          <span>{i + 1}</span><span>{q.choices[key]}{q.answer === key ? ` （正解: ${KEY_TO_NUM[key]}）` : ''}</span>
                         </div>
                       ))}
                     </div>
