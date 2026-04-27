@@ -72,22 +72,56 @@ export function getTodayGenre(): { genre: string; index: number } {
   return { genre: GENRE_FEEDS[index].genre, index };
 }
 
+// 記事からコンテンツを抽出（複数フィールドのフォールバック）
+function extractContent(item: Record<string, unknown>): string {
+  const candidates = [
+    item.contentSnippet,
+    item.content,
+    item.description,
+    item.summary,
+    item['content:encoded'],
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim().length > 50) {
+      // HTMLタグを除去
+      return c.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+  }
+  return '';
+}
+
 export async function fetchNewsArticle(): Promise<Article> {
   const { genre, index } = getTodayGenre();
   const feeds = GENRE_FEEDS[index].feeds;
 
-  for (const feed of feeds) {
+  // 全フィードを試す
+  const allFeeds = [
+    ...feeds,
+    { name: 'BBC News', url: 'http://feeds.bbci.co.uk/news/rss.xml' },
+    { name: 'BBC World', url: 'http://feeds.bbci.co.uk/news/world/rss.xml' },
+  ];
+
+  for (const feed of allFeeds) {
     try {
       const result = await parser.parseURL(feed.url);
-      const items = result.items.filter(
-        (item) => item.contentSnippet && item.contentSnippet.length > 200
-      );
+      // コンテンツがあるアイテムを探す（閾値を50文字に下げる）
+      const items = result.items.filter((item) => {
+        const content = extractContent(item as Record<string, unknown>);
+        return content.length > 50 && item.title;
+      });
       if (items.length === 0) continue;
 
       const item = items[Math.floor(Math.random() * Math.min(5, items.length))];
+      const content = extractContent(item as Record<string, unknown>);
+
+      // コンテンツが短い場合はタイトルも補完
+      const fullContent = content.length < 200
+        ? `${item.title}. ${content}`
+        : content;
+
       return {
         title: item.title || '',
-        content: item.contentSnippet || item.content || '',
+        content: fullContent,
         source: feed.name,
         link: item.link || '',
         genre,
@@ -97,15 +131,5 @@ export async function fetchNewsArticle(): Promise<Article> {
     }
   }
 
-  // フォールバック：BBCトップ
-  const fallback = await parser.parseURL('http://feeds.bbci.co.uk/news/rss.xml');
-  const items = fallback.items.filter((item) => item.contentSnippet && item.contentSnippet.length > 200);
-  const item = items[0];
-  return {
-    title: item?.title || '',
-    content: item?.contentSnippet || '',
-    source: 'BBC News',
-    link: item?.link || '',
-    genre,
-  };
+  throw new Error('Failed to fetch news from all feeds');
 }
