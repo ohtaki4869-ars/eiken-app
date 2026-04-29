@@ -47,18 +47,20 @@ function buildPrompt(article: Article, format: ReadingFormat): string {
    - A 300-400 word passage based on or inspired by the article topic
    - Written at EIKEN Grade 1 difficulty level
    - Insert exactly 4 blanks into the passage, marked as (1), (2), (3), (4)
-   - Each blank should be a phrase or clause (NOT a single word) — like actual EIKEN Grade 1 format
-   - The blank phrase should be 3-8 words long and fit naturally into the sentence
+   - Each blank must be a position where a COMPLETE SENTENCE can be inserted (not a word or phrase)
+   - Place blanks between paragraphs or at the end of a paragraph — like actual EIKEN Grade 1 format
+   - The blank sentence should logically connect or conclude the surrounding paragraphs
 
 3. **Japanese translation** of the reading passage (日本語訳):
    - Natural, accurate Japanese translation of the full passage including the blank positions
    - Use __(1)__, __(2)__ etc. to mark blank positions in the Japanese translation
 
 4. **4 Fill-in-the-blank Questions** (穴埋め問題):
-   - One question per blank: "Which phrase best fits blank (N)?"
-   - 4 choices each (A, B, C, D) — all are phrases of similar length, only one is correct
-   - Choices should be plausible but clearly distinguishable — like actual EIKEN Grade 1
-   - The correct answer and a brief Japanese explanation`
+   - One question per blank: "Which sentence best fits blank (N)?"
+   - 4 choices each (A, B, C, D) — all are COMPLETE SENTENCES of similar style and length
+   - Only one choice logically fits the context; the others are plausible but clearly wrong
+   - Choices should be 10-20 words each — exactly like actual EIKEN Grade 1 level
+   - The correct answer and a brief Japanese explanation of why it fits`
       : `
 2. **1 Reading Passage** (長文):
    - A 300-400 word passage based on or inspired by the article topic
@@ -75,20 +77,20 @@ function buildPrompt(article: Article, format: ReadingFormat): string {
 
   const readingJsonExample =
     format === 'fill-in-blank'
-      ? `  "readingPassage": "Global temperatures have risen (1) over the past century, causing widespread concern among scientists. The primary driver is the emission of greenhouse gases, particularly carbon dioxide. Governments worldwide have attempted to (2) through various international agreements. However, progress has been slow, partly because many nations (3) when economic growth is at stake. Scientists warn that without immediate action, the consequences (4) for future generations.",
-  "readingPassageJa": "世界の気温は過去1世紀にわたって__(1)__上昇しており、科学者の間で広く懸念されている。主な原因は温室効果ガスの排出、特に二酸化炭素である。世界各国の政府はさまざまな国際協定を通じて__(2)__しようとしてきた。しかし、多くの国が経済成長が危ぶまれると__(3)__ため、進展は遅い。科学者たちは、即座の行動なしには、将来世代への影響が__(4)__と警告している。",
+      ? `  "readingPassage": "Global temperatures have risen dramatically over the past century, alarming scientists worldwide. The primary cause is the burning of fossil fuels, which releases vast amounts of carbon dioxide into the atmosphere. (1)\n\nDespite growing awareness, international efforts to curb emissions have met with limited success. The Paris Agreement set ambitious targets, yet many countries have struggled to meet their commitments. (2)\n\nSome economists argue that transitioning to renewable energy will ultimately boost economic growth. They point to the rapid decline in solar and wind energy costs as evidence of this trend. (3)\n\nHowever, the transition requires significant upfront investment, which remains a barrier for developing nations. Without financial support from wealthier countries, many regions may be left behind. (4)",
+  "readingPassageJa": "世界の気温は過去1世紀にわたって劇的に上昇しており、世界中の科学者を不安にさせている。主な原因は化石燃料の燃焼であり、それによって大量の二酸化炭素が大気中に放出される。__(1)__\n\n意識が高まっているにもかかわらず、排出量削減のための国際的な取り組みは限られた成果しか上げられていない。パリ協定は野心的な目標を設定したが、多くの国がその約束を果たすのに苦労している。__(2)__\n\n一部の経済学者は、再生可能エネルギーへの移行が最終的に経済成長を促進すると主張する。彼らは太陽光・風力エネルギーコストの急激な低下をその証拠として挙げる。__(3)__\n\nしかし、この移行には多大な初期投資が必要であり、発展途上国にとっては依然として障壁となっている。裕福な国々からの財政支援なしには、多くの地域が取り残されるかもしれない。__(4)__",
   "readingQuestions": [
     {
       "number": 1,
-      "question": "Which phrase best fits blank (1)?",
+      "question": "Which sentence best fits blank (1)?",
       "choices": {
-        "A": "at an unprecedented rate",
-        "B": "in a gradual and predictable manner",
-        "C": "with negligible consequences",
-        "D": "due to natural climate cycles"
+        "A": "Without drastic action, average temperatures could rise by 3°C by the end of this century.",
+        "B": "Scientists have long celebrated the economic benefits of industrial development.",
+        "C": "Many governments have decided to increase their reliance on coal power plants.",
+        "D": "The cooling of ocean temperatures has helped offset some of these changes."
       },
       "answer": "A",
-      "explanation": "「前例のない速さで」が文脈に最も合う。急激な気候変動の深刻さを表す表現。"
+      "explanation": "気候変動の深刻さを強調する文として、「抜本的な対策なしには今世紀末までに3℃上昇」が文脈に最も合う。"
     }
   ]`
       : `  "readingPassage": "The passage text here...",
