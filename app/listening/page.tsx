@@ -169,6 +169,9 @@ export default function ListeningPage() {
           <p className="text-sm text-gray-500">{exam.label}</p>
         </div>
         <div className="flex gap-3 flex-wrap">
+          <Link href="/listening/daily" className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
+            🎧 毎日リスニングへ
+          </Link>
           <Link href="/" className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
             ← 今日の問題へ
           </Link>
