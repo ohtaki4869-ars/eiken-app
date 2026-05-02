@@ -76,6 +76,9 @@ export default function Home() {
           <Link href="/flashcards" className="px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600">
             単語復習
           </Link>
+          <Link href="/listening" className="px-4 py-2 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">
+            🎧 リスニング
+          </Link>
           <Link href="/history" className="px-4 py-2 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">
             過去の問題
           </Link>
