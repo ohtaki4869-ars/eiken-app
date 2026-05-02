@@ -1,9 +1,26 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Article } from './rss';
+import { WORD_BANK, WordEntry } from './wordbank';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+
+/**
+ * 指定された日付の seed を元に単語帳から決定論的にサンプリング（同じ日は同じ単語）
+ */
+function sampleWords(count: number, seed?: number): WordEntry[] {
+  const s = seed ?? new Date().getDate();
+  // simple seeded shuffle using the date as seed
+  const shuffled = [...WORD_BANK];
+  let state = s * 1234567 + 89;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    state = (state * 1103515245 + 12345) & 0x7fffffff;
+    const j = state % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, count);
+}
 
 export type ReadingFormat = 'content' | 'fill-in-blank';
 
@@ -39,7 +56,7 @@ export function getTodayFormat(): ReadingFormat {
   return day % 2 === 1 ? 'content' : 'fill-in-blank';
 }
 
-function buildPrompt(article: Article, format: ReadingFormat): string {
+function buildPrompt(article: Article, format: ReadingFormat, sampledWords: WordEntry[]): string {
 
   // ===== 穴埋め形式 (Part 2 style) =====
   const fillInBlankInstructions = `
@@ -149,6 +166,10 @@ function buildPrompt(article: Article, format: ReadingFormat): string {
     ? fillInBlankJsonExample
     : contentJsonExample;
 
+  const wordListText = sampledWords
+    .map(w => `- ${w.word}：${w.meaning}（例：${w.phrase}）`)
+    .join('\n');
+
   return `You are an expert English exam question creator specializing in EIKEN Grade 1 (英検1級) level questions. You have deep knowledge of the actual EIKEN Grade 1 exam format.
 
 Based on the following news article, create authentic EIKEN Grade 1 style exam questions.
@@ -157,13 +178,19 @@ Article Title: ${article.title}
 Source: ${article.source}
 Content: ${article.content}
 
+## Word Bank (英検1級単熟語EX より抜粋)
+Use words from this list as the CORRECT ANSWERS for vocabulary questions. Choose 5 words from this list that can fit naturally into sentences related to the article topic. Use the remaining words in this list as WRONG CHOICES (distractors) where appropriate.
+
+${wordListText}
+
 Create the following in JSON format:
 
 1. **5 Vocabulary Questions** (語彙問題 - EIKEN Grade 1 Part 1 style):
    - Each is a natural English sentence with ONE blank (____) for a difficult word
-   - 4 choices (A, B, C, D): all single words, EIKEN Grade 1 level (e.g., glitch, sedentary, forgery, humdrum, venomous, lurking, deterrent, contentious)
+   - **IMPORTANT**: The correct answer MUST be one of the words from the Word Bank above
+   - 4 choices (A, B, C, D): all single words, EIKEN Grade 1 level — use other words from the Word Bank as distractors
    - Only one word fits both grammar and meaning
-   - Include the correct answer and a brief Japanese explanation of all 4 choices
+   - Include the correct answer and a brief Japanese explanation of all 4 choices (include the Japanese meaning of each choice word)
 ${readingInstructions}
 
 Return ONLY valid JSON in this exact format:
@@ -195,7 +222,10 @@ export async function generateQuestions(
     ...article,
     content: article.content.slice(0, 2000),
   };
-  const prompt = buildPrompt(trimmedArticle, format);
+  // Sample 30 words from word bank (seeded by today's date for consistency)
+  const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
+  const sampledWords = sampleWords(30, jstDay);
+  const prompt = buildPrompt(trimmedArticle, format, sampledWords);
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
