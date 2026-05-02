@@ -40,90 +40,130 @@ export function getTodayFormat(): ReadingFormat {
 }
 
 function buildPrompt(article: Article, format: ReadingFormat): string {
-  const readingInstructions =
-    format === 'fill-in-blank'
-      ? `
-2. **1 Reading Passage with blanks** (穴埋め長文):
-   - A 300-400 word passage based on or inspired by the article topic
-   - Written at EIKEN Grade 1 difficulty level
-   - Insert exactly 4 blanks into the passage, marked as (1), (2), (3), (4)
-   - Each blank must be a position where a COMPLETE SENTENCE can be inserted (not a word or phrase)
-   - Place blanks between paragraphs or at the end of a paragraph — like actual EIKEN Grade 1 format
-   - The blank sentence should logically connect or conclude the surrounding paragraphs
 
-3. **Japanese translation** of the reading passage (日本語訳):
-   - Natural, accurate Japanese translation of the full passage including the blank positions
-   - Use __(1)__, __(2)__ etc. to mark blank positions in the Japanese translation
+  // ===== 穴埋め形式 (Part 2 style) =====
+  const fillInBlankInstructions = `
+2. **Reading Passage with 3 blanks** (長文穴埋め - EIKEN Grade 1 Part 2 style):
+   - Write a 3-paragraph passage (300-400 words total) on the article topic
+   - Difficulty: EIKEN Grade 1 level academic English
+   - Place exactly 3 blanks marked as (1), (2), (3) — one blank per paragraph
+   - Each blank replaces a SHORT PHRASE (3-8 words) that fits grammatically and logically
+   - The blank should complete a sentence naturally, like these real EIKEN examples:
+     * "These rogue waves were long assumed to ( )" → choices: "no longer exist" / "only occur during storms" / "be a thing of legend" / "be deadly to marine life"
+     * "However, researchers have struggled ( )" → choices: "to find sailors willing to test them" / "with the difficulty of creating waves indoors" / "to understand these theories" / "with how unpredictable the ocean can be"
 
-4. **4 Fill-in-the-blank Questions** (穴埋め問題):
-   - One question per blank: "Which sentence best fits blank (N)?"
-   - 4 choices each (A, B, C, D) — all are COMPLETE SENTENCES of similar style and length
-   - Only one choice logically fits the context; the others are plausible but clearly wrong
-   - Choices should be 10-20 words each — exactly like actual EIKEN Grade 1 level
-   - The correct answer and a brief Japanese explanation of why it fits`
-      : `
-2. **1 Reading Passage** (長文):
-   - A 300-400 word passage based on or inspired by the article topic
-   - Written at EIKEN Grade 1 difficulty level
+3. **Japanese translation** of the full passage:
+   - Natural Japanese translation paragraph by paragraph
+   - Mark blank positions as __(1)__, __(2)__, __(3)__
 
-3. **Japanese translation** of the reading passage (日本語訳):
-   - Natural, accurate Japanese translation of the passage
-   - Paragraph by paragraph, matching the English structure
-
-4. **4 Reading Comprehension Questions** (長文読解問題):
-   - Questions about the content of the reading passage
-   - 4 choices each (A, B, C, D)
+4. **3 Fill-in-blank Questions** (穴埋め設問):
+   - One question per blank: "Which phrase best completes blank (N)?"
+   - 4 choices each: SHORT PHRASES of 3-8 words, grammatically parallel, all plausible but only one fits
    - The correct answer and a brief Japanese explanation`;
 
-  const readingJsonExample =
-    format === 'fill-in-blank'
-      ? `  "readingPassage": "Global temperatures have risen dramatically over the past century, alarming scientists worldwide. The primary cause is the burning of fossil fuels, which releases vast amounts of carbon dioxide into the atmosphere. (1)\n\nDespite growing awareness, international efforts to curb emissions have met with limited success. The Paris Agreement set ambitious targets, yet many countries have struggled to meet their commitments. (2)\n\nSome economists argue that transitioning to renewable energy will ultimately boost economic growth. They point to the rapid decline in solar and wind energy costs as evidence of this trend. (3)\n\nHowever, the transition requires significant upfront investment, which remains a barrier for developing nations. Without financial support from wealthier countries, many regions may be left behind. (4)",
-  "readingPassageJa": "世界の気温は過去1世紀にわたって劇的に上昇しており、世界中の科学者を不安にさせている。主な原因は化石燃料の燃焼であり、それによって大量の二酸化炭素が大気中に放出される。__(1)__\n\n意識が高まっているにもかかわらず、排出量削減のための国際的な取り組みは限られた成果しか上げられていない。パリ協定は野心的な目標を設定したが、多くの国がその約束を果たすのに苦労している。__(2)__\n\n一部の経済学者は、再生可能エネルギーへの移行が最終的に経済成長を促進すると主張する。彼らは太陽光・風力エネルギーコストの急激な低下をその証拠として挙げる。__(3)__\n\nしかし、この移行には多大な初期投資が必要であり、発展途上国にとっては依然として障壁となっている。裕福な国々からの財政支援なしには、多くの地域が取り残されるかもしれない。__(4)__",
+  // ===== 内容一致形式 (Part 3 style) =====
+  const contentInstructions = `
+2. **Reading Passage** (長文 - EIKEN Grade 1 Part 3 style):
+   - Write a 3-4 paragraph passage (350-450 words) on the article topic
+   - Difficulty: EIKEN Grade 1 level academic English
+   - Structured argument with clear topic sentences and evidence
+
+3. **Japanese translation** of the full passage:
+   - Natural, accurate Japanese translation paragraph by paragraph
+
+4. **4 Reading Comprehension Questions** (内容一致設問 - EIKEN Grade 1 Part 3 style):
+   - Use these question stems exactly as EIKEN does:
+     * "According to the passage, ..."
+     * "What is one thing that is stated about ...?"
+     * "Which of the following statements best describes ...?"
+     * "What does the author suggest about ...?"
+   - Each question has 4 choices that are COMPLETE SENTENCES (20-40 words each)
+   - Choices must be specific and detailed — like real EIKEN Grade 1 options, NOT vague one-liners
+   - Three wrong choices should be plausible but contain subtle factual errors or misrepresentations
+   - The correct answer and a brief Japanese explanation citing the relevant paragraph`;
+
+  const readingInstructions = format === 'fill-in-blank'
+    ? fillInBlankInstructions
+    : contentInstructions;
+
+  // ===== JSON examples =====
+  const fillInBlankJsonExample = `  "readingPassage": "For decades, scientists have been studying the mysterious phenomenon of deep-sea bioluminescence, the ability of marine organisms to produce light. Researchers initially believed this trait evolved primarily as a defense mechanism, but new findings suggest it may ( 1 ) as well. Studies of various species have revealed unexpected complexity in how and when they produce light.\\n\\nThe scientific community has made significant advances in understanding bioluminescence, yet many questions remain. One major challenge has been ( 2 ), as the deep ocean environment makes direct observation extremely difficult. Recent technological innovations, however, have enabled researchers to collect data that was previously impossible to obtain.\\n\\nThese discoveries have implications beyond pure science. Bioluminescent compounds are increasingly being used in medical research and diagnostics. The natural light-producing mechanisms found in marine life have proven ( 3 ), inspiring engineers and biochemists to develop new tools for detecting diseases at an early stage.",
+  "readingPassageJa": "数十年にわたり、科学者たちは深海生物の発光現象を研究してきた。研究者たちは当初、この特性は主に防御メカニズムとして進化したと考えていたが、新たな知見はそれが__(1)__でもあることを示唆している。さまざまな種の研究から、光を発する方法やタイミングにおける予想外の複雑さが明らかになった。\\n\\n科学界は生物発光の理解において大きな進歩を遂げたが、多くの疑問が残っている。主な課題の一つは__(2)__であり、深海環境が直接観察を非常に困難にしている。しかし最近の技術革新により、以前は不可能だったデータの収集が可能になった。\\n\\nこれらの発見は純粋な科学を超えた意義を持っている。発光化合物は医学研究や診断にますます活用されている。海洋生物に見られる自然の発光メカニズムは__(3)__ことが証明されており、エンジニアや生化学者が疾患を早期発見するための新しいツールを開発するヒントとなっている。",
   "readingQuestions": [
     {
       "number": 1,
-      "question": "Which sentence best fits blank (1)?",
+      "question": "Which phrase best completes blank (1)?",
       "choices": {
-        "A": "Without drastic action, average temperatures could rise by 3°C by the end of this century.",
-        "B": "Scientists have long celebrated the economic benefits of industrial development.",
-        "C": "Many governments have decided to increase their reliance on coal power plants.",
-        "D": "The cooling of ocean temperatures has helped offset some of these changes."
+        "A": "serve a communicative purpose",
+        "B": "attract only larger predators",
+        "C": "be unique to a single species",
+        "D": "disappear under bright conditions"
       },
       "answer": "A",
-      "explanation": "気候変動の深刻さを強調する文として、「抜本的な対策なしには今世紀末までに3℃上昇」が文脈に最も合う。"
-    }
-  ]`
-      : `  "readingPassage": "The passage text here...",
-  "readingPassageJa": "日本語訳をここに記載...",
-  "readingQuestions": [
+      "explanation": "発光が防御だけでなくコミュニケーション目的でもあるという文脈に「コミュニケーション目的を果たす」が合う。"
+    },
     {
-      "number": 1,
-      "question": "According to the passage, what is the main reason for...?",
+      "number": 2,
+      "question": "Which phrase best completes blank (2)?",
       "choices": {
-        "A": "choice A",
-        "B": "choice B",
-        "C": "choice C",
-        "D": "choice D"
+        "A": "attracting sufficient research funding",
+        "B": "replicating ocean conditions in labs",
+        "C": "persuading governments to act",
+        "D": "translating findings for the public"
       },
       "answer": "B",
-      "explanation": "第2段落に「...」とあり、Bが正解。"
+      "explanation": "直後に「深海での直接観察が困難」とあるため、「実験室で海洋環境を再現すること」が文脈に合う。"
+    },
+    {
+      "number": 3,
+      "question": "Which phrase best completes blank (3)?",
+      "choices": {
+        "A": "too unstable for practical use",
+        "B": "highly valuable to researchers",
+        "C": "difficult to replicate artificially",
+        "D": "limited in their medical applications"
+      },
+      "answer": "B",
+      "explanation": "新ツール開発のヒントになっているという文脈から「研究者にとって非常に価値がある」が正解。"
     }
   ]`;
 
-  return `You are an expert English exam question creator specializing in EIKEN Grade 1 (英検1級) level questions.
+  const contentJsonExample = `  "readingPassage": "The passage text here (3-4 paragraphs, 350-450 words)...",
+  "readingPassageJa": "日本語訳（段落ごと）...",
+  "readingQuestions": [
+    {
+      "number": 1,
+      "question": "According to the passage, what was the main conclusion of the researchers?",
+      "choices": {
+        "A": "Although initial results appeared promising, further investigation revealed that the proposed method had significant limitations that prevented it from being widely adopted.",
+        "B": "The evidence gathered over several decades conclusively demonstrated that economic factors played a far more decisive role than previously assumed by experts in the field.",
+        "C": "Despite widespread skepticism from the scientific community, the findings ultimately supported the original hypothesis put forward at the beginning of the study.",
+        "D": "The data collected from multiple regions confirmed that environmental conditions varied too greatly for any single policy to be effective across all contexts."
+      },
+      "answer": "B",
+      "explanation": "第2段落に「経済的要因が決定的な役割を果たした」と記述があり、Bが正解。他の選択肢は本文に記載がない。"
+    }
+  ]`;
 
-Based on the following news article, create exam questions in the style of EIKEN Grade 1.
+  const readingJsonExample = format === 'fill-in-blank'
+    ? fillInBlankJsonExample
+    : contentJsonExample;
+
+  return `You are an expert English exam question creator specializing in EIKEN Grade 1 (英検1級) level questions. You have deep knowledge of the actual EIKEN Grade 1 exam format.
+
+Based on the following news article, create authentic EIKEN Grade 1 style exam questions.
 
 Article Title: ${article.title}
 Source: ${article.source}
 Content: ${article.content}
 
-Please create the following in JSON format:
+Create the following in JSON format:
 
-1. **5 Vocabulary Questions** (語彙問題):
-   - Each question is a sentence with a blank (____) where a difficult English word should go
-   - 4 choices (A, B, C, D) with EIKEN Grade 1 level vocabulary
-   - The correct answer and a brief Japanese explanation
+1. **5 Vocabulary Questions** (語彙問題 - EIKEN Grade 1 Part 1 style):
+   - Each is a natural English sentence with ONE blank (____) for a difficult word
+   - 4 choices (A, B, C, D): all single words, EIKEN Grade 1 level (e.g., glitch, sedentary, forgery, humdrum, venomous, lurking, deterrent, contentious)
+   - Only one word fits both grammar and meaning
+   - Include the correct answer and a brief Japanese explanation of all 4 choices
 ${readingInstructions}
 
 Return ONLY valid JSON in this exact format:
@@ -131,16 +171,16 @@ Return ONLY valid JSON in this exact format:
   "vocabQuestions": [
     {
       "number": 1,
-      "sentence": "The government's ____ policy on immigration has sparked debate.",
-      "blank": "stringent",
+      "sentence": "The strict regulations were intended to be a ____ to those who might otherwise violate environmental laws.",
+      "blank": "deterrent",
       "choices": {
-        "A": "stringent",
-        "B": "lenient",
-        "C": "ambiguous",
-        "D": "redundant"
+        "A": "deterrent",
+        "B": "hallmark",
+        "C": "specimen",
+        "D": "gratuity"
       },
       "answer": "A",
-      "explanation": "stringent（厳格な）が文脈に最も合う。lenient（寛大な）、ambiguous（曖昧な）、redundant（余分な）"
+      "explanation": "deterrent（抑止力）が文脈に最も合う。hallmark（特徴）、specimen（標本）、gratuity（チップ）は意味が合わない。"
     }
   ],
   ${readingJsonExample}
@@ -151,7 +191,6 @@ export async function generateQuestions(
   article: Article,
   format: ReadingFormat
 ): Promise<GeneratedQuestions> {
-  // 記事内容を2000文字に制限してトークン超過を防ぐ
   const trimmedArticle = {
     ...article,
     content: article.content.slice(0, 2000),
@@ -166,13 +205,10 @@ export async function generateQuestions(
 
   const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
-  // JSON部分を抽出（複数の方法を試みる）
   let parsed;
   try {
-    // まずテキスト全体をJSONとして試みる
     parsed = JSON.parse(text);
   } catch {
-    // 次に最初の { から最後の } までを抽出
     const start = text.indexOf('{');
     const end = text.lastIndexOf('}');
     if (start === -1 || end === -1) {
