@@ -50,6 +50,9 @@ export default function QuizPage() {
           <button onClick={() => setShowJa(!showJa)} className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700">
             {showJa ? '日本語訳を隠す' : '日本語訳を表示'}
           </button>
+          <button onClick={() => window.open(`/api/pdf/seidoku?date=${date}`, '_blank')} className="px-4 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">
+            📄 精読ノート
+          </button>
           <button onClick={() => { document.body.setAttribute('data-print', 'questions'); window.print(); document.body.removeAttribute('data-print'); }} className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">
             問題を印刷
           </button>

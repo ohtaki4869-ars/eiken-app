@@ -86,6 +86,16 @@ export default function Home() {
             過去の問題
           </Link>
           <button
+            onClick={() => {
+              const dateKey = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
+              window.open(`/api/pdf/seidoku?date=${dateKey}`, '_blank');
+            }}
+            disabled={loading || !data}
+            className="px-4 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+          >
+            📄 精読ノート
+          </button>
+          <button
             onClick={() => fetchQuestions(true)}
             disabled={loading}
             className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
