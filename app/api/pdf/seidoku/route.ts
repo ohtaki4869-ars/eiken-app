@@ -4,6 +4,9 @@ import fs from 'fs';
 import { getJSTDateKey, loadQuestions } from '@/app/api/generate/route';
 import { GeneratedQuestions, VocabQuestion } from '@/lib/claude';
 
+// Node.js ランタイムを明示（pdfkit は Edge Runtime 非対応）
+export const runtime = 'nodejs';
+
 // pdfkit は CommonJS モジュールなので動的 import
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require('pdfkit');
