@@ -73,9 +73,6 @@ export default function Home() {
           >
             {showJa ? '日本語訳を隠す' : '日本語訳を表示'}
           </button>
-          <Link href="/flashcards" className="px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600">
-            単語復習
-          </Link>
           <Link href="/listening/daily" className="px-4 py-2 text-sm bg-teal-600 text-white rounded hover:bg-teal-700">
             🎧 毎日リスニング
           </Link>
