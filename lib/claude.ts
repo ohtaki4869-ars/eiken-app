@@ -94,10 +94,22 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
      * "What is one thing that is stated about ...?"
      * "Which of the following statements best describes ...?"
      * "What does the author suggest about ...?"
-   - Each question has 4 choices that are COMPLETE SENTENCES (20-40 words each)
-   - Choices must be specific and detailed — like real EIKEN Grade 1 options, NOT vague one-liners
-   - Three wrong choices should be plausible but contain subtle factual errors or misrepresentations
-   - The correct answer and a brief Japanese explanation citing the relevant paragraph`;
+   - Each question has 4 choices that are COMPLETE SENTENCES (25-45 words each)
+
+   **CRITICAL RULES FOR WRONG CHOICES — this is the most important part:**
+   - ALL 4 choices must be fully believable to someone who has read the passage but understood it imperfectly
+   - Wrong choices must NEVER be obviously absent from the passage — they must feel like they COULD have been stated
+   - Wrong choices should use the same key vocabulary and topic words as the passage (e.g., same proper nouns, same concepts)
+   - Wrong choices should introduce subtle distortions such as:
+     * Swapping cause and effect ("A caused B" → wrong choice says "B caused A")
+     * Changing scope ("some researchers" → wrong says "all researchers")
+     * Changing degree ("sometimes reduces" → wrong says "always prevents" or "has little impact")
+     * Mixing up two different facts from the passage
+     * Stating the opposite of what was qualified ("can be beneficial" → wrong says "is never beneficial")
+     * Attributing a claim to the wrong party
+   - A student who only half-understood the passage should find at least 2 choices plausible
+   - Do NOT write choices like "The author argues that X is completely unrelated to Y" when X and Y are central topics — that is too obviously wrong
+   - The correct answer and a brief Japanese explanation citing the specific sentence/paragraph`;
 
   const readingInstructions = format === 'fill-in-blank'
     ? fillInBlankInstructions
@@ -150,15 +162,15 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
   "readingQuestions": [
     {
       "number": 1,
-      "question": "According to the passage, what was the main conclusion of the researchers?",
+      "question": "According to the passage, what did researchers discover about decision-making under conditions of abundant choice?",
       "choices": {
-        "A": "Although initial results appeared promising, further investigation revealed that the proposed method had significant limitations that prevented it from being widely adopted.",
-        "B": "The evidence gathered over several decades conclusively demonstrated that economic factors played a far more decisive role than previously assumed by experts in the field.",
-        "C": "Despite widespread skepticism from the scientific community, the findings ultimately supported the original hypothesis put forward at the beginning of the study.",
-        "D": "The data collected from multiple regions confirmed that environmental conditions varied too greatly for any single policy to be effective across all contexts."
+        "A": "Individuals who selected from a larger pool of options reported lower levels of satisfaction with their final decision than those who chose from a more restricted set of alternatives.",
+        "B": "Researchers found that people with access to more choices made objectively better decisions, even though they spent considerably more time deliberating before reaching a conclusion.",
+        "C": "The studies demonstrated that decision paralysis occurred only among individuals who lacked prior experience with the type of choice they were confronted with in the experiment.",
+        "D": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions."
       },
-      "answer": "B",
-      "explanation": "第2段落に「経済的要因が決定的な役割を果たした」と記述があり、Bが正解。他の選択肢は本文に記載がない。"
+      "answer": "A",
+      "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」が根拠。BはChoicesが多いほど決定の質が上がると逆の主張。CはDecision paralysisの発生条件を本文にない形で限定している。Dは本文にない「フィルタリングの習得」という概念を持ち込んでいる。"
     }
   ]`;
 
