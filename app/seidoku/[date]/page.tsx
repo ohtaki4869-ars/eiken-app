@@ -18,6 +18,24 @@ export default function SeidokuPage() {
       .then(d => { setData(d); setLoading(false); });
   }, [date]);
 
+  // 印刷前後でbody/htmlのflexを解除（layout.tsxのflex flex-colが白紙の原因）
+  useEffect(() => {
+    const before = () => {
+      document.documentElement.style.display = 'block';
+      document.body.style.display = 'block';
+    };
+    const after = () => {
+      document.documentElement.style.display = '';
+      document.body.style.display = '';
+    };
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  }, []);
+
   function formatDate(dateStr: string) {
     const d = new Date(dateStr + 'T00:00:00+09:00');
     return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
@@ -68,7 +86,19 @@ export default function SeidokuPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              // beforeprintイベントが発火する前にスタイルを直接セット
+              document.documentElement.style.display = 'block';
+              document.body.style.display = 'block';
+              setTimeout(() => {
+                window.print();
+                // afterprintが発火しない環境向けに遅延リセット
+                setTimeout(() => {
+                  document.documentElement.style.display = '';
+                  document.body.style.display = '';
+                }, 1000);
+              }, 50);
+            }}
             className="px-5 py-2 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700 text-sm"
           >
             🖨️ 印刷 / PDFで保存
