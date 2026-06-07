@@ -179,14 +179,15 @@ export default function SeidokuPage() {
             Step 4　論理の流れ
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            {['通説 (¶1)', '反証 (¶2)', '具体例 (¶3)', '解決策 (¶4)'].slice(0, Math.min(4, paragraphs.length)).map((label, i, arr) => (
+            {Array.from({ length: Math.min(4, paragraphs.length) }).map((_, i, arr) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{
-                  border: '1.5px solid #2c6fad', borderRadius: '4px', padding: '8px 12px',
-                  textAlign: 'center', fontSize: '10px', fontWeight: 'bold', color: '#1a3a5c',
-                  background: '#e8f0f7', minWidth: '70px'
+                  border: '1.5px solid #2c6fad', borderRadius: '4px',
+                  textAlign: 'center', fontSize: '9px', color: '#aac', width: '80px', height: '52px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
+                  paddingBottom: '4px', background: 'white',
                 }}>
-                  {label}
+                  <span>¶{i + 1}</span>
                 </div>
                 {i < arr.length - 1 && (
                   <span style={{ color: '#2c6fad', fontSize: '18px', fontWeight: 'bold' }}>→</span>
