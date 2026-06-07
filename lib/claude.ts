@@ -212,6 +212,14 @@ Create the following in JSON format:
    - **All 4 choices must be EIKEN Grade 1 level words** — never use common words (e.g., "show", "clear", "big") or obviously off-topic words (e.g., "irrigation" in a tech context)
    - **No obviously wrong choices**: every distractor must be a word that a student might plausibly consider given partial understanding of the sentence
    - **Match the part of speech**: all 4 choices must be the same grammatical category (all nouns, all verbs, all adjectives, or all adverbs). Never mix parts of speech across the 4 choices.
+
+   **SELF-CHECK (mandatory before finalizing each vocabulary question):**
+   After drafting each question, verify ALL of the following. If any check fails, revise the question before including it in the output.
+   1. **Answer not leaked**: The correct answer word does NOT appear anywhere in the sentence (including in modified forms). If it does, rewrite the sentence.
+   2. **Part of speech consistent**: All 4 choices (A, B, C, D) are the exact same part of speech. If not, replace the mismatched choice(s).
+   3. **Grammatical fit**: Every one of the 4 choices can be inserted into the blank without causing a grammatical error. If a choice causes a grammar problem, replace it.
+   4. **No obvious wrong answers**: Read each distractor and ask: "Could a student who partially understands the sentence seriously consider this?" If any choice is immediately dismissible, replace it with a more plausible distractor.
+   5. **EIKEN Grade 1 level**: Confirm all 4 choices are genuinely Grade 1 level vocabulary. If any choice is below that level, replace it.
 ${readingInstructions}
 
 Return ONLY valid JSON in this exact format:
