@@ -76,7 +76,12 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
 4. **3 Fill-in-blank Questions** (穴埋め設問):
    - One question per blank: "Which phrase best completes blank (N)?"
    - 4 choices each: SHORT PHRASES of 3-8 words, grammatically parallel, all plausible but only one fits
-   - The correct answer and a brief Japanese explanation`;
+   - The correct answer and a brief Japanese explanation
+
+   **CRITICAL RULES FOR FILL-IN-BLANK CHOICES:**
+   - **Grammar match**: ALL 4 choices must be grammatically compatible with both what comes before AND after the blank in the passage. Never create a choice that causes the surrounding sentence to break grammatically.
+   - **Similar length**: Keep all 4 choices roughly the same length (within 2 words of each other) so no choice stands out visually as correct or wrong.
+   - **No obviously wrong choices**: every choice must make logical sense given partial reading of the paragraph — differ in subtle meaning or scope, not in plausibility.`;
 
   // ===== 内容一致形式 (Part 3 style) =====
   const contentInstructions = `
@@ -89,26 +94,28 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
    - Natural, accurate Japanese translation paragraph by paragraph
 
 4. **4 Reading Comprehension Questions** (内容一致設問 - EIKEN Grade 1 Part 3 style):
-   - Use these question stems exactly as EIKEN does:
-     * "According to the passage, ..."
-     * "What is one thing that is stated about ...?"
-     * "Which of the following statements best describes ...?"
-     * "What does the author suggest about ...?"
+   - **Question type distribution** (strictly follow this):
+     * At least 2 of the 4 questions must be **inference questions** that require the reader to draw a conclusion not explicitly stated — use stems like "What does the author suggest/imply about...?", "What can be inferred from the passage about...?", "Which of the following best reflects the author's view of...?"
+     * At least 2 of the 4 questions must ask about **the author's argument or claim** — use stems like "What does the author argue about...?", "What is the author's main point regarding...?", "What does the author suggest about...?"
+     * Also include factual/detail questions with stems like "According to the passage...", "What is one thing that is stated about...?"
    - Each question has 4 choices that are COMPLETE SENTENCES (25-45 words each)
+
+   **CRITICAL RULES FOR CORRECT ANSWERS:**
+   - **No direct quotation**: The correct answer must NEVER be a copy-paste of a sentence from the passage. It must paraphrase the original using different vocabulary and sentence structure while preserving the meaning.
 
    **CRITICAL RULES FOR WRONG CHOICES — this is the most important part:**
    - ALL 4 choices must be fully believable to someone who has read the passage but understood it imperfectly
    - Wrong choices must NEVER be obviously absent from the passage — they must feel like they COULD have been stated
-   - Wrong choices should use the same key vocabulary and topic words as the passage (e.g., same proper nouns, same concepts)
+   - **Partial match**: Wrong choices must use actual keywords, proper nouns, and concepts from the passage — a student who skimmed should find them plausible
    - Wrong choices should introduce subtle distortions such as:
      * Swapping cause and effect ("A caused B" → wrong choice says "B caused A")
      * Changing scope ("some researchers" → wrong says "all researchers")
      * Changing degree ("sometimes reduces" → wrong says "always prevents" or "has little impact")
-     * Mixing up two different facts from the passage
+     * Mixing facts from two different paragraphs into one false statement
      * Stating the opposite of what was qualified ("can be beneficial" → wrong says "is never beneficial")
-     * Attributing a claim to the wrong party
+     * Attributing a claim to the wrong party or institution
    - A student who only half-understood the passage should find at least 2 choices plausible
-   - Do NOT write choices like "The author argues that X is completely unrelated to Y" when X and Y are central topics — that is too obviously wrong
+   - Do NOT write choices that are obviously off-topic or use vocabulary not present in the passage
    - The correct answer and a brief Japanese explanation citing the specific sentence/paragraph`;
 
   const readingInstructions = format === 'fill-in-blank'
@@ -203,6 +210,12 @@ Create the following in JSON format:
    - 4 choices (A, B, C, D): all single words, EIKEN Grade 1 level — use other words from the Word Bank as distractors
    - Only one word fits both grammar and meaning
    - Include the correct answer and a brief Japanese explanation of all 4 choices (include the Japanese meaning of each choice word)
+
+   **CRITICAL RULES FOR VOCABULARY QUESTIONS:**
+   - **Difficulty**: Target a 30–60% correct-answer rate. The sentence context should not make the answer immediately obvious — a test-taker must know the precise meaning of the word.
+   - **All 4 choices must be EIKEN Grade 1 level words** — never use common words (e.g., "show", "clear", "big") or obviously off-topic words (e.g., "irrigation" in a tech context)
+   - **No obviously wrong choices**: every distractor must be a word that a student might plausibly consider given partial understanding of the sentence
+   - **Match the part of speech**: all 4 choices must be the same grammatical category (all nouns, all verbs, all adjectives, or all adverbs). Never mix parts of speech across the 4 choices.
 ${readingInstructions}
 
 Return ONLY valid JSON in this exact format:
@@ -214,12 +227,12 @@ Return ONLY valid JSON in this exact format:
       "blank": "deterrent",
       "choices": {
         "A": "deterrent",
-        "B": "hallmark",
-        "C": "specimen",
-        "D": "gratuity"
+        "B": "reprimand",
+        "C": "constraint",
+        "D": "inducement"
       },
       "answer": "A",
-      "explanation": "deterrent（抑止力）が文脈に最も合う。hallmark（特徴）、specimen（標本）、gratuity（チップ）は意味が合わない。"
+      "explanation": "deterrent（抑止力）が文脈に最も合う。reprimand（叱責・懲戒）は処罰の一形態で惜しいが「法律違反への事前抑止」という意味がない。constraint（制約）は規制そのものを指し文脈がやや異なる。inducement（誘因）は違反を促す方向で意味が逆。"
     }
   ],
   ${readingJsonExample}
