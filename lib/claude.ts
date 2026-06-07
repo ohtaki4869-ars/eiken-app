@@ -104,19 +104,15 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
    - **No direct quotation**: The correct answer must NEVER be a copy-paste of a sentence from the passage. It must paraphrase the original using different vocabulary and sentence structure while preserving the meaning.
 
    **CRITICAL RULES FOR WRONG CHOICES — this is the most important part:**
-   - ALL 4 choices must be fully believable to someone who has read the passage but understood it imperfectly
-   - Wrong choices must NEVER be obviously absent from the passage — they must feel like they COULD have been stated
-   - **Partial match**: Wrong choices must use actual keywords, proper nouns, and concepts from the passage — a student who skimmed should find them plausible
-   - Wrong choices should introduce subtle distortions such as:
-     * Swapping cause and effect ("A caused B" → wrong choice says "B caused A")
-     * Changing scope ("some researchers" → wrong says "all researchers")
-     * Changing degree ("sometimes reduces" → wrong says "always prevents" or "has little impact")
-     * Mixing facts from two different paragraphs into one false statement
-     * Stating the opposite of what was qualified ("can be beneficial" → wrong says "is never beneficial")
-     * Attributing a claim to the wrong party or institution
+   - **50% content overlap**: Every wrong choice must share at least 50% of its content with what the passage actually states. This means using the same subject, the same topic, the same key terms — only the relationship, scope, or degree is distorted. A student who read the passage carefully should need to re-read to confirm the choice is wrong.
+   - **No obviously wrong choices**: NEVER write a choice that introduces a concept, person, or claim completely absent from the passage. Every distractor must feel like something the passage "almost" said.
+   - **Use exactly these three distortion techniques** — assign each wrong choice one of the following:
+     * **因果関係の逆転 (Causal reversal)**: Swap cause and effect. If the passage says "A led to B", the wrong choice says "B led to A", or "A was caused by B". The same facts appear, but the direction of causation is flipped.
+     * **範囲の拡大 (Scope expansion)**: Broaden a limited claim into an absolute one. If the passage says "some studies suggest X", the wrong choice says "research has conclusively shown X" or "all cases demonstrate X". The core claim is preserved but overgeneralized.
+     * **筆者の主張の誇張 (Exaggeration of author's claim)**: Take the author's actual argument and push it further than stated. If the author says "X may contribute to Y", the wrong choice says "X is the primary cause of Y" or "X alone determines Y". The direction is correct but the strength is inflated.
+   - Distribute the three techniques across the three wrong choices (one technique per wrong choice).
    - A student who only half-understood the passage should find at least 2 choices plausible
-   - Do NOT write choices that are obviously off-topic or use vocabulary not present in the passage
-   - The correct answer and a brief Japanese explanation citing the specific sentence/paragraph`;
+   - The correct answer and a brief Japanese explanation citing the specific sentence/paragraph, and for each wrong choice note which distortion technique was used (因果逆転／範囲拡大／誇張)`;
 
   const readingInstructions = format === 'fill-in-blank'
     ? fillInBlankInstructions
@@ -177,7 +173,7 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
         "D": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions."
       },
       "answer": "A",
-      "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」が根拠。BはChoicesが多いほど決定の質が上がると逆の主張。CはDecision paralysisの発生条件を本文にない形で限定している。Dは本文にない「フィルタリングの習得」という概念を持ち込んでいる。"
+      "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」をparaphraseしたAが正解。B【範囲の拡大】選択肢数が多いほど決定の「質」が上がると本文の限定的な記述を拡大解釈している。C【因果関係の逆転】Decision paralysisの原因と結果を入れ替え、経験不足が原因であるかのように描いている。D【筆者の主張の誇張】筆者が示唆する「適応の可能性」を「同等の結果に達する」と過度に強めている。"
     }
   ]`;
 
