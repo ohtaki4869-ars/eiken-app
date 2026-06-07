@@ -38,8 +38,19 @@ export default function SeidokuPage() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { margin: 0; }
+          /* layout.tsx の flex flex-col を印刷時にリセット */
+          html, body { display: block !important; margin: 0 !important; background: white !important; }
           @page { size: A4; margin: 15mm 18mm; }
+          .page {
+            display: block !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: white !important;
+            page-break-after: always;
+          }
+          .page:last-of-type { page-break-after: auto; }
         }
         @media screen {
           body { background: #f3f4f6; }
