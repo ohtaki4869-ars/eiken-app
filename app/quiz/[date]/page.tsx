@@ -75,10 +75,31 @@ export default function QuizPage() {
               <p className="text-sm mt-1">{formatDate(date)}</p>
             </div>
 
-            <div className="mb-6 flex items-center gap-3 no-print">
+            <div className="mb-6 flex items-center gap-3 flex-wrap no-print">
               <span className={`text-xs font-bold px-2 py-1 rounded ${formatBadgeColor}`}>
                 {isFillInBlank ? '【穴埋め形式】' : '【内容一致形式】'}
               </span>
+              {data.difficultyScore && (() => {
+                const d = data.difficultyScore;
+                const colors: Record<string, string> = {
+                  A: 'bg-green-100 text-green-800',
+                  B: 'bg-lime-100 text-lime-800',
+                  C: 'bg-yellow-100 text-yellow-800',
+                  D: 'bg-orange-100 text-orange-800',
+                  E: 'bg-red-100 text-red-800',
+                };
+                const labels: Record<string, string> = {
+                  A: '易しい', B: 'やや易しい', C: '標準', D: 'やや難しい', E: '難しい',
+                };
+                return (
+                  <span
+                    title={`語彙:${d.vocab_score} ダミー:${d.dummy_score} 文脈:${d.context_score} 推論:${d.inference_score} 設問:${d.question_score}\n${d.reason}`}
+                    className={`text-xs font-bold px-2 py-1 rounded cursor-help ${colors[d.difficulty]}`}
+                  >
+                    難易度 {d.difficulty}：{labels[d.difficulty]}（{d.overall_score}点）
+                  </span>
+                );
+              })()}
               <span className="text-sm text-gray-500">{data.article.source} — {data.article.title}</span>
             </div>
 

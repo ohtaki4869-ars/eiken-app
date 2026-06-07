@@ -129,7 +129,7 @@ export default function Home() {
         {loading && (
           <div className="text-center py-20">
             <div className="text-gray-500 text-lg">問題を生成中...</div>
-            <div className="text-gray-400 text-sm mt-2">最新ニュースから問題を作成しています</div>
+            <div className="text-gray-400 text-sm mt-2">生成 → 校閲 → 難易度評価の順に処理しています（30〜40秒かかる場合があります）</div>
           </div>
         )}
 
@@ -143,6 +143,27 @@ export default function Home() {
               <span className={`text-xs font-bold px-2 py-1 rounded ${formatBadgeColor}`}>
                 本日の形式: {formatLabel}
               </span>
+              {data.difficultyScore && (() => {
+                const d = data.difficultyScore;
+                const colors: Record<string, string> = {
+                  A: 'bg-green-100 text-green-800',
+                  B: 'bg-lime-100 text-lime-800',
+                  C: 'bg-yellow-100 text-yellow-800',
+                  D: 'bg-orange-100 text-orange-800',
+                  E: 'bg-red-100 text-red-800',
+                };
+                const labels: Record<string, string> = {
+                  A: '易しい', B: 'やや易しい', C: '標準', D: 'やや難しい', E: '難しい',
+                };
+                return (
+                  <span
+                    title={`語彙:${d.vocab_score} ダミー:${d.dummy_score} 文脈:${d.context_score} 推論:${d.inference_score} 設問:${d.question_score}\n${d.reason}`}
+                    className={`text-xs font-bold px-2 py-1 rounded cursor-help ${colors[d.difficulty]}`}
+                  >
+                    難易度 {d.difficulty}：{labels[d.difficulty]}（総合 {d.overall_score}点）
+                  </span>
+                );
+              })()}
               {'genre' in data.article && (
                 <span className="text-xs font-bold px-2 py-1 rounded bg-green-100 text-green-800">
                   ジャンル: {(data.article as {genre: string}).genre}

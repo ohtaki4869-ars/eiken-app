@@ -41,6 +41,19 @@ export interface ReadingQuestion {
   explanation: string;
 }
 
+export type DifficultyLevel = 'A' | 'B' | 'C' | 'D' | 'E';
+
+export interface DifficultyScore {
+  vocab_score: number;
+  dummy_score: number;
+  context_score: number;
+  inference_score: number;
+  question_score: number;
+  overall_score: number;
+  difficulty: DifficultyLevel;
+  reason: string;
+}
+
 export interface GeneratedQuestions {
   article: Article;
   readingFormat: ReadingFormat;
@@ -49,6 +62,7 @@ export interface GeneratedQuestions {
   readingPassageJa: string;
   readingQuestions: ReadingQuestion[];
   generatedAt: string;
+  difficultyScore?: DifficultyScore;
 }
 
 export function getTodayFormat(): ReadingFormat {
@@ -326,20 +340,101 @@ async function reviewQuestions(draft: GeneratedQuestions): Promise<GeneratedQues
   }
 }
 
-export async function generateQuestions(
-  article: Article,
-  format: ReadingFormat
-): Promise<GeneratedQuestions> {
-  const trimmedArticle = {
-    ...article,
-    content: article.content.slice(0, 2000),
-  };
-  // Sample 30 words from word bank (seeded by today's date for consistency)
-  const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
-  const sampledWords = sampleWords(30, jstDay);
-  const prompt = buildPrompt(trimmedArticle, format, sampledWords);
+// ===== 難易度評価プロンプト =====
+function buildEvalPrompt(questions: GeneratedQuestions): string {
+  return `あなたは英検1級の問題編集者です。
 
-  // ===== Step 1: 問題生成 =====
+以下の問題セットを評価してください。
+
+## 語彙問題（5問）
+${JSON.stringify(questions.vocabQuestions, null, 2)}
+
+## 長文
+${questions.readingPassage}
+
+## 読解問題
+${JSON.stringify(questions.readingQuestions, null, 2)}
+
+## 評価項目
+
+1. **語彙レベル**（0〜100）
+   - 100：全選択肢が英検1級最上位層、文脈も高度
+   - 50：1級レベルだが正解が類推しやすい
+   - 0：準1級以下の語彙が混在
+
+2. **ダミー選択肢の質**（0〜100）
+   - 100：全ての誤答が半数以上の受験者を惑わせるレベル
+   - 50：一部の誤答が明らかに消去できる
+   - 0：誤答がほぼ全て即座に消去できる
+
+3. **文脈依存度**（0〜100）
+   - 100：語の精密な意味知識と文脈把握が両方必要
+   - 50：どちらか一方だけで正解できる
+   - 0：単語を知らなくても文脈で選べる
+
+4. **読解に必要な推論量**（0〜100）
+   - 100：本文に直接書かれていないことを複数ステップで推論が必要
+   - 50：本文を注意深く読めば解ける
+   - 0：本文の該当箇所を見つけるだけで解ける
+
+5. **設問の質**（0〜100）
+   - 100：問い方が正確で、正解が唯一に定まる
+   - 50：やや曖昧さがあるが許容範囲
+   - 0：問いが不明確または正解が複数成立する
+
+## 総合難易度
+上記5項目の評価を踏まえて、総合難易度を以下から選んでください：
+- A：易しい（英検準1級レベルで解ける）
+- B：やや易しい（1級受験者の70%以上が正解できる）
+- C：標準（1級受験者の40〜70%が正解できる）
+- D：やや難しい（1級受験者の20〜40%が正解できる）
+- E：難しい（1級合格者でも20%以下しか正解できない）
+
+## 出力形式（JSONのみ、説明文なし）
+{
+  "vocab_score": 数値,
+  "dummy_score": 数値,
+  "context_score": 数値,
+  "inference_score": 数値,
+  "question_score": 数値,
+  "overall_score": 数値,
+  "difficulty": "A" | "B" | "C" | "D" | "E",
+  "reason": "総合判定の根拠を2〜3文で"
+}`;
+}
+
+// ===== 難易度評価ステップ =====
+async function evaluateDifficulty(questions: GeneratedQuestions): Promise<DifficultyScore | null> {
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: buildEvalPrompt(questions) }],
+    });
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const result = parseJson(text) as DifficultyScore;
+    return result;
+  } catch (e) {
+    console.warn('Difficulty evaluation failed:', e);
+    return null;
+  }
+}
+
+// ===== 生成ヘルパー（1回分） =====
+async function generateOnce(
+  article: Article,
+  format: ReadingFormat,
+  sampledWords: WordEntry[],
+  feedbackHint?: string
+): Promise<GeneratedQuestions> {
+  const trimmedArticle = { ...article, content: article.content.slice(0, 2000) };
+  let prompt = buildPrompt(trimmedArticle, format, sampledWords);
+
+  // 前回評価のフィードバックがある場合は末尾に追加
+  if (feedbackHint) {
+    prompt += `\n\n## ⚠️ Previous Attempt Feedback\nThe previous generated questions were rated as too easy (${feedbackHint}).\nPlease make harder questions this time by:\n- Using more advanced and less predictable vocabulary\n- Making distractors more plausible and harder to eliminate\n- Requiring more inferential reasoning to answer reading questions\n- Ensuring no choice can be dismissed without carefully reading the passage`;
+  }
+
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 6000,
@@ -347,7 +442,6 @@ export async function generateQuestions(
   });
 
   const text = response.content[0].type === 'text' ? response.content[0].text : '';
-
   let parsed;
   try {
     parsed = parseJson(text) as {
@@ -362,7 +456,7 @@ export async function generateQuestions(
     throw new Error('Failed to parse JSON from Claude response');
   }
 
-  const draft: GeneratedQuestions = {
+  return {
     article,
     readingFormat: format,
     vocabQuestions: parsed.vocabQuestions,
@@ -371,7 +465,33 @@ export async function generateQuestions(
     readingQuestions: parsed.readingQuestions,
     generatedAt: new Date().toISOString(),
   };
+}
+
+export async function generateQuestions(
+  article: Article,
+  format: ReadingFormat
+): Promise<GeneratedQuestions> {
+  const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
+  const sampledWords = sampleWords(30, jstDay);
+
+  // ===== Step 1: 問題生成 =====
+  let draft = await generateOnce(article, format, sampledWords);
 
   // ===== Step 2: 校閲・修正 =====
-  return await reviewQuestions(draft);
+  draft = await reviewQuestions(draft);
+
+  // ===== Step 3: 難易度評価 =====
+  const score = await evaluateDifficulty(draft);
+
+  // ===== Step 4: 易しすぎる場合は1回だけ再生成 =====
+  if (score && (score.difficulty === 'A' || score.difficulty === 'B')) {
+    console.log(`Difficulty rated ${score.difficulty} — regenerating with harder hint`);
+    const hint = `difficulty: ${score.difficulty}, reason: ${score.reason}`;
+    let retry = await generateOnce(article, format, sampledWords, hint);
+    retry = await reviewQuestions(retry);
+    const retryScore = await evaluateDifficulty(retry);
+    return { ...retry, difficultyScore: retryScore ?? score };
+  }
+
+  return { ...draft, difficultyScore: score ?? undefined };
 }
