@@ -243,6 +243,89 @@ Return ONLY valid JSON in this exact format:
 }`;
 }
 
+// ===== JSON parser helper =====
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No JSON object found');
+    return JSON.parse(text.slice(start, end + 1));
+  }
+}
+
+// ===== 校閲プロンプト =====
+function buildReviewPrompt(draft: GeneratedQuestions): string {
+  const draftJson = JSON.stringify({
+    vocabQuestions: draft.vocabQuestions,
+    readingPassage: draft.readingPassage,
+    readingPassageJa: draft.readingPassageJa,
+    readingQuestions: draft.readingQuestions,
+  }, null, 2);
+
+  return `You are a strict quality controller for EIKEN Grade 1 (英検1級) exam questions.
+Review the following draft questions and fix every issue found. Return corrected JSON only.
+
+## Draft Questions
+${draftJson}
+
+## Vocabulary Question Checklist (apply to EACH of the 5 vocab questions):
+1. **Answer not leaked**: The correct answer word must NOT appear anywhere in the sentence (including derived/inflected forms). If it does → rewrite the sentence so the answer cannot be guessed from surface reading.
+2. **Part of speech consistent**: All 4 choices (A/B/C/D) must be the exact same part of speech (all nouns, all verbs, all adjectives, or all adverbs). If any choice differs → replace it with a same-POS EIKEN Grade 1 word.
+3. **Grammatical fit**: Every one of the 4 choices must fit grammatically into the blank without error. If any choice causes a grammar problem → replace it.
+4. **No obvious wrong answers**: Every distractor must be a word a student could seriously consider given partial understanding of the sentence. If any choice is immediately dismissible → replace it with a more plausible distractor.
+5. **EIKEN Grade 1 level**: All 4 choices must be genuine EIKEN Grade 1 vocabulary. If any choice is too common or too easy → replace it.
+
+## Reading Comprehension Question Checklist (apply to EACH reading question):
+6. **No copy-paste in correct answer**: The correct answer (answer key choice) must paraphrase the passage using different words and sentence structure — never quote directly. If it quotes → rewrite as paraphrase.
+7. **50% content overlap in wrong choices**: Each wrong choice must share at least 50% of its content (same subject, topic, key terms) with the passage. If a wrong choice introduces content absent from the passage → revise it.
+8. **Three distortion techniques**: The three wrong choices must each use one of these techniques (one per choice, all three must appear):
+   - 因果関係の逆転: swap cause and effect
+   - 範囲の拡大: broaden a limited claim to an absolute one
+   - 筆者の主張の誇張: push the author's claim further than stated
+   If this distribution is not followed → revise the wrong choices to apply one technique each.
+9. **No obviously wrong choices**: Every wrong choice must feel like something the passage "almost" said. If any choice is clearly off-topic or uses vocabulary not in the passage → revise it.
+
+## Output Rules
+- Return ONLY valid JSON in the exact same structure as the input draft.
+- Fix every issue found; keep questions that already pass all checks unchanged.
+- Do NOT add any explanation outside the JSON.`;
+}
+
+// ===== 校閲ステップ =====
+async function reviewQuestions(draft: GeneratedQuestions): Promise<GeneratedQuestions> {
+  const prompt = buildReviewPrompt(draft);
+
+  let reviewText = '';
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 6000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    reviewText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const reviewed = parseJson(reviewText) as {
+      vocabQuestions?: typeof draft.vocabQuestions;
+      readingPassage?: string;
+      readingPassageJa?: string;
+      readingQuestions?: typeof draft.readingQuestions;
+    };
+    return {
+      ...draft,
+      vocabQuestions: reviewed.vocabQuestions ?? draft.vocabQuestions,
+      readingPassage: reviewed.readingPassage ?? draft.readingPassage,
+      readingPassageJa: reviewed.readingPassageJa ?? draft.readingPassageJa,
+      readingQuestions: reviewed.readingQuestions ?? draft.readingQuestions,
+    };
+  } catch (e) {
+    // 校閲に失敗してもドラフトをそのまま返す（フォールバック）
+    console.warn('Review step failed, returning draft:', e);
+    if (reviewText) console.warn('Review response:', reviewText.slice(0, 300));
+    return draft;
+  }
+}
+
 export async function generateQuestions(
   article: Article,
   format: ReadingFormat
@@ -256,6 +339,7 @@ export async function generateQuestions(
   const sampledWords = sampleWords(30, jstDay);
   const prompt = buildPrompt(trimmedArticle, format, sampledWords);
 
+  // ===== Step 1: 問題生成 =====
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 6000,
@@ -266,24 +350,19 @@ export async function generateQuestions(
 
   let parsed;
   try {
-    parsed = JSON.parse(text);
-  } catch {
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start === -1 || end === -1) {
-      console.error('Claude response:', text.slice(0, 500));
-      throw new Error('Failed to parse JSON from Claude response');
-    }
-    try {
-      parsed = JSON.parse(text.slice(start, end + 1));
-    } catch (e) {
-      console.error('JSON parse error:', e);
-      console.error('Claude response:', text.slice(0, 500));
-      throw new Error('Failed to parse JSON from Claude response');
-    }
+    parsed = parseJson(text) as {
+      vocabQuestions: VocabQuestion[];
+      readingPassage: string;
+      readingPassageJa: string;
+      readingQuestions: ReadingQuestion[];
+    };
+  } catch (e) {
+    console.error('JSON parse error:', e);
+    console.error('Claude response:', text.slice(0, 500));
+    throw new Error('Failed to parse JSON from Claude response');
   }
 
-  return {
+  const draft: GeneratedQuestions = {
     article,
     readingFormat: format,
     vocabQuestions: parsed.vocabQuestions,
@@ -292,4 +371,7 @@ export async function generateQuestions(
     readingQuestions: parsed.readingQuestions,
     generatedAt: new Date().toISOString(),
   };
+
+  // ===== Step 2: 校閲・修正 =====
+  return await reviewQuestions(draft);
 }
