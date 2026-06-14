@@ -306,6 +306,23 @@ Return ONLY valid JSON in this exact format:
 }`;
 }
 
+// ===== 選択肢シャッフル =====
+function shuffleChoices<T extends { choices: { A: string; B: string; C: string; D: string }; answer: string }>(q: T): T {
+  const keys = ['A', 'B', 'C', 'D'] as const;
+  const values = keys.map(k => q.choices[k]);
+  const correctValue = q.choices[q.answer as keyof typeof q.choices];
+
+  // Fisher-Yates shuffle
+  for (let i = values.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [values[i], values[j]] = [values[j], values[i]];
+  }
+
+  const newChoices = { A: values[0], B: values[1], C: values[2], D: values[3] };
+  const newAnswer = keys[values.findIndex(v => v === correctValue)];
+  return { ...q, choices: newChoices, answer: newAnswer };
+}
+
 // ===== コードバリデーション（機械チェック） =====
 interface ValidationResult {
   valid: boolean;
@@ -631,8 +648,16 @@ export async function generateQuestions(
     let retry = await generateOnce(article, format, sampledWords, hint);
     retry = await reviewQuestions(retry);
     const retryScore = await evaluateDifficulty(retry);
-    return { ...retry, difficultyScore: retryScore ?? score };
+    return applyChoiceShuffle({ ...retry, difficultyScore: retryScore ?? score });
   }
 
-  return { ...draft, difficultyScore: score ?? undefined };
+  return applyChoiceShuffle({ ...draft, difficultyScore: score ?? undefined });
+}
+
+function applyChoiceShuffle(q: GeneratedQuestions): GeneratedQuestions {
+  return {
+    ...q,
+    vocabQuestions: q.vocabQuestions.map(shuffleChoices),
+    readingQuestions: q.readingQuestions.map(shuffleChoices),
+  };
 }
