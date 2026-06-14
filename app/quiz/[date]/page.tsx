@@ -3,8 +3,61 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { GeneratedQuestions } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotation } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
+
+function ChoiceDissect({ annotations, choices, answer }: {
+  annotations: ChoiceAnnotation[];
+  choices: { A: string; B: string; C: string; D: string };
+  answer: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const keys = ['A', 'B', 'C', 'D'] as const;
+
+  return (
+    <div className="no-print mt-3">
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-xs text-indigo-600 border border-indigo-300 rounded px-3 py-1 hover:bg-indigo-50"
+      >
+        {open ? '▲ 選択肢の意味を閉じる' : '▼ 選択肢の意味を確認する'}
+      </button>
+      {open && (
+        <div className="mt-2 border border-indigo-200 rounded-lg overflow-hidden text-xs">
+          {keys.map((key, i) => {
+            const val = choices[key];
+            const isCorrect = answer === key;
+            const ann = annotations.find(a => a.choice === val || a.choice === val.slice(0, 40));
+            return (
+              <div key={key} className={`px-4 py-3 border-b last:border-b-0 ${isCorrect ? 'bg-green-50' : 'bg-white'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-bold text-gray-500">{i + 1}</span>
+                  <span className={`font-bold ${isCorrect ? 'text-green-700' : 'text-gray-800'}`}>{val}</span>
+                  {isCorrect && <span className="text-green-600 text-xs font-bold">✅ 正解</span>}
+                </div>
+                {ann && (
+                  <>
+                    {ann.morphemes.length > 0 && (
+                      <div className="text-gray-500 mb-1">
+                        {ann.morphemes.map((m, j) => (
+                          <span key={j}>{m.word}（{m.meaning}）{j < ann.morphemes.length - 1 ? ' + ' : ''}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-gray-700">→ {ann.translation}</div>
+                    {ann.incorrectReason && (
+                      <div className="text-red-600 mt-1 italic">{ann.incorrectReason}</div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const KEY_TO_NUM: Record<string, string> = { A: '1', B: '2', C: '3', D: '4' };
 
@@ -106,7 +159,7 @@ export default function QuizPage() {
             <section className="mb-10">
               <h2 className="text-lg font-bold border-b-2 border-gray-800 pb-2 mb-6">第1部　語彙・語法問題</h2>
               <p className="text-sm text-gray-600 mb-6">次の(1)〜(5)の（　　）に入れるのに最も適切なものを1、2、3、4の中から一つ選びなさい。</p>
-              {data.vocabQuestions.map((q) => (
+              {data.vocabQuestions.map((q, qi) => (
                 <div key={q.number} className="mb-8">
                   <p className="font-medium mb-3">({q.number}) {q.sentence.replace('____', '（　　　　）')}</p>
                   <div className="grid grid-cols-2 gap-2 ml-4">
@@ -117,6 +170,13 @@ export default function QuizPage() {
                       </div>
                     ))}
                   </div>
+                  {data.choiceAnnotations?.vocabulary?.[qi] && (
+                    <ChoiceDissect
+                      annotations={data.choiceAnnotations.vocabulary[qi]}
+                      choices={q.choices}
+                      answer={q.answer}
+                    />
+                  )}
                 </div>
               ))}
             </section>
@@ -145,7 +205,7 @@ export default function QuizPage() {
                   ))}
                 </div>
               )}
-              {data.readingQuestions.map((q) => (
+              {data.readingQuestions.map((q, qi) => (
                 <div key={q.number} className="mb-8">
                   <p className="font-medium mb-3">({q.number}) {q.question}</p>
                   <div className="grid grid-cols-1 gap-2 ml-4">
@@ -156,6 +216,13 @@ export default function QuizPage() {
                       </div>
                     ))}
                   </div>
+                  {data.choiceAnnotations?.reading?.[qi] && (
+                    <ChoiceDissect
+                      annotations={data.choiceAnnotations.reading[qi]}
+                      choices={q.choices}
+                      answer={q.answer}
+                    />
+                  )}
                 </div>
               ))}
             </section>

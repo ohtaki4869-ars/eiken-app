@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { GeneratedQuestions } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotation } from '@/lib/claude';
 
 export default function SeidokuPage() {
   const { date } = useParams<{ date: string }>();
@@ -254,6 +254,129 @@ export default function SeidokuPage() {
           <span>{formatDate(date === 'today' ? new Date(Date.now() + 9*3600000).toISOString().split('T')[0] : date)}</span>
         </div>
       </div>
+
+      {/* ===== PAGE 3: 選択肢精読 ===== */}
+      {data.choiceAnnotations && (
+        <div className="page" style={{ marginTop: '0' }}>
+          {/* ヘッダー */}
+          <div style={{ borderBottom: '3px solid #1a3a5c', marginBottom: '16px', paddingBottom: '8px' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1a3a5c' }}>選択肢精読</div>
+            <div style={{ fontSize: '10px', color: '#2c6fad', marginTop: '2px' }}>EIKEN Grade 1 — Choice Analysis</div>
+          </div>
+
+          {/* 語彙問題 */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+              ■ 語彙問題　選択肢解剖
+            </div>
+            {data.vocabQuestions.map((q, qi) => {
+              const annotations: ChoiceAnnotation[] = data.choiceAnnotations?.vocabulary?.[qi] ?? [];
+              const choices = Object.entries(q.choices) as [string, string][];
+              return (
+                <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#1a3a5c', marginBottom: '4px' }}>
+                    ({qi + 1}) {choices.map(([, v]) => v).join(' / ')}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                    {choices.map(([key, val]) => {
+                      const ann = annotations.find(a => a.choice === val);
+                      const isCorrect = q.answer === key;
+                      return (
+                        <div key={key} style={{
+                          fontSize: '9px', padding: '4px 6px', borderRadius: '3px',
+                          background: isCorrect ? '#e8f5e9' : '#fafafa',
+                          border: `1px solid ${isCorrect ? '#4caf50' : '#ddd'}`
+                        }}>
+                          <span style={{ fontWeight: 'bold', color: isCorrect ? '#2e7d32' : '#1a3a5c' }}>
+                            {key} {val} {isCorrect ? '✅' : ''}
+                          </span>
+                          {ann && (
+                            <>
+                              <div style={{ color: '#555', marginTop: '2px' }}>
+                                {ann.morphemes.map((m, i) => (
+                                  <span key={i}>{m.word}（{m.meaning}）{i < ann.morphemes.length - 1 ? ' + ' : ''}</span>
+                                ))}
+                              </div>
+                              <div style={{ color: '#333', marginTop: '1px' }}>→ {ann.translation}</div>
+                              {ann.incorrectReason && (
+                                <div style={{ color: '#b71c1c', marginTop: '1px', fontStyle: 'italic' }}>{ann.incorrectReason}</div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 紛らわしいペア */}
+          {data.confusingPairs && data.confusingPairs.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#c0392b', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
+                ⚡ 紛らわしいペア解説
+              </div>
+              {data.confusingPairs.map((pair, i) => (
+                <div key={i} style={{ fontSize: '9.5px', marginBottom: '8px', padding: '6px 8px', background: '#fff8f8', border: '1px solid #f5c6c6', borderRadius: '4px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#c0392b' }}>{pair.choiceA} vs {pair.choiceB}：</span>
+                  <span style={{ color: '#333', marginLeft: '4px' }}>{pair.explanation}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 読解問題選択肢 */}
+          {data.choiceAnnotations.reading && data.choiceAnnotations.reading.length > 0 && (
+            <div>
+              <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                ■ 読解問題　選択肢訳
+              </div>
+              {data.readingQuestions.map((q, qi) => {
+                const annotations: ChoiceAnnotation[] = data.choiceAnnotations?.reading?.[qi] ?? [];
+                const choices = Object.entries(q.choices) as [string, string][];
+                return (
+                  <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#1a3a5c', marginBottom: '4px' }}>
+                      読解({qi + 1}) {q.question.slice(0, 60)}...
+                    </div>
+                    {choices.map(([key, val]) => {
+                      const ann = annotations.find(a => a.choice === val || a.choice === val.slice(0, 40));
+                      const isCorrect = q.answer === key;
+                      return (
+                        <div key={key} style={{
+                          fontSize: '9px', marginBottom: '4px', padding: '4px 6px',
+                          background: isCorrect ? '#e8f5e9' : '#fafafa',
+                          border: `1px solid ${isCorrect ? '#4caf50' : '#eee'}`,
+                          borderRadius: '3px'
+                        }}>
+                          <span style={{ fontWeight: 'bold', color: isCorrect ? '#2e7d32' : '#555' }}>
+                            {key} {isCorrect ? '✅' : '❌'}
+                          </span>
+                          <span style={{ color: '#333', marginLeft: '4px' }}>{val.slice(0, 80)}{val.length > 80 ? '...' : ''}</span>
+                          {ann?.translation && (
+                            <div style={{ color: '#555', marginTop: '2px', fontStyle: 'italic' }}>→ {ann.translation}</div>
+                          )}
+                          {ann?.incorrectReason && (
+                            <div style={{ color: '#b71c1c', marginTop: '1px', fontSize: '8.5px' }}>{ann.incorrectReason}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* フッター */}
+          <div style={{ marginTop: '16px', borderTop: '1px solid #ccc', paddingTop: '6px', fontSize: '8px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
+            <span>英検1級 毎日トレーニング　選択肢精読</span>
+            <span>{formatDate(date === 'today' ? new Date(Date.now() + 9*3600000).toISOString().split('T')[0] : date)}</span>
+          </div>
+        </div>
+      )}
     </>
   );
 }

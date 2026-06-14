@@ -41,6 +41,30 @@ export interface ReadingQuestion {
   explanation: string;
 }
 
+export interface Morpheme {
+  word: string;
+  meaning: string;
+}
+
+export interface ChoiceAnnotation {
+  choice: string;
+  translation: string;
+  morphemes: Morpheme[];
+  isCorrect: boolean;
+  incorrectReason?: string;
+}
+
+export interface ConfusingPair {
+  choiceA: string;
+  choiceB: string;
+  explanation: string;
+}
+
+export interface ChoiceAnnotations {
+  vocabulary: ChoiceAnnotation[][];
+  reading: ChoiceAnnotation[][];
+}
+
 export type DifficultyLevel = 'A' | 'B' | 'C' | 'D' | 'E';
 
 export interface DifficultyScore {
@@ -63,6 +87,8 @@ export interface GeneratedQuestions {
   readingQuestions: ReadingQuestion[];
   generatedAt: string;
   difficultyScore?: DifficultyScore;
+  choiceAnnotations?: ChoiceAnnotations;
+  confusingPairs?: ConfusingPair[];
 }
 
 export function getTodayFormat(): ReadingFormat {
@@ -153,7 +179,13 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
 
    **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
 
-   For each question: state the correct answer and a Japanese explanation noting the passage location AND which technique (技法1/2/3) each wrong choice uses.
+   **Explanation format for each reading question:**
+   【正解】本文の該当箇所を必ず引用：「本文に'～'とあり、これをparaphraseすると正解の'～'に対応する」。推論問題の場合は「本文の'A'と'B'から推論できる」と複数箇所を示す。
+   【各誤答】使用した技法を明示：
+     技法1「因果関係の逆転」→「本文では原因と結果が逆に記述されている」
+     技法2「範囲の拡大」  →「本文では'～に限定'されているが、選択肢では過度に一般化している」
+     技法3「誇張・断定化」→「本文では'could/may'と可能性で述べているが、選択肢では断定している」
+     技法4「本文に根拠なし」→「この内容は本文中に記述がない」（使用時のみ）
 
    **SELF-CHECK（内容一致・5項目）:**
    - [ ] 問題数が4問である
@@ -253,7 +285,13 @@ Create the following in JSON format:
    - **IMPORTANT**: The correct answer MUST be one of the words from the Word Bank above
    - 4 choices (A, B, C, D): all single words, EIKEN Grade 1 level — use other words from the Word Bank as distractors
    - Only one word fits both grammar and meaning
-   - Include the correct answer and a brief Japanese explanation of all 4 choices (include the Japanese meaning of each choice word)
+   - Include the correct answer with a structured Japanese explanation following this format:
+     【正解】問題文の該当箇所を引用し、なぜその語が最適かを文脈に即した意味で説明。辞書的定義ではなく文脈での機能を優先。
+     【不正解各選択肢】以下のパターンのいずれかを明示：
+       パターンA「意味が逆」：正解と反対方向の意味を持つ
+       パターンB「意味が近いが文脈の焦点がズレる」：ニュアンスの違いを具体的に1文で
+       パターンC「文脈と無関係」：なぜ文脈に合わないかを一言
+     【紛らわしいペア】正解と最も混同しやすい選択肢がある場合は「AvsB：違いの1文説明」を追記
 
    **【選択肢設計ルール（必須）】**
 
@@ -299,11 +337,91 @@ Return ONLY valid JSON in this exact format:
         "D": "inducement"
       },
       "answer": "A",
-      "explanation": "deterrent（抑止力）が文脈に最も合う。reprimand（叱責・懲戒）は処罰の一形態で惜しいが「法律違反への事前抑止」という意味がない。constraint（制約）は規制そのものを指し文脈がやや異なる。inducement（誘因）は違反を促す方向で意味が逆。"
+      "explanation": "【正解】文中の'regulations were intended to be a ____ to those who might otherwise violate'より、法律違反を未然に防ぐ「抑止力」を意味するdeterrentが最適。単なる制限でなく違反意図そのものを抑える語が必要。【B: reprimand】パターンB「意味が近いが焦点がズレる」─事後的な「叱責・懲戒」であり、違反を未然に抑止するdeterrentとは機能が異なる。deterrent vs reprimand：deterrentは「未然防止」、reprimandは「事後対処」。【C: constraint】パターンB「意味が近いが焦点がズレる」─「制約」そのものを指し、違反への抑止という心理的作用を持たない。【D: inducement】パターンA「意味が逆」─違反を促す「誘因」であり、意味が逆。"
     }
   ],
   ${readingJsonExample}
 }`;
+}
+
+// ===== 選択肢アノテーション生成 =====
+function buildAnnotationPrompt(questions: GeneratedQuestions): string {
+  const vocabSummary = questions.vocabQuestions.map((q, i) => {
+    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v}`).join(', ');
+    return `語彙(${i + 1}): ${q.sentence.replace('____', `[${q.choices[q.answer as keyof typeof q.choices]}]`)} | 選択肢: ${choices} | 正解: ${q.answer}`;
+  }).join('\n');
+
+  const readingSummary = questions.readingQuestions.map((q, i) => {
+    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v.slice(0, 60)}...`).join('\n    ');
+    return `読解(${i + 1}): ${q.question.slice(0, 80)}\n    ${choices}\n    正解: ${q.answer}`;
+  }).join('\n');
+
+  return `以下の英検1級問題について、各選択肢のアノテーション（意味・語源・正誤理由）を生成してください。
+
+## 長文
+${questions.readingPassage.slice(0, 800)}
+
+## 語彙問題
+${vocabSummary}
+
+## 読解問題
+${readingSummary}
+
+## 生成ルール
+
+### 語彙問題の各選択肢：
+- translation: 文脈に即した日本語訳（辞書的定義でなく）
+- morphemes: 語を構成する接頭辞・語根・接尾辞に分解（1〜3要素）
+- isCorrect: 正解かどうか
+- incorrectReason: 不正解の場合のみ、パターンA/B/Cを明示
+  例: "パターンB: 「強化」系の語だが、文脈は「妨害」を要求している"
+
+### 読解問題の各選択肢：
+- translation: 自然な日本語訳（主語・接続詞を補い、直訳禁止）
+- morphemes: 重要語句を3語程度分解（例: unattainable → un+attain+able）
+- isCorrect: 正解かどうか
+- incorrectReason: 不正解の場合、使用した技法を明示
+  例: "技法2「範囲の拡大」: 本文では英国のみに限定されているが、全先進国に拡大している"
+
+### 紛らわしいペア（confusingPairs）：
+語彙問題で正解と最も混同しやすいペアを最大3組選び、違いを1〜2文で説明。
+
+## 出力形式（JSONのみ）
+{
+  "choiceAnnotations": {
+    "vocabulary": [
+      [
+        { "choice": "deterrent", "translation": "抑止力（違反を未然に防ぐ手段）", "morphemes": [{"word":"de-","meaning":"離れる"},{"word":"terr","meaning":"怖がらせる"},{"word":"-ent","meaning":"〜するもの"}], "isCorrect": true },
+        { "choice": "reprimand", "translation": "叱責、懲戒", "morphemes": [{"word":"re-","meaning":"再び"},{"word":"primand","meaning":"抑える"}], "isCorrect": false, "incorrectReason": "パターンB: 事後的な「懲戒」であり、違反を未然に防ぐdeterrentとは機能が異なる" }
+      ]
+    ],
+    "reading": [
+      [
+        { "choice": "選択肢テキスト", "translation": "自然な日本語訳", "morphemes": [{"word":"key term","meaning":"意味"}], "isCorrect": true },
+        { "choice": "選択肢テキスト", "translation": "自然な日本語訳", "morphemes": [], "isCorrect": false, "incorrectReason": "技法2「範囲の拡大」: 本文では〜に限定されているが..." }
+      ]
+    ]
+  },
+  "confusingPairs": [
+    { "choiceA": "deterrent", "choiceB": "reprimand", "explanation": "deterrentは未然防止、reprimandは事後対処。文脈が「違反させないための手段」を求めているのでdeterrentが正解。" }
+  ]
+}`;
+}
+
+async function generateAnnotations(questions: GeneratedQuestions): Promise<{ choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] } | null> {
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: buildAnnotationPrompt(questions) }],
+    });
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    const result = parseJson(text) as { choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] };
+    return result;
+  } catch (e) {
+    console.warn('Annotation generation failed:', e);
+    return null;
+  }
 }
 
 // ===== 選択肢シャッフル =====
@@ -648,10 +766,15 @@ export async function generateQuestions(
     let retry = await generateOnce(article, format, sampledWords, hint);
     retry = await reviewQuestions(retry);
     const retryScore = await evaluateDifficulty(retry);
-    return applyChoiceShuffle({ ...retry, difficultyScore: retryScore ?? score });
+    const finalRetry = applyChoiceShuffle({ ...retry, difficultyScore: retryScore ?? score });
+    const retryAnnotations = await generateAnnotations(finalRetry);
+    return { ...finalRetry, ...retryAnnotations };
   }
 
-  return applyChoiceShuffle({ ...draft, difficultyScore: score ?? undefined });
+  // ===== Step 6: 選択肢アノテーション生成 =====
+  const final = applyChoiceShuffle({ ...draft, difficultyScore: score ?? undefined });
+  const annotations = await generateAnnotations(final);
+  return { ...final, ...annotations };
 }
 
 function applyChoiceShuffle(q: GeneratedQuestions): GeneratedQuestions {
