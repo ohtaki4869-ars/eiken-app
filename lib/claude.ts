@@ -47,11 +47,16 @@ export interface Morpheme {
 }
 
 export interface ChoiceAnnotation {
-  choice: string;
   translation: string;
   morphemes: Morpheme[];
-  isCorrect: boolean;
   incorrectReason?: string;
+}
+
+export interface ChoiceAnnotationSet {
+  A: ChoiceAnnotation;
+  B: ChoiceAnnotation;
+  C: ChoiceAnnotation;
+  D: ChoiceAnnotation;
 }
 
 export interface ConfusingPair {
@@ -61,8 +66,8 @@ export interface ConfusingPair {
 }
 
 export interface ChoiceAnnotations {
-  vocabulary: ChoiceAnnotation[][];
-  reading: ChoiceAnnotation[][];
+  vocabulary: ChoiceAnnotationSet[];
+  reading: ChoiceAnnotationSet[];
 }
 
 export type DifficultyLevel = 'A' | 'B' | 'C' | 'D' | 'E';
@@ -347,63 +352,51 @@ Return ONLY valid JSON in this exact format:
 // ===== 選択肢アノテーション生成 =====
 function buildAnnotationPrompt(questions: GeneratedQuestions): string {
   const vocabSummary = questions.vocabQuestions.map((q, i) => {
-    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v}`).join(', ');
-    return `語彙(${i + 1}): ${q.sentence.replace('____', `[${q.choices[q.answer as keyof typeof q.choices]}]`)} | 選択肢: ${choices} | 正解: ${q.answer}`;
+    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v}`).join(' / ');
+    return `語彙(${i + 1}) 正解:${q.answer} | ${choices}`;
   }).join('\n');
 
   const readingSummary = questions.readingQuestions.map((q, i) => {
-    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v.slice(0, 60)}...`).join('\n    ');
-    return `読解(${i + 1}): ${q.question.slice(0, 80)}\n    ${choices}\n    正解: ${q.answer}`;
+    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v.slice(0, 80)}`).join('\n    ');
+    return `読解(${i + 1}) 正解:${q.answer}\n    ${choices}`;
   }).join('\n');
 
-  return `以下の英検1級問題について、各選択肢のアノテーション（意味・語源・正誤理由）を生成してください。
+  return `英検1級の問題について、各選択肢の日本語訳と不正解理由を生成してください。
 
-## 長文
-${questions.readingPassage.slice(0, 800)}
-
-## 語彙問題
+## 語彙問題（全選択肢が1語の英単語）
 ${vocabSummary}
 
 ## 読解問題
 ${readingSummary}
 
-## 生成ルール
-
-### 語彙問題の各選択肢：
-- translation: 文脈に即した日本語訳（辞書的定義でなく）
-- morphemes: 語を構成する接頭辞・語根・接尾辞に分解（1〜3要素）
-- isCorrect: 正解かどうか
-- incorrectReason: 不正解の場合のみ、パターンA/B/Cを明示
-  例: "パターンB: 「強化」系の語だが、文脈は「妨害」を要求している"
-
-### 読解問題の各選択肢：
-- translation: 自然な日本語訳（主語・接続詞を補い、直訳禁止）
-- morphemes: 重要語句を3語程度分解（例: unattainable → un+attain+able）
-- isCorrect: 正解かどうか
-- incorrectReason: 不正解の場合、使用した技法を明示
-  例: "技法2「範囲の拡大」: 本文では英国のみに限定されているが、全先進国に拡大している"
-
-### 紛らわしいペア（confusingPairs）：
-語彙問題で正解と最も混同しやすいペアを最大3組選び、違いを1〜2文で説明。
+## ルール
+- translation: 短い日本語訳（10字以内）※語彙問題のみ
+- morphemes: 接頭辞・語根・接尾辞の配列（語彙問題のみ、1〜3要素）※省略可
+- incorrectReason: 不正解の選択肢のみ。語彙はパターンA/B/C、読解は技法1/2/3を明記（20字以内）
+- 正解選択肢はincorrectReasonなし
 
 ## 出力形式（JSONのみ）
 {
   "choiceAnnotations": {
     "vocabulary": [
-      [
-        { "choice": "deterrent", "translation": "抑止力（違反を未然に防ぐ手段）", "morphemes": [{"word":"de-","meaning":"離れる"},{"word":"terr","meaning":"怖がらせる"},{"word":"-ent","meaning":"〜するもの"}], "isCorrect": true },
-        { "choice": "reprimand", "translation": "叱責、懲戒", "morphemes": [{"word":"re-","meaning":"再び"},{"word":"primand","meaning":"抑える"}], "isCorrect": false, "incorrectReason": "パターンB: 事後的な「懲戒」であり、違反を未然に防ぐdeterrentとは機能が異なる" }
-      ]
+      {
+        "A": { "translation": "抑止力", "morphemes": [{"word":"de-","meaning":"離れる"},{"word":"terr","meaning":"怖がらせる"},{"word":"-ent","meaning":"〜するもの"}] },
+        "B": { "translation": "叱責", "morphemes": [], "incorrectReason": "パターンB: 事後対処で文脈に不一致" },
+        "C": { "translation": "制約", "morphemes": [], "incorrectReason": "パターンB: 心理的抑止力なし" },
+        "D": { "translation": "誘因", "morphemes": [], "incorrectReason": "パターンA: 意味が逆（誘発）" }
+      }
     ],
     "reading": [
-      [
-        { "choice": "選択肢テキスト", "translation": "自然な日本語訳", "morphemes": [{"word":"key term","meaning":"意味"}], "isCorrect": true },
-        { "choice": "選択肢テキスト", "translation": "自然な日本語訳", "morphemes": [], "isCorrect": false, "incorrectReason": "技法2「範囲の拡大」: 本文では〜に限定されているが..." }
-      ]
+      {
+        "A": { "translation": "正解の日本語訳", "morphemes": [] },
+        "B": { "translation": "誤答の訳", "morphemes": [], "incorrectReason": "技法2: 範囲を過度に拡大" },
+        "C": { "translation": "誤答の訳", "morphemes": [], "incorrectReason": "技法1: 因果関係が逆" },
+        "D": { "translation": "誤答の訳", "morphemes": [], "incorrectReason": "技法3: 可能性を断定化" }
+      }
     ]
   },
   "confusingPairs": [
-    { "choiceA": "deterrent", "choiceB": "reprimand", "explanation": "deterrentは未然防止、reprimandは事後対処。文脈が「違反させないための手段」を求めているのでdeterrentが正解。" }
+    { "choiceA": "deterrent", "choiceB": "reprimand", "explanation": "deterrentは未然防止、reprimandは事後対処。" }
   ]
 }`;
 }
@@ -412,14 +405,16 @@ async function generateAnnotations(questions: GeneratedQuestions): Promise<{ cho
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 4000,
+      max_tokens: 6000,
       messages: [{ role: 'user', content: buildAnnotationPrompt(questions) }],
     });
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    console.log('[Annotations] Response length:', text.length, '| First 200:', text.slice(0, 200));
     const result = parseJson(text) as { choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] };
+    console.log('[Annotations] Parse success. vocab:', result.choiceAnnotations?.vocabulary?.length, 'reading:', result.choiceAnnotations?.reading?.length);
     return result;
   } catch (e) {
-    console.warn('Annotation generation failed:', e);
+    console.error('[Annotations] FAILED:', String(e));
     return null;
   }
 }

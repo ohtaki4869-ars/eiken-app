@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { GeneratedQuestions, ChoiceAnnotation } from '@/lib/claude';
+import { GeneratedQuestions } from '@/lib/claude';
 
 export default function SeidokuPage() {
   const { date } = useParams<{ date: string }>();
@@ -270,7 +270,7 @@ export default function SeidokuPage() {
               ■ 語彙問題　選択肢解剖
             </div>
             {data.vocabQuestions.map((q, qi) => {
-              const annotations: ChoiceAnnotation[] = data.choiceAnnotations?.vocabulary?.[qi] ?? [];
+              const annotationSet = data.choiceAnnotations?.vocabulary?.[qi];
               const choices = Object.entries(q.choices) as [string, string][];
               return (
                 <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>
@@ -279,7 +279,7 @@ export default function SeidokuPage() {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
                     {choices.map(([key, val]) => {
-                      const ann = annotations.find(a => a.choice === val);
+                      const ann = annotationSet?.[key as 'A'|'B'|'C'|'D'];
                       const isCorrect = q.answer === key;
                       return (
                         <div key={key} style={{
@@ -292,11 +292,13 @@ export default function SeidokuPage() {
                           </span>
                           {ann && (
                             <>
-                              <div style={{ color: '#555', marginTop: '2px' }}>
-                                {ann.morphemes.map((m, i) => (
-                                  <span key={i}>{m.word}（{m.meaning}）{i < ann.morphemes.length - 1 ? ' + ' : ''}</span>
-                                ))}
-                              </div>
+                              {ann.morphemes && ann.morphemes.length > 0 && (
+                                <div style={{ color: '#555', marginTop: '2px' }}>
+                                  {ann.morphemes.map((m, i) => (
+                                    <span key={i}>{m.word}（{m.meaning}）{i < ann.morphemes.length - 1 ? ' + ' : ''}</span>
+                                  ))}
+                                </div>
+                              )}
                               <div style={{ color: '#333', marginTop: '1px' }}>→ {ann.translation}</div>
                               {ann.incorrectReason && (
                                 <div style={{ color: '#b71c1c', marginTop: '1px', fontStyle: 'italic' }}>{ann.incorrectReason}</div>
@@ -334,7 +336,7 @@ export default function SeidokuPage() {
                 ■ 読解問題　選択肢訳
               </div>
               {data.readingQuestions.map((q, qi) => {
-                const annotations: ChoiceAnnotation[] = data.choiceAnnotations?.reading?.[qi] ?? [];
+                const annotationSet = data.choiceAnnotations?.reading?.[qi];
                 const choices = Object.entries(q.choices) as [string, string][];
                 return (
                   <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>
@@ -342,7 +344,7 @@ export default function SeidokuPage() {
                       読解({qi + 1}) {q.question.slice(0, 60)}...
                     </div>
                     {choices.map(([key, val]) => {
-                      const ann = annotations.find(a => a.choice === val || a.choice === val.slice(0, 40));
+                      const ann = annotationSet?.[key as 'A'|'B'|'C'|'D'];
                       const isCorrect = q.answer === key;
                       return (
                         <div key={key} style={{

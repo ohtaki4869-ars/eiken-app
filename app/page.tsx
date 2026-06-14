@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { GeneratedQuestions, ChoiceAnnotation } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotationSet } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
 
-function ChoiceDissect({ annotations, choices, answer }: {
-  annotations: ChoiceAnnotation[];
+function ChoiceDissect({ annotationSet, choices, answer }: {
+  annotationSet: ChoiceAnnotationSet;
   choices: { A: string; B: string; C: string; D: string };
   answer: string;
 }) {
@@ -26,7 +26,7 @@ function ChoiceDissect({ annotations, choices, answer }: {
           {keys.map((key, i) => {
             const val = choices[key];
             const isCorrect = answer === key;
-            const ann = annotations.find(a => a.choice === val || a.choice === val.slice(0, 40));
+            const ann = annotationSet[key];
             return (
               <div key={key} className={`px-4 py-3 border-b last:border-b-0 ${isCorrect ? 'bg-green-50' : 'bg-white'}`}>
                 <div className="flex items-center gap-2 mb-1">
@@ -36,7 +36,7 @@ function ChoiceDissect({ annotations, choices, answer }: {
                 </div>
                 {ann && (
                   <>
-                    {ann.morphemes.length > 0 && (
+                    {ann.morphemes && ann.morphemes.length > 0 && (
                       <div className="text-gray-500 mb-1">
                         {ann.morphemes.map((m, j) => (
                           <span key={j}>{m.word}（{m.meaning}）{j < ann.morphemes.length - 1 ? ' + ' : ''}</span>
@@ -254,7 +254,7 @@ export default function Home() {
                   </div>
                   {data.choiceAnnotations?.vocabulary?.[qi] && (
                     <ChoiceDissect
-                      annotations={data.choiceAnnotations.vocabulary[qi]}
+                      annotationSet={data.choiceAnnotations.vocabulary[qi]}
                       choices={q.choices}
                       answer={q.answer}
                     />
@@ -319,7 +319,7 @@ export default function Home() {
                   </div>
                   {data.choiceAnnotations?.reading?.[qi] && (
                     <ChoiceDissect
-                      annotations={data.choiceAnnotations.reading[qi]}
+                      annotationSet={data.choiceAnnotations.reading[qi]}
                       choices={q.choices}
                       answer={q.answer}
                     />
