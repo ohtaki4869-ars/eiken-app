@@ -77,8 +77,10 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
 2. **Reading Passage with 3 blanks** (長文穴埋め - EIKEN Grade 1 Part 2 style):
    - Write a 3-paragraph passage (300-400 words total) on the article topic
    - Difficulty: EIKEN Grade 1 level academic English
-   - Place exactly 3 blanks marked as (1), (2), (3) — one blank per paragraph
+   - Place exactly 3 blanks marked as (1), (2), (3) — exactly one blank per paragraph
    - Each blank replaces a SHORT PHRASE (3-8 words) that fits grammatically and logically
+   - **Blank placement**: position blanks in the middle or end of a sentence — NEVER at the start of a paragraph
+   - **Context design**: the 5 words before and after each blank must provide meaningful context clues
    - The blank should complete a sentence naturally, like these real EIKEN examples:
      * "These rogue waves were long assumed to ( )" → choices: "no longer exist" / "only occur during storms" / "be a thing of legend" / "be deadly to marine life"
      * "However, researchers have struggled ( )" → choices: "to find sailors willing to test them" / "with the difficulty of creating waves indoors" / "to understand these theories" / "with how unpredictable the ocean can be"
@@ -89,13 +91,22 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
 
 4. **3 Fill-in-blank Questions** (穴埋め設問):
    - One question per blank: "Which phrase best completes blank (N)?"
-   - 4 choices each: SHORT PHRASES of 3-8 words, grammatically parallel, all plausible but only one fits
+   - 4 choices each: SHORT PHRASES of 3-8 words, all plausible but only one fits
    - The correct answer and a brief Japanese explanation
 
    **CRITICAL RULES FOR FILL-IN-BLANK CHOICES:**
-   - **Grammar match**: ALL 4 choices must be grammatically compatible with both what comes before AND after the blank in the passage. Never create a choice that causes the surrounding sentence to break grammatically.
-   - **Similar length**: Keep all 4 choices roughly the same length (within 2 words of each other) so no choice stands out visually as correct or wrong.
-   - **No obviously wrong choices**: every choice must make logical sense given partial reading of the paragraph — differ in subtle meaning or scope, not in plausibility.`;
+   - **Grammar match**: ALL 4 choices must connect grammatically with both what comes before AND after the blank. Never create a choice that breaks the surrounding sentence.
+   - **Similar length**: Keep all 4 choices within ±2 words of each other so no choice stands out visually.
+   - **Two distortion techniques** — use one per wrong choice (技法A for one wrong choice, 技法B for another):
+     * 技法A「方向性の逆転」: content that reverses the passage's flow (e.g., if passage implies growth, the wrong choice implies decline)
+     * 技法B「部分的整合」: uses correct keywords but the logic doesn't fit the paragraph's argument
+   - **No obviously wrong choices**: every choice must feel plausible to someone who read the paragraph once.
+
+   **SELF-CHECK（穴埋め・4項目）:**
+   - [ ] 各段落に空欄が1つずつある（計3つ）
+   - [ ] 選択肢の語数が±2語以内
+   - [ ] 正解以外の選択肢も文法的に前後と接続可能
+   - [ ] 誤答に「明らかな外れ」がない（本文と無関係な内容は禁止）`;
 
   // ===== 内容一致形式 (Part 3 style) =====
   const contentInstructions = `
@@ -107,26 +118,49 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
 3. **Japanese translation** of the full passage:
    - Natural, accurate Japanese translation paragraph by paragraph
 
-4. **4 Reading Comprehension Questions** (内容一致設問 - EIKEN Grade 1 Part 3 style):
-   - **Question type distribution** (strictly follow this):
-     * At least 2 of the 4 questions must be **inference questions** that require the reader to draw a conclusion not explicitly stated — use stems like "What does the author suggest/imply about...?", "What can be inferred from the passage about...?", "Which of the following best reflects the author's view of...?"
-     * At least 2 of the 4 questions must ask about **the author's argument or claim** — use stems like "What does the author argue about...?", "What is the author's main point regarding...?", "What does the author suggest about...?"
-     * Also include factual/detail questions with stems like "According to the passage...", "What is one thing that is stated about...?"
+4. **4 Reading Comprehension Questions** — EXACTLY 4 questions, no more, no less.
+   **Question type distribution (strictly follow this):**
+   - 推論問題 2問以上: require drawing a conclusion NOT explicitly stated
+     stems: "What can be inferred from the passage about...?", "What does the author imply about...?", "Which of the following best reflects the author's view of...?"
+   - 筆者の主張問題 2問以下: ask about the author's argument
+     stems: "What does the author argue about...?", "What is the author's main point regarding...?"
+   - 細部一致問題 1問まで: factual detail only
+     stems: "According to the passage...", "What is one thing stated about...?"
    - Each question has 4 choices that are COMPLETE SENTENCES (25-45 words each)
 
    **CRITICAL RULES FOR CORRECT ANSWERS:**
-   - **No direct quotation**: The correct answer must NEVER be a copy-paste of a sentence from the passage. It must paraphrase the original using different vocabulary and sentence structure while preserving the meaning.
+   - **No direct quotation**: NEVER copy-paste from the passage.
+   - **True paraphrase = word substitution AND syntactic restructuring BOTH**:
+     ❌ NG: "the conditions focus on territorial integrity" → "the conditions address territorial integrity"（語の置換のみ）
+     ✅ OK: "the conditions focus on territorial integrity" → "preserving national borders forms the basis of the proposed framework"
 
-   **CRITICAL RULES FOR WRONG CHOICES — this is the most important part:**
-   - **50% content overlap**: Every wrong choice must share at least 50% of its content with what the passage actually states. This means using the same subject, the same topic, the same key terms — only the relationship, scope, or degree is distorted. A student who read the passage carefully should need to re-read to confirm the choice is wrong.
-   - **No obviously wrong choices**: NEVER write a choice that introduces a concept, person, or claim completely absent from the passage. Every distractor must feel like something the passage "almost" said.
-   - **Use exactly these three distortion techniques** — assign each wrong choice one of the following:
-     * **因果関係の逆転 (Causal reversal)**: Swap cause and effect. If the passage says "A led to B", the wrong choice says "B led to A", or "A was caused by B". The same facts appear, but the direction of causation is flipped.
-     * **範囲の拡大 (Scope expansion)**: Broaden a limited claim into an absolute one. If the passage says "some studies suggest X", the wrong choice says "research has conclusively shown X" or "all cases demonstrate X". The core claim is preserved but overgeneralized.
-     * **筆者の主張の誇張 (Exaggeration of author's claim)**: Take the author's actual argument and push it further than stated. If the author says "X may contribute to Y", the wrong choice says "X is the primary cause of Y" or "X alone determines Y". The direction is correct but the strength is inflated.
-   - Distribute the three techniques across the three wrong choices (one technique per wrong choice).
-   - A student who only half-understood the passage should find at least 2 choices plausible
-   - The correct answer and a brief Japanese explanation citing the specific sentence/paragraph, and for each wrong choice note which distortion technique was used (因果逆転／範囲拡大／誇張)`;
+   **CRITICAL RULES FOR WRONG CHOICES:**
+   Assign exactly one technique per wrong choice (技法1 / 技法2 / 技法3, one each):
+
+   **技法1「因果関係の逆転」**
+   Swap cause and effect from the passage.
+   例: 本文「Aが起きたのでBになった」→ 誤答「BのためにAが生じた」
+
+   **技法2「範囲の拡大・過度な一般化」**
+   Broaden a limited claim into an absolute one.
+   例: 本文「英国で導入」→ 誤答「すべての先進国で導入」
+   例: 本文「一部の専門家が懸念」→ 誤答「すべての専門家が反対」
+
+   **技法3「筆者の主張の誇張・断定化」**
+   Turn a tentative claim into a certainty.
+   例: 本文「～する可能性がある（could / may）」→ 誤答「～することが証明された / 必ず～する」
+   例: 本文「～が重要だと示唆する」→ 誤答「～が唯一の解決策であると断言する」
+
+   **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
+
+   For each question: state the correct answer and a Japanese explanation noting the passage location AND which technique (技法1/2/3) each wrong choice uses.
+
+   **SELF-CHECK（内容一致・5項目）:**
+   - [ ] 問題数が4問である
+   - [ ] 正解がparaphrase（語の言い換え＋構文変換の両方）されている
+   - [ ] 誤答3択に技法1・2・3が1つずつ割り当てられている
+   - [ ] 各誤答に本文キーワードが2語以上含まれている
+   - [ ] 誤答に「明らかな外れ」がない`;
 
   const readingInstructions = format === 'fill-in-blank'
     ? fillInBlankInstructions
@@ -221,19 +255,34 @@ Create the following in JSON format:
    - Only one word fits both grammar and meaning
    - Include the correct answer and a brief Japanese explanation of all 4 choices (include the Japanese meaning of each choice word)
 
-   **CRITICAL RULES FOR VOCABULARY QUESTIONS:**
-   - **Difficulty**: Target a 30–60% correct-answer rate. The sentence context should not make the answer immediately obvious — a test-taker must know the precise meaning of the word.
-   - **All 4 choices must be EIKEN Grade 1 level words** — never use common words (e.g., "show", "clear", "big") or obviously off-topic words (e.g., "irrigation" in a tech context)
-   - **No obviously wrong choices**: every distractor must be a word that a student might plausibly consider given partial understanding of the sentence
-   - **Match the part of speech**: all 4 choices must be the same grammatical category (all nouns, all verbs, all adjectives, or all adverbs). Never mix parts of speech across the 4 choices.
+   **【選択肢設計ルール（必須）】**
 
-   **SELF-CHECK (mandatory before finalizing each vocabulary question):**
-   After drafting each question, verify ALL of the following. If any check fails, revise the question before including it in the output.
-   1. **Answer not leaked**: The correct answer word does NOT appear anywhere in the sentence (including in modified forms). If it does, rewrite the sentence.
-   2. **Part of speech consistent**: All 4 choices (A, B, C, D) are the exact same part of speech. If not, replace the mismatched choice(s).
-   3. **Grammatical fit**: Every one of the 4 choices can be inserted into the blank without causing a grammatical error. If a choice causes a grammar problem, replace it.
-   4. **No obvious wrong answers**: Read each distractor and ask: "Could a student who partially understands the sentence seriously consider this?" If any choice is immediately dismissible, replace it with a more plausible distractor.
-   5. **EIKEN Grade 1 level**: Confirm all 4 choices are genuinely Grade 1 level vocabulary. If any choice is below that level, replace it.
+   ■ **品詞統一**
+   全4択の品詞を統一する（全て動詞の原形、全て名詞、全て形容詞 等）。
+   品詞が1つでも異なる場合はその問題全体を作り直す。
+
+   ■ **意味カテゴリー分散（NEW）**
+   誤答3択は以下の条件を満たすこと：
+   - 正解語と「同じ意味カテゴリーに属する語」は1択以内に抑える
+   - 残り2択は異なる意味カテゴリーから選ぶ
+   意味カテゴリーの例：
+     感情系: skepticism / wariness / complacency / elation
+     破壊・損傷系: rubble / debris / ruins / wreckage
+     促進・強化系: galvanize / consolidate / bolster / fortify
+     欠乏系: dearth / scarcity / paucity / shortage
+   ❌ 悪い例（全て同カテゴリー）: 1 rubble  2 shambles  3 ruins  4 debris
+   ✅ 良い例（カテゴリー分散）: 1 rubble（破壊系）  2 reprieve（猶予系）  3 complacency（感情系）  4 condemnation（批判系）
+
+   ■ **難易度**
+   - 全4択が英検1級水準
+   - 正解率30〜60%を想定（文脈から推測しにくい語を優先）
+
+   **SELF-CHECK（語彙・5項目、出力前に必ず確認）:**
+   - [ ] 正解語が問題文中に出現していない（活用形・派生語も含む）
+   - [ ] 問題文に ____ が1箇所だけある
+   - [ ] 全4択の品詞が一致している
+   - [ ] 誤答3択が異なる意味カテゴリーに分散している
+   - [ ] 全4択が英検1級レベルである
 ${readingInstructions}
 
 Return ONLY valid JSON in this exact format:
@@ -255,6 +304,56 @@ Return ONLY valid JSON in this exact format:
   ],
   ${readingJsonExample}
 }`;
+}
+
+// ===== コードバリデーション（機械チェック） =====
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+function validateVocabQuestions(questions: VocabQuestion[]): ValidationResult {
+  const errors: string[] = [];
+
+  questions.forEach((q, i) => {
+    const num = i + 1;
+    const answer = q.choices[q.answer as keyof typeof q.choices];
+    const sentence = q.sentence;
+
+    // チェック①: 空所が存在するか
+    if (!sentence.includes('____')) {
+      errors.push(`語彙(${num}): 空所 ____ が存在しない`);
+    }
+
+    // チェック②: 空所が1つだけか
+    const blankCount = (sentence.match(/____/g) || []).length;
+    if (blankCount > 1) {
+      errors.push(`語彙(${num}): 空所が${blankCount}個ある（1つのみ許可）`);
+    }
+
+    // チェック③: 正解語が文中に露出していないか（大文字小文字・語幹も考慮）
+    const sentenceWithoutBlank = sentence.replace(/____/g, '');
+    const answerLower = answer?.toLowerCase() ?? '';
+    // 語幹チェック（最初の5文字が一致する語が含まれていないか）
+    const answerStem = answerLower.slice(0, 5);
+    if (answerStem.length >= 4 && sentenceWithoutBlank.toLowerCase().includes(answerStem)) {
+      errors.push(`語彙(${num}): 正解語 "${answer}" またはその語幹が問題文中に露出している可能性がある`);
+    }
+
+    // チェック④: 選択肢が4つあるか
+    const choiceValues = Object.values(q.choices);
+    if (choiceValues.length !== 4) {
+      errors.push(`語彙(${num}): 選択肢が${choiceValues.length}個（4つ必要）`);
+    }
+
+    // チェック⑤: 選択肢に重複がないか
+    const unique = new Set(choiceValues.map(c => c.toLowerCase()));
+    if (unique.size !== choiceValues.length) {
+      errors.push(`語彙(${num}): 選択肢に重複がある`);
+    }
+  });
+
+  return { valid: errors.length === 0, errors };
 }
 
 // ===== JSON parser helper =====
@@ -279,32 +378,47 @@ function buildReviewPrompt(draft: GeneratedQuestions): string {
   }, null, 2);
 
   return `You are a strict quality controller for EIKEN Grade 1 (英検1級) exam questions.
-Review the following draft questions and fix every issue found. Return corrected JSON only.
+Review the following draft and fix every issue. Return corrected JSON only — no explanation outside the JSON.
 
-## Draft Questions
+## Draft
 ${draftJson}
 
-## Vocabulary Question Checklist (apply to EACH of the 5 vocab questions):
-1. **Answer not leaked**: The correct answer word must NOT appear anywhere in the sentence (including derived/inflected forms). If it does → rewrite the sentence so the answer cannot be guessed from surface reading.
-2. **Part of speech consistent**: All 4 choices (A/B/C/D) must be the exact same part of speech (all nouns, all verbs, all adjectives, or all adverbs). If any choice differs → replace it with a same-POS EIKEN Grade 1 word.
-3. **Grammatical fit**: Every one of the 4 choices must fit grammatically into the blank without error. If any choice causes a grammar problem → replace it.
-4. **No obvious wrong answers**: Every distractor must be a word a student could seriously consider given partial understanding of the sentence. If any choice is immediately dismissible → replace it with a more plausible distractor.
-5. **EIKEN Grade 1 level**: All 4 choices must be genuine EIKEN Grade 1 vocabulary. If any choice is too common or too easy → replace it.
+---
 
-## Reading Comprehension Question Checklist (apply to EACH reading question):
-6. **No copy-paste in correct answer**: The correct answer (answer key choice) must paraphrase the passage using different words and sentence structure — never quote directly. If it quotes → rewrite as paraphrase.
-7. **50% content overlap in wrong choices**: Each wrong choice must share at least 50% of its content (same subject, topic, key terms) with the passage. If a wrong choice introduces content absent from the passage → revise it.
-8. **Three distortion techniques**: The three wrong choices must each use one of these techniques (one per choice, all three must appear):
-   - 因果関係の逆転: swap cause and effect
-   - 範囲の拡大: broaden a limited claim to an absolute one
-   - 筆者の主張の誇張: push the author's claim further than stated
-   If this distribution is not followed → revise the wrong choices to apply one technique each.
-9. **No obviously wrong choices**: Every wrong choice must feel like something the passage "almost" said. If any choice is clearly off-topic or uses vocabulary not in the passage → revise it.
+## 【校閲対象：語彙（3項目）】
+※ 空所の存在・正解語露出はコード検証済みのため確認不要。
+
+1. **品詞統一**: 全4択が同じ品詞（名詞・動詞・形容詞・副詞）か確認する。
+   → 不一致があれば、品詞を揃えて同レベルのEIKEN Grade 1語に差し替える。
+
+2. **意味カテゴリー分散**: 誤答3択が異なる意味カテゴリーに分散しているか確認する。
+   → 同カテゴリーが2択以上ある場合、1択を別カテゴリーの語に差し替える。
+   例：破壊系が3択並んでいたら1択を感情系や批判系に変える。
+
+3. **英検1級レベル**: 全4択が英検1級水準か確認する。
+   → 不足する語があれば同品詞・同カテゴリーの1級語に差し替える。
+
+## 【校閲対象：読解（4項目）】
+
+4. **正解のparaphrase**: 正解選択肢が本文のコピペでないか確認する。
+   → コピペの場合、語の言い換え＋構文変換の**両方**を施して修正する。
+   ❌ NG: 語を1語置換しただけ（"focus on" → "address"）
+   ✅ OK: 語も構文も変える（"preserving national borders forms the basis of..."）
+
+5. **3技法の割り当て**: 誤答3択に因果逆転・範囲拡大・誇張が1つずつ使われているか。
+   → 不足・重複がある場合、対象の選択肢を作り直す。
+
+6. **本文キーワードの含有**: 各誤答に本文の実際のキーワードが2語以上含まれているか。
+   → 含まれていない誤答は、本文の語句を活用した形に修正する。
+
+7. **明らかな外れの排除**: 本文と全く無関係な誤答がないか確認する。
+   → 無関係な誤答は本文の内容に基づいて作り直す。
 
 ## Output Rules
-- Return ONLY valid JSON in the exact same structure as the input draft.
-- Fix every issue found; keep questions that already pass all checks unchanged.
-- Do NOT add any explanation outside the JSON.`;
+- 修正箇所がある場合：修正済みJSONを返す。
+- 修正箇所がない場合：元のJSONをそのまま返す。
+- JSON以外のテキストを出力しないこと。
+- 入力と同じ構造のJSONを返すこと。`;
 }
 
 // ===== 校閲ステップ =====
@@ -425,10 +539,16 @@ async function generateOnce(
   article: Article,
   format: ReadingFormat,
   sampledWords: WordEntry[],
-  feedbackHint?: string
+  feedbackHint?: string,
+  validationErrors?: string[]
 ): Promise<GeneratedQuestions> {
   const trimmedArticle = { ...article, content: article.content.slice(0, 2000) };
   let prompt = buildPrompt(trimmedArticle, format, sampledWords);
+
+  // バリデーションエラーのフィードバック
+  if (validationErrors && validationErrors.length > 0) {
+    prompt += `\n\n## ⚠️ 前回の生成で以下のエラーが検出されました。必ず修正してください：\n${validationErrors.map(e => `- ${e}`).join('\n')}`;
+  }
 
   // 前回評価のフィードバックがある場合は末尾に追加
   if (feedbackHint) {
@@ -474,16 +594,37 @@ export async function generateQuestions(
   const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
   const sampledWords = sampleWords(30, jstDay);
 
-  // ===== Step 1: 問題生成 =====
-  let draft = await generateOnce(article, format, sampledWords);
+  // ===== Step 1 + Step 2: 問題生成 → コードバリデーション（最大3回） =====
+  let draft: GeneratedQuestions | null = null;
+  let validationErrors: string[] = [];
 
-  // ===== Step 2: 校閲・修正 =====
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const candidate = await generateOnce(
+      article, format, sampledWords,
+      undefined,
+      attempt > 0 ? validationErrors : undefined
+    );
+    const validation = validateVocabQuestions(candidate.vocabQuestions);
+    if (validation.valid) {
+      draft = candidate;
+      break;
+    }
+    validationErrors = validation.errors;
+    console.warn(`Validation failed (attempt ${attempt + 1}):`, validationErrors);
+  }
+
+  // バリデーションが通らなくても最後の候補を使用（フォールバック）
+  if (!draft) {
+    draft = await generateOnce(article, format, sampledWords);
+  }
+
+  // ===== Step 3: 校閲・修正 =====
   draft = await reviewQuestions(draft);
 
-  // ===== Step 3: 難易度評価 =====
+  // ===== Step 4: 難易度評価 =====
   const score = await evaluateDifficulty(draft);
 
-  // ===== Step 4: 易しすぎる場合は1回だけ再生成 =====
+  // ===== Step 5: 易しすぎる場合は1回だけ再生成 =====
   if (score && (score.difficulty === 'A' || score.difficulty === 'B')) {
     console.log(`Difficulty rated ${score.difficulty} — regenerating with harder hint`);
     const hint = `difficulty: ${score.difficulty}, reason: ${score.reason}`;
