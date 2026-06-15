@@ -820,19 +820,7 @@ export async function generateQuestions(
   // ===== Step 4: 難易度評価 =====
   const score = await evaluateDifficulty(draft);
 
-  // ===== Step 5: 易しすぎる場合は1回だけ再生成 =====
-  if (score && (score.difficulty === 'A' || score.difficulty === 'B')) {
-    console.log(`Difficulty rated ${score.difficulty} — regenerating with harder hint`);
-    const hint = `difficulty: ${score.difficulty}, reason: ${score.reason}`;
-    let retry = await generateOnce(article, format, sampledWords, hint);
-    retry = await reviewQuestions(retry);
-    const retryScore = await evaluateDifficulty(retry);
-    const finalRetry = applyChoiceShuffle({ ...retry, difficultyScore: retryScore ?? score });
-    const retryAnnotations = await generateAnnotations(finalRetry);
-    return { ...finalRetry, ...retryAnnotations };
-  }
-
-  // ===== Step 6: 選択肢アノテーション生成 =====
+  // ===== Step 5: 選択肢アノテーション生成 =====
   const final = applyChoiceShuffle({ ...draft, difficultyScore: score ?? undefined });
   const annotations = await generateAnnotations(final);
   return { ...final, ...annotations };

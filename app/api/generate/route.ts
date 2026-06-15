@@ -76,10 +76,17 @@ export async function GET(request: Request) {
     if (cached) return NextResponse.json(cached);
   }
 
-  const format = getTodayFormat();
-  const article = await fetchNewsArticle();
-  const questions = await generateQuestions(article, format);
-  await saveQuestions(todayKey, questions);
-
-  return NextResponse.json(questions);
+  try {
+    const format = getTodayFormat();
+    const article = await fetchNewsArticle();
+    const questions = await generateQuestions(article, format);
+    await saveQuestions(todayKey, questions);
+    return NextResponse.json(questions);
+  } catch (e) {
+    console.error('[generate] Fatal error:', String(e));
+    // 生成失敗時はキャッシュがあればそれを返す
+    const cached = await loadQuestions(todayKey);
+    if (cached) return NextResponse.json(cached);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 }
