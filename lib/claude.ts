@@ -431,7 +431,7 @@ async function generateAnnotations(questions: GeneratedQuestions): Promise<{ cho
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 6000,
+      max_tokens: 3000,
       messages: [{ role: 'user', content: buildAnnotationPrompt(questions) }],
     });
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
@@ -784,44 +784,16 @@ export async function generateQuestions(
   const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
   const sampledWords = sampleWords(30, jstDay);
 
-  // ===== Step 1 + Step 2: 問題生成 → コードバリデーション（最大3回） =====
-  let draft: GeneratedQuestions | null = null;
-  let validationErrors: string[] = [];
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const candidate = await generateOnce(
-      article, format, sampledWords,
-      undefined,
-      attempt > 0 ? validationErrors : undefined
-    );
-    const validation = validateVocabQuestions(candidate.vocabQuestions);
-    if (validation.valid) {
-      draft = candidate;
-      break;
-    }
-    validationErrors = validation.errors;
-    console.warn(`Validation failed (attempt ${attempt + 1}):`, validationErrors);
+  // ===== Step 1: 問題生成（失敗時1回リトライ） =====
+  let draft = await generateOnce(article, format, sampledWords);
+  const validation = validateVocabQuestions(draft.vocabQuestions);
+  if (!validation.valid) {
+    console.warn('Validation failed, retrying once:', validation.errors);
+    draft = await generateOnce(article, format, sampledWords, undefined, validation.errors);
   }
 
-  // バリデーションが通らなくても最後の候補を使用（フォールバック）
-  if (!draft) {
-    draft = await generateOnce(article, format, sampledWords);
-  }
-
-  // ===== Step 3: 校閲・修正 =====
-  draft = await reviewQuestions(draft);
-
-  // ===== Step 3b: 解説バリデーション（ログのみ・非ブロッキング） =====
-  const explanationValidation = validateExplanationMapping(draft);
-  if (!explanationValidation.valid) {
-    console.warn('[ExplanationValidation] Issues found:', explanationValidation.errors);
-  }
-
-  // ===== Step 4: 難易度評価 =====
-  const score = await evaluateDifficulty(draft);
-
-  // ===== Step 5: 選択肢アノテーション生成 =====
-  const final = applyChoiceShuffle({ ...draft, difficultyScore: score ?? undefined });
+  // ===== Step 2: 選択肢シャッフル＋アノテーション生成 =====
+  const final = applyChoiceShuffle(draft);
   const annotations = await generateAnnotations(final);
   return { ...final, ...annotations };
 }
