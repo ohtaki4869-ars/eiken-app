@@ -62,6 +62,8 @@ const TECHNIQUE_COLOR: Record<string, string> = {
   '範囲の拡大': 'text-purple-700',
   '誇張・断定化': 'text-red-700',
   '本文に根拠なし': 'text-gray-600',
+  '方向性の逆転': 'text-orange-700',
+  '部分的整合': 'text-blue-700',
 };
 
 function ReadingExplanationBlock({ q, qi, explanations }: {

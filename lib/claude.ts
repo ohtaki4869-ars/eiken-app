@@ -390,6 +390,8 @@ Return ONLY valid JSON in this exact format:
 
 // ===== 選択肢アノテーション生成 =====
 function buildAnnotationPrompt(questions: GeneratedQuestions): string {
+  const isFillInBlank = questions.readingFormat === 'fill-in-blank';
+
   const vocabSummary = questions.vocabQuestions.map((q, i) => {
     const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v}`).join(' / ');
     return `語彙(${i + 1}) 正解:${q.answer} | ${choices}`;
@@ -402,7 +404,34 @@ function buildAnnotationPrompt(questions: GeneratedQuestions): string {
     return `読解(${i + 1}) 正解:${q.answer}\n設問:${q.question}\n${choices}`;
   }).join('\n\n');
 
+  const readingExplanationRules = isFillInBlank ? `
+【readingChoiceExplanations ルール（穴埋め形式）】
+穴埋め問題の各設問について、4択すべてに以下を生成する：
+- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順）
+- choiceText: 問題の選択肢テキストと完全一致させること
+- choiceTranslation: 自然な日本語訳（フレーズなので文脈上の意味を補って訳す）
+- isCorrect: 正解のみtrue（1問につき必ず1つだけ）
+- 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"空所前後の引用", paraphraseExplanation:"なぜこのフレーズが空所に合うかの説明" }
+- 不正解の場合: incorrectReason = { technique:"方向性の逆転" または "部分的整合", originalText:"関連する本文箇所", explanation:"なぜ空所に合わないかの説明" }
+  technique の選択：
+  "方向性の逆転"：本文の論旨と逆方向の内容（本文が増加を示すのに減少を示す等）
+  "部分的整合"：本文のキーワードを含むが論理的に前後と合わない` : `
+【readingChoiceExplanations ルール（内容一致形式）】
+読解問題の各設問について、4択すべてに以下を生成する：
+- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順）
+- choiceText: 問題の選択肢テキストと完全一致させること
+- choiceTranslation: 自然な日本語訳（直訳禁止。主語・接続詞を補い、長ければ2文に分ける）
+- isCorrect: 正解のみtrue（1問につき必ず1つだけ）
+- 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"本文引用", paraphraseExplanation:"対応説明" }
+- 不正解の場合: incorrectReason = { technique:"技法名", originalText:"本文引用", explanation:"具体的な誤りの説明" }
+  technique は以下から1つ選ぶ：
+  "因果関係の逆転"：本文のA→BがB→Aに逆転している
+  "範囲の拡大"：一部→すべて／限定→一般化
+  "誇張・断定化"：could/may/suggests → has proven/will/inevitably に変質
+  "本文に根拠なし"：本文に一切記述がない（originalTextは空文字）`;
+
   return `英検1級の問題について、各選択肢のアノテーションと読解詳細解説を生成してください。
+形式：${isFillInBlank ? '穴埋め（fill-in-blank）' : '内容一致（content）'}
 
 ## 読解パッセージ（解説の根拠として使用）
 ${questions.readingPassage}
@@ -419,20 +448,7 @@ ${readingDetail}
 - pos: 品詞を漢字1字で（動/名/形/副）
 - collocation: よく使うコロケーション2例を "A / B" 形式で
 - incorrectReason: 不正解のみ。パターンA「意味が逆」/パターンB「焦点がズレる」/パターンC「文脈と無関係」（25字以内）
-
-【readingChoiceExplanations ルール（必須）】
-読解問題の各設問について、4択すべてに以下を生成する：
-- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順）
-- choiceText: 問題の選択肢テキストと完全一致させること
-- choiceTranslation: 自然な日本語訳（直訳禁止。主語・接続詞を補い、長ければ2文に分ける）
-- isCorrect: 正解のみtrue（1問につき必ず1つだけ）
-- 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"本文引用", paraphraseExplanation:"対応説明" }
-- 不正解の場合: incorrectReason = { technique:"技法名", originalText:"本文引用", explanation:"具体的な誤りの説明" }
-  technique は以下から1つ選ぶ：
-  "因果関係の逆転"：本文のA→BがB→Aに逆転している
-  "範囲の拡大"：一部→すべて／限定→一般化
-  "誇張・断定化"：could/may/suggests → has proven/will/inevitably に変質
-  "本文に根拠なし"：本文に一切記述がない（originalTextは空文字）
+${readingExplanationRules}
 
 ## 出力形式（JSONのみ、コメント禁止）
 {
