@@ -163,41 +163,53 @@ export default function SeidokuPage() {
           <div style={{ fontSize: '10px', color: '#2c6fad', marginTop: '2px' }}>EIKEN Grade 1 — Intensive Reading Worksheet</div>
         </div>
 
-        {/* Step 2: 語彙チェック */}
+        {/* Step 2: 語彙チェック（全選択肢・手書き記入欄） */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
             Step 2　語彙チェック
           </div>
           <div style={{ fontSize: '9px', color: '#555', marginBottom: '6px' }}>
-            知らなかった単語に ✓ を入れ、意味と例文を確認しよう
+            知らなかった単語に ✓ を入れ、意味・コロケーションを手書きで記入しよう
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
             <thead>
               <tr style={{ background: '#e8f0f7' }}>
                 <th style={{ width: '4%', padding: '4px', border: '1px solid #ccc', color: '#1a3a5c' }}>✓</th>
-                <th style={{ width: '18%', padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'left' }}>単語</th>
-                <th style={{ width: '28%', padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'left' }}>意味（解説）</th>
-                <th style={{ padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'left' }}>例文</th>
+                <th style={{ width: '22%', padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'left' }}>単語</th>
+                <th style={{ width: '6%', padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'center' }}>品詞</th>
+                <th style={{ width: '32%', padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'left' }}>意味（手書き）</th>
+                <th style={{ padding: '4px', border: '1px solid #ccc', color: '#1a3a5c', textAlign: 'left' }}>コロケーション（手書き）</th>
               </tr>
             </thead>
             <tbody>
-              {data.vocabQuestions.map((q, i) => {
-                const word = q.choices[q.answer as keyof typeof q.choices];
-                const example = q.sentence.replace('____', `[${word}]`);
-                return (
-                  <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                    <td style={{ padding: '5px 4px', border: '1px solid #ddd', textAlign: 'center' }}>□</td>
-                    <td style={{ padding: '5px 4px', border: '1px solid #ddd', fontWeight: 'bold', color: '#2c6fad' }}>{word}</td>
-                    <td style={{ padding: '5px 4px', border: '1px solid #ddd' }}>{q.explanation.slice(0, 45)}</td>
-                    <td style={{ padding: '5px 4px', border: '1px solid #ddd', color: '#444', fontStyle: 'italic' }}>{example.slice(0, 70)}</td>
-                  </tr>
-                );
-              })}
+              {data.vocabQuestions.flatMap((q, qi) =>
+                (['A', 'B', 'C', 'D'] as const).map((key) => {
+                  const word = q.choices[key];
+                  const isCorrect = q.answer === key;
+                  const ann = data.choiceAnnotations?.vocabulary?.[qi]?.[key];
+                  const rowIdx = qi * 4 + ['A','B','C','D'].indexOf(key);
+                  return (
+                    <tr key={`${qi}-${key}`} style={{ background: rowIdx % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={{ padding: '7px 4px', border: '1px solid #ddd', textAlign: 'center', height: '30px' }}>□</td>
+                      <td style={{ padding: '7px 4px', border: '1px solid #ddd', fontWeight: isCorrect ? 'bold' : 'normal', color: isCorrect ? '#2c6fad' : '#333' }}>
+                        {word}{isCorrect ? ' ✅' : ''}
+                      </td>
+                      <td style={{ padding: '7px 4px', border: '1px solid #ddd', textAlign: 'center', color: '#555' }}>
+                        {ann?.pos ?? ''}
+                      </td>
+                      <td style={{ padding: '7px 4px', border: '1px solid #ddd' }}></td>
+                      <td style={{ padding: '7px 4px', border: '1px solid #ddd', fontSize: '8px', color: '#999', fontStyle: 'italic' }}>
+                        {ann?.collocation ?? ''}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Step 3: 段落要約 */}
+        {/* Step 3: 段落要約（3行スペース） */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
             Step 3　段落ごとの1行要約
@@ -206,32 +218,38 @@ export default function SeidokuPage() {
             各段落のポイントを日本語で1〜2行にまとめよう
           </div>
           {paragraphs.map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '12px', gap: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2c6fad', minWidth: '24px' }}>¶{i + 1}</span>
-              <span style={{ fontSize: '10px', color: '#888' }}>→</span>
-              <div style={{ flex: 1, borderBottom: '1px solid #aaa', height: '20px' }} />
+            <div key={i} style={{ marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2c6fad', minWidth: '24px' }}>¶{i + 1}</span>
+                <span style={{ fontSize: '10px', color: '#888' }}>→</span>
+              </div>
+              {[0, 1, 2].map(j => (
+                <div key={j} style={{ borderBottom: '1px solid #aaa', height: '26px', marginBottom: '2px', marginLeft: '32px' }} />
+              ))}
             </div>
           ))}
         </div>
 
-        {/* Step 4: 論理の流れ */}
+        {/* Step 4: 論理の流れ（縦並びボックス） */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
             Step 4　論理の流れ
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0' }}>
             {Array.from({ length: Math.min(4, paragraphs.length) }).map((_, i, arr) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                 <div style={{
-                  border: '1.5px solid #2c6fad', borderRadius: '4px',
-                  textAlign: 'center', fontSize: '9px', color: '#aac', width: '80px', height: '52px',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
-                  paddingBottom: '4px', background: 'white',
+                  border: '2px solid #2c6fad', borderRadius: '4px',
+                  width: '100%', minHeight: '50mm',
+                  background: 'white', position: 'relative',
                 }}>
-                  <span>¶{i + 1}</span>
+                  <span style={{ position: 'absolute', top: '6px', left: '8px', fontSize: '9px', color: '#aab', fontWeight: 'bold' }}>¶{i + 1}</span>
                 </div>
                 {i < arr.length - 1 && (
-                  <span style={{ color: '#2c6fad', fontSize: '18px', fontWeight: 'bold' }}>→</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '2px 0' }}>
+                    <div style={{ width: '2px', height: '6px', background: '#2c6fad' }} />
+                    <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '8px solid #2c6fad' }} />
+                  </div>
                 )}
               </div>
             ))}
@@ -283,28 +301,30 @@ export default function SeidokuPage() {
                       const isCorrect = q.answer === key;
                       return (
                         <div key={key} style={{
-                          fontSize: '9px', padding: '4px 6px', borderRadius: '3px',
+                          fontSize: '9px', padding: '4px 6px 4px 6px', borderRadius: '3px',
                           background: isCorrect ? '#e8f5e9' : '#fafafa',
-                          border: `1px solid ${isCorrect ? '#4caf50' : '#ddd'}`
+                          border: `1px solid ${isCorrect ? '#4caf50' : '#ddd'}`,
+                          display: 'flex', gap: '6px',
                         }}>
-                          <span style={{ fontWeight: 'bold', color: isCorrect ? '#2e7d32' : '#1a3a5c' }}>
-                            {key} {val} {isCorrect ? '✅' : ''}
-                          </span>
-                          {ann && (
-                            <>
-                              {ann.morphemes && ann.morphemes.length > 0 && (
-                                <div style={{ color: '#555', marginTop: '2px' }}>
-                                  {ann.morphemes.map((m, i) => (
-                                    <span key={i}>{m.word}（{m.meaning}）{i < ann.morphemes.length - 1 ? ' + ' : ''}</span>
-                                  ))}
-                                </div>
-                              )}
-                              <div style={{ color: '#333', marginTop: '1px' }}>→ {ann.translation}</div>
-                              {ann.incorrectReason && (
-                                <div style={{ color: '#b71c1c', marginTop: '1px', fontStyle: 'italic' }}>{ann.incorrectReason}</div>
-                              )}
-                            </>
-                          )}
+                          {/* メイン情報 */}
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: 'bold', color: isCorrect ? '#2e7d32' : '#1a3a5c' }}>
+                              {key} {val} {isCorrect ? '✅' : ''}
+                            </span>
+                            {ann && (
+                              <>
+                                <div style={{ color: '#333', marginTop: '2px' }}>→ {ann.translation}</div>
+                                {ann.collocation && (
+                                  <div style={{ color: '#666', marginTop: '1px', fontStyle: 'italic' }}>{ann.collocation}</div>
+                                )}
+                                {ann.incorrectReason && (
+                                  <div style={{ color: '#b71c1c', marginTop: '1px' }}>{ann.incorrectReason}</div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {/* 手書きメモ余白 */}
+                          <div style={{ width: '10mm', borderLeft: '1px dashed #ccc', flexShrink: 0 }} />
                         </div>
                       );
                     })}

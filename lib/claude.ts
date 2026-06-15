@@ -41,14 +41,10 @@ export interface ReadingQuestion {
   explanation: string;
 }
 
-export interface Morpheme {
-  word: string;
-  meaning: string;
-}
-
 export interface ChoiceAnnotation {
   translation: string;
-  morphemes: Morpheme[];
+  pos?: string;         // 品詞: 動/名/形/副 (語彙問題のみ)
+  collocation?: string; // "word + A / word + B" (語彙問題のみ)
   incorrectReason?: string;
 }
 
@@ -185,11 +181,17 @@ function buildPrompt(article: Article, format: ReadingFormat, sampledWords: Word
    **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
 
    **Explanation format for each reading question:**
+   【解説文体ルール（必須）】
+   ■ 断定形で書く。「〜とも読める」「ただし〜」等の留保表現は禁止。
+   ■ 各選択肢をA/B/C/Dで明示し、記号順（A→B→C→D）に記述すること
+   ■ 技法3「誇張・断定化」を使った誤答の場合は、本文の「可能性・当為」と誤答の「必然・義務」の具体的な差を示す
+     例：「本文はvigilant oversightという自発的改善を述べており、government controlsという外部強制の必然性までは主張していない」
+
    【正解】本文の該当箇所を必ず引用：「本文に'～'とあり、これをparaphraseすると正解の'～'に対応する」。推論問題の場合は「本文の'A'と'B'から推論できる」と複数箇所を示す。
-   【各誤答】使用した技法を明示：
-     技法1「因果関係の逆転」→「本文では原因と結果が逆に記述されている」
-     技法2「範囲の拡大」  →「本文では'～に限定'されているが、選択肢では過度に一般化している」
-     技法3「誇張・断定化」→「本文では'could/may'と可能性で述べているが、選択肢では断定している」
+   【各誤答】記号と技法を明示：
+     【B: ...】技法1「因果関係の逆転」→「本文では原因と結果が逆に記述されている」
+     【C: ...】技法2「範囲の拡大」  →「本文では'～に限定'されているが、選択肢では過度に一般化している」
+     【D: ...】技法3「誇張・断定化」→「本文では'could/may'と可能性で述べているが、選択肢では断定している」
      技法4「本文に根拠なし」→「この内容は本文中に記述がない」（使用時のみ）
 
    **SELF-CHECK（内容一致・5項目）:**
@@ -291,12 +293,25 @@ Create the following in JSON format:
    - 4 choices (A, B, C, D): all single words, EIKEN Grade 1 level — use other words from the Word Bank as distractors
    - Only one word fits both grammar and meaning
    - Include the correct answer with a structured Japanese explanation following this format:
-     【正解】問題文の該当箇所を引用し、なぜその語が最適かを文脈に即した意味で説明。辞書的定義ではなく文脈での機能を優先。
-     【不正解各選択肢】以下のパターンのいずれかを明示：
+
+     【解説文体ルール（必須）】
+     ■ 断定形で書く。「〜とも読める」「とも言える」「ただし〜」「あり得るが」「解釈もある」等の留保表現は禁止。
+       NG：「waneが正解。ただしcontrastive読みもあり得るが〜」
+       OK：「時間経過とともに関心が薄れるという文脈でwaneが最適。直後の節はwaneの進行を抑制する対比表現である」
+     ■ 選択肢をA/B/C/Dで言及すること
+       各不正解をその記号と単語テキストで明示する。例：【B: curtail】パターンB「〜」
+       記号順（A→B→C→D）に記述すること
+     ■ 解説文中で正解語を記述する際は問題文の表記と完全に一致させること（タイポ禁止）
+     ■ 正解語の固有ニュアンスを1文で示す（訳語の羅列ではなく文脈での機能を優先）
+       例：「事前に手を打つことで問題を未然に防ぐというobviate固有のニュアンスが文脈と合致」
+     ■ 正解と最も混同しやすい選択肢との違いを1文で必ず言及すること
+
+     【正解】問題文の該当箇所を引用し、正解語固有のニュアンスで説明。
+     【不正解各選択肢】記号と単語を明示しパターンを示す：
        パターンA「意味が逆」：正解と反対方向の意味を持つ
        パターンB「意味が近いが文脈の焦点がズレる」：ニュアンスの違いを具体的に1文で
        パターンC「文脈と無関係」：なぜ文脈に合わないかを一言
-     【紛らわしいペア】正解と最も混同しやすい選択肢がある場合は「AvsB：違いの1文説明」を追記
+     【紛らわしいペア】正解と最も混同しやすい選択肢がある場合は「XvsY：違いの1文説明」を追記
 
    **【選択肢設計ルール（必須）】**
 
@@ -361,7 +376,7 @@ function buildAnnotationPrompt(questions: GeneratedQuestions): string {
     return `読解(${i + 1}) 正解:${q.answer}\n    ${choices}`;
   }).join('\n');
 
-  return `英検1級の問題について、各選択肢の日本語訳と不正解理由を生成してください。
+  return `英検1級の問題について、各選択肢のアノテーションを生成してください。
 
 ## 語彙問題（全選択肢が1語の英単語）
 ${vocabSummary}
@@ -370,28 +385,38 @@ ${vocabSummary}
 ${readingSummary}
 
 ## ルール
-- translation: 短い日本語訳（10字以内）※語彙問題のみ
-- morphemes: 接頭辞・語根・接尾辞の配列（語彙問題のみ、1〜3要素）※省略可
-- incorrectReason: 不正解の選択肢のみ。語彙はパターンA/B/C、読解は技法1/2/3を明記（20字以内）
-- 正解選択肢はincorrectReasonなし
+【語彙問題の各選択肢】
+- translation: 文脈に即した日本語訳（8字以内）
+- pos: 品詞を漢字1字で（動/名/形/副）
+- collocation: よく使うコロケーション2例を "A / B" 形式で（例: "obfuscate the issue / obfuscate the truth"）
+- incorrectReason: 不正解の選択肢のみ。パターンA/B/Cを明記（25字以内）
+  パターンA「意味が逆」/パターンB「焦点がズレる」/パターンC「文脈と無関係」
+
+【読解問題の各選択肢】
+- translation: 自然な日本語訳（直訳禁止、主語・接続詞を補う）
+- pos: ""（空文字）
+- collocation: ""（空文字）
+- incorrectReason: 不正解の選択肢のみ。技法1/2/3を明記（30字以内）
+
+【正解選択肢のincorrectReason】省略（フィールドごと省く）
 
 ## 出力形式（JSONのみ）
 {
   "choiceAnnotations": {
     "vocabulary": [
       {
-        "A": { "translation": "抑止力", "morphemes": [{"word":"de-","meaning":"離れる"},{"word":"terr","meaning":"怖がらせる"},{"word":"-ent","meaning":"〜するもの"}] },
-        "B": { "translation": "叱責", "morphemes": [], "incorrectReason": "パターンB: 事後対処で文脈に不一致" },
-        "C": { "translation": "制約", "morphemes": [], "incorrectReason": "パターンB: 心理的抑止力なし" },
-        "D": { "translation": "誘因", "morphemes": [], "incorrectReason": "パターンA: 意味が逆（誘発）" }
+        "A": { "translation": "抑止力", "pos": "名", "collocation": "a deterrent effect / act as a deterrent" },
+        "B": { "translation": "叱責", "pos": "名", "collocation": "a formal reprimand / receive a reprimand", "incorrectReason": "パターンB: 事後対処で文脈に不一致" },
+        "C": { "translation": "制約", "pos": "名", "collocation": "a legal constraint / under constraint", "incorrectReason": "パターンB: 心理的抑止力なし" },
+        "D": { "translation": "誘因", "pos": "名", "collocation": "financial inducement / an inducement to act", "incorrectReason": "パターンA: 意味が逆（誘発）" }
       }
     ],
     "reading": [
       {
-        "A": { "translation": "正解の日本語訳", "morphemes": [] },
-        "B": { "translation": "誤答の訳", "morphemes": [], "incorrectReason": "技法2: 範囲を過度に拡大" },
-        "C": { "translation": "誤答の訳", "morphemes": [], "incorrectReason": "技法1: 因果関係が逆" },
-        "D": { "translation": "誤答の訳", "morphemes": [], "incorrectReason": "技法3: 可能性を断定化" }
+        "A": { "translation": "正解の自然な日本語訳", "pos": "", "collocation": "" },
+        "B": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "技法2: 英国限定を全先進国に拡大" },
+        "C": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "技法1: 因果関係が逆" },
+        "D": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "技法3: 可能性を断定化" }
       }
     ]
   },
@@ -551,9 +576,46 @@ ${draftJson}
 - 入力と同じ構造のJSONを返すこと。`;
 }
 
+// ===== 解説バリデーション =====
+function validateExplanationMapping(questions: GeneratedQuestions): ValidationResult {
+  const errors: string[] = [];
+  const hedgePatterns = ['とも読める', 'とも言える', 'ただし', 'あり得るが', '解釈もある'];
+
+  questions.vocabQuestions.forEach((q, i) => {
+    const text = q.explanation;
+    const correctWord = q.choices[q.answer as keyof typeof q.choices];
+
+    // 正解語のタイポチェック
+    if (correctWord && !text.includes(correctWord)) {
+      errors.push(`語彙(${i + 1}): 解説に正解語「${correctWord}」が見当たらない（タイポの可能性）`);
+    }
+
+    // 留保表現チェック
+    hedgePatterns.forEach(p => {
+      if (text.includes(p)) {
+        errors.push(`語彙(${i + 1}): 留保表現「${p}」が含まれている（断定形で書くこと）`);
+      }
+    });
+  });
+
+  questions.readingQuestions.forEach((q, i) => {
+    const text = q.explanation;
+    hedgePatterns.forEach(p => {
+      if (text.includes(p)) {
+        errors.push(`読解(${i + 1}): 留保表現「${p}」が含まれている（断定形で書くこと）`);
+      }
+    });
+  });
+
+  return { valid: errors.length === 0, errors };
+}
+
 // ===== 校閲ステップ =====
-async function reviewQuestions(draft: GeneratedQuestions): Promise<GeneratedQuestions> {
-  const prompt = buildReviewPrompt(draft);
+async function reviewQuestions(draft: GeneratedQuestions, explanationErrors?: string[]): Promise<GeneratedQuestions> {
+  let prompt = buildReviewPrompt(draft);
+  if (explanationErrors && explanationErrors.length > 0) {
+    prompt += `\n\n## ⚠️ 解説バリデーションエラー（必ず修正してください）\n${explanationErrors.map(e => `- ${e}`).join('\n')}`;
+  }
 
   let reviewText = '';
   try {
@@ -750,6 +812,13 @@ export async function generateQuestions(
 
   // ===== Step 3: 校閲・修正 =====
   draft = await reviewQuestions(draft);
+
+  // ===== Step 3b: 解説バリデーション（最大1回再校閲） =====
+  const explanationValidation = validateExplanationMapping(draft);
+  if (!explanationValidation.valid) {
+    console.warn('Explanation validation failed:', explanationValidation.errors);
+    draft = await reviewQuestions(draft, explanationValidation.errors);
+  }
 
   // ===== Step 4: 難易度評価 =====
   const score = await evaluateDifficulty(draft);

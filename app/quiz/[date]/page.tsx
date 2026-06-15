@@ -37,14 +37,10 @@ function ChoiceDissect({ annotationSet, choices, answer }: {
                 </div>
                 {ann && (
                   <>
-                    {ann.morphemes && ann.morphemes.length > 0 && (
-                      <div className="text-gray-500 mb-1">
-                        {ann.morphemes.map((m, j) => (
-                          <span key={j}>{m.word}（{m.meaning}）{j < ann.morphemes.length - 1 ? ' + ' : ''}</span>
-                        ))}
-                      </div>
-                    )}
                     <div className="text-gray-700">→ {ann.translation}</div>
+                    {ann.collocation && (
+                      <div className="text-gray-400 mt-0.5 italic text-xs">{ann.collocation}</div>
+                    )}
                     {ann.incorrectReason && (
                       <div className="text-red-600 mt-1 italic">{ann.incorrectReason}</div>
                     )}
