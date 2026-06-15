@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { GeneratedQuestions, ChoiceAnnotationSet } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
 
 function ChoiceDissect({ annotationSet, choices, answer }: {
@@ -68,16 +68,29 @@ function renderPassageWithBlanks(passage: string) {
   );
 }
 
+interface AnnotationData {
+  choiceAnnotations: ChoiceAnnotations;
+  confusingPairs: ConfusingPair[];
+}
+
 export default function QuizPage() {
   const { date } = useParams<{ date: string }>();
   const [data, setData] = useState<GeneratedQuestions | null>(null);
+  const [annotations, setAnnotations] = useState<AnnotationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showJa, setShowJa] = useState(false);
 
   useEffect(() => {
     fetch(`/api/quiz/${date}`)
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+        fetch(`/api/annotations?date=${date}`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((a) => { if (a) setAnnotations(a); })
+          .catch(() => {});
+      });
   }, [date]);
 
   function formatDate(dateStr: string) {
@@ -166,9 +179,9 @@ export default function QuizPage() {
                       </div>
                     ))}
                   </div>
-                  {data.choiceAnnotations?.vocabulary?.[qi] && (
+                  {annotations?.choiceAnnotations?.vocabulary?.[qi] && (
                     <ChoiceDissect
-                      annotationSet={data.choiceAnnotations.vocabulary[qi]}
+                      annotationSet={annotations?.choiceAnnotations.vocabulary[qi]}
                       choices={q.choices}
                       answer={q.answer}
                     />
@@ -212,9 +225,9 @@ export default function QuizPage() {
                       </div>
                     ))}
                   </div>
-                  {data.choiceAnnotations?.reading?.[qi] && (
+                  {annotations?.choiceAnnotations?.reading?.[qi] && (
                     <ChoiceDissect
-                      annotationSet={data.choiceAnnotations.reading[qi]}
+                      annotationSet={annotations?.choiceAnnotations.reading[qi]}
                       choices={q.choices}
                       answer={q.answer}
                     />

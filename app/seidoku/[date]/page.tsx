@@ -2,20 +2,39 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { GeneratedQuestions } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotations, ConfusingPair } from '@/lib/claude';
+
+interface AnnotationData {
+  choiceAnnotations: ChoiceAnnotations;
+  confusingPairs: ConfusingPair[];
+}
+
+function getJSTDateKey(): string {
+  const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return jst.toISOString().split('T')[0];
+}
 
 export default function SeidokuPage() {
   const { date } = useParams<{ date: string }>();
   const [data, setData] = useState<GeneratedQuestions | null>(null);
+  const [annotations, setAnnotations] = useState<AnnotationData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const url = date === 'today'
       ? '/api/generate'
       : `/api/quiz/${date}`;
+    const dateKey = date === 'today' ? getJSTDateKey() : date;
     fetch(url)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); });
+      .then(d => {
+        setData(d);
+        setLoading(false);
+        fetch(`/api/annotations?date=${dateKey}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(a => { if (a) setAnnotations(a); })
+          .catch(() => {});
+      });
   }, [date]);
 
   // 印刷前後でbody/htmlのflexを解除（layout.tsxのflex flex-colが白紙の原因）
@@ -186,7 +205,7 @@ export default function SeidokuPage() {
                 (['A', 'B', 'C', 'D'] as const).map((key) => {
                   const word = q.choices[key];
                   const isCorrect = q.answer === key;
-                  const ann = data.choiceAnnotations?.vocabulary?.[qi]?.[key];
+                  const ann = annotations?.choiceAnnotations?.vocabulary?.[qi]?.[key];
                   const rowIdx = qi * 4 + ['A','B','C','D'].indexOf(key);
                   return (
                     <tr key={`${qi}-${key}`} style={{ background: rowIdx % 2 === 0 ? 'white' : '#fafafa' }}>
@@ -274,7 +293,7 @@ export default function SeidokuPage() {
       </div>
 
       {/* ===== PAGE 3: 選択肢精読 ===== */}
-      {data.choiceAnnotations && (
+      {annotations?.choiceAnnotations && (
         <div className="page" style={{ marginTop: '0' }}>
           {/* ヘッダー */}
           <div style={{ borderBottom: '3px solid #1a3a5c', marginBottom: '16px', paddingBottom: '8px' }}>
@@ -288,7 +307,7 @@ export default function SeidokuPage() {
               ■ 語彙問題　選択肢解剖
             </div>
             {data.vocabQuestions.map((q, qi) => {
-              const annotationSet = data.choiceAnnotations?.vocabulary?.[qi];
+              const annotationSet = annotations?.choiceAnnotations?.vocabulary?.[qi];
               const choices = Object.entries(q.choices) as [string, string][];
               return (
                 <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>
@@ -350,13 +369,13 @@ export default function SeidokuPage() {
           )}
 
           {/* 読解問題選択肢 */}
-          {data.choiceAnnotations.reading && data.choiceAnnotations.reading.length > 0 && (
+          {annotations?.choiceAnnotations.reading && annotations?.choiceAnnotations.reading.length > 0 && (
             <div>
               <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
                 ■ 読解問題　選択肢訳
               </div>
               {data.readingQuestions.map((q, qi) => {
-                const annotationSet = data.choiceAnnotations?.reading?.[qi];
+                const annotationSet = annotations?.choiceAnnotations?.reading?.[qi];
                 const choices = Object.entries(q.choices) as [string, string][];
                 return (
                   <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>

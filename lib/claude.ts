@@ -427,7 +427,7 @@ ${readingSummary}
 }`;
 }
 
-async function generateAnnotations(questions: GeneratedQuestions): Promise<{ choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] } | null> {
+export async function generateAnnotations(questions: GeneratedQuestions): Promise<{ choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] } | null> {
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
@@ -792,10 +792,8 @@ export async function generateQuestions(
     draft = await generateOnce(article, format, sampledWords, undefined, validation.errors);
   }
 
-  // ===== Step 2: 選択肢シャッフル＋アノテーション生成 =====
-  const final = applyChoiceShuffle(draft);
-  const annotations = await generateAnnotations(final);
-  return { ...final, ...annotations };
+  // ===== Step 2: 選択肢シャッフル =====
+  return applyChoiceShuffle(draft);
 }
 
 function applyChoiceShuffle(q: GeneratedQuestions): GeneratedQuestions {

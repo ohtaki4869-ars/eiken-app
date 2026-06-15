@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { GeneratedQuestions, ChoiceAnnotationSet } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
 
 function ChoiceDissect({ annotationSet, choices, answer }: {
@@ -70,9 +70,21 @@ function renderPassageWithBlanks(passage: string) {
   );
 }
 
+interface AnnotationData {
+  choiceAnnotations: ChoiceAnnotations;
+  confusingPairs: ConfusingPair[];
+}
+
+function getJSTDateKey(): string {
+  const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return jst.toISOString().split('T')[0];
+}
+
 export default function Home() {
   const [data, setData] = useState<GeneratedQuestions | null>(null);
+  const [annotations, setAnnotations] = useState<AnnotationData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [annotationsLoading, setAnnotationsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showJa, setShowJa] = useState(false);
 
@@ -80,15 +92,33 @@ export default function Home() {
     fetchQuestions();
   }, []);
 
+  async function fetchAnnotations(dateKey: string) {
+    setAnnotationsLoading(true);
+    try {
+      const res = await fetch(`/api/annotations?date=${dateKey}`);
+      if (res.ok) {
+        const json = await res.json();
+        setAnnotations(json);
+      }
+    } catch {
+      // annotations are optional — silent fail
+    } finally {
+      setAnnotationsLoading(false);
+    }
+  }
+
   async function fetchQuestions(refresh = false) {
     setLoading(true);
     setError('');
     setShowJa(false);
+    setAnnotations(null);
     try {
       const res = await fetch(`/api/generate${refresh ? '?refresh=true' : ''}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const json = await res.json();
       setData(json);
+      const dateKey = getJSTDateKey();
+      fetchAnnotations(dateKey);
     } catch {
       setError('問題の取得に失敗しました。APIキーを確認してください。');
     } finally {
@@ -248,9 +278,9 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                  {data.choiceAnnotations?.vocabulary?.[qi] && (
+                  {annotations?.choiceAnnotations?.vocabulary?.[qi] && (
                     <ChoiceDissect
-                      annotationSet={data.choiceAnnotations.vocabulary[qi]}
+                      annotationSet={annotations?.choiceAnnotations.vocabulary[qi]}
                       choices={q.choices}
                       answer={q.answer}
                     />
@@ -313,9 +343,9 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                  {data.choiceAnnotations?.reading?.[qi] && (
+                  {annotations?.choiceAnnotations?.reading?.[qi] && (
                     <ChoiceDissect
-                      annotationSet={data.choiceAnnotations.reading[qi]}
+                      annotationSet={annotations?.choiceAnnotations.reading[qi]}
                       choices={q.choices}
                       answer={q.answer}
                     />
