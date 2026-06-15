@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateAnnotations, GeneratedQuestions, ChoiceAnnotations, ConfusingPair } from '@/lib/claude';
+import { generateAnnotations, GeneratedQuestions, ChoiceAnnotations, ConfusingPair, ReadingQuestionExplanation } from '@/lib/claude';
 import { loadQuestions } from '@/app/api/generate/route';
 
 export const maxDuration = 60;
@@ -7,6 +7,7 @@ export const maxDuration = 60;
 interface AnnotationData {
   choiceAnnotations: ChoiceAnnotations;
   confusingPairs: ConfusingPair[];
+  readingChoiceExplanations?: ReadingQuestionExplanation[];
 }
 
 async function getKV() {

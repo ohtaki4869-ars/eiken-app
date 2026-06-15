@@ -66,6 +66,29 @@ export interface ChoiceAnnotations {
   reading: ChoiceAnnotationSet[];
 }
 
+export interface ReadingChoiceExplanation {
+  choiceKey: 'A' | 'B' | 'C' | 'D';
+  choiceText: string;
+  choiceTranslation: string;
+  isCorrect: boolean;
+  correctReason?: {
+    paragraphRef: string;   // 例: "第2段落"
+    originalText: string;   // 本文引用
+    paraphraseExplanation: string;
+  };
+  incorrectReason?: {
+    technique: '因果関係の逆転' | '範囲の拡大' | '誇張・断定化' | '本文に根拠なし';
+    originalText: string;   // 本文引用（根拠なしの場合は空文字）
+    explanation: string;    // 具体的な誤りの説明
+  };
+}
+
+export interface ReadingQuestionExplanation {
+  questionNumber: number;
+  questionText: string;
+  choices: ReadingChoiceExplanation[];  // 必ずA/B/C/D順の4要素
+}
+
 export type DifficultyLevel = 'A' | 'B' | 'C' | 'D' | 'E';
 
 export interface DifficultyScore {
@@ -372,36 +395,46 @@ function buildAnnotationPrompt(questions: GeneratedQuestions): string {
     return `語彙(${i + 1}) 正解:${q.answer} | ${choices}`;
   }).join('\n');
 
-  const readingSummary = questions.readingQuestions.map((q, i) => {
-    const choices = Object.entries(q.choices).map(([k, v]) => `${k}: ${v.slice(0, 80)}`).join('\n    ');
-    return `読解(${i + 1}) 正解:${q.answer}\n    ${choices}`;
-  }).join('\n');
+  const readingDetail = questions.readingQuestions.map((q, i) => {
+    const choices = (['A', 'B', 'C', 'D'] as const)
+      .map(k => `  ${k}: ${q.choices[k]}`)
+      .join('\n');
+    return `読解(${i + 1}) 正解:${q.answer}\n設問:${q.question}\n${choices}`;
+  }).join('\n\n');
 
-  return `英検1級の問題について、各選択肢のアノテーションを生成してください。
+  return `英検1級の問題について、各選択肢のアノテーションと読解詳細解説を生成してください。
+
+## 読解パッセージ（解説の根拠として使用）
+${questions.readingPassage}
 
 ## 語彙問題（全選択肢が1語の英単語）
 ${vocabSummary}
 
-## 読解問題
-${readingSummary}
+## 読解問題（全選択肢の完全テキスト）
+${readingDetail}
 
 ## ルール
 【語彙問題の各選択肢】
 - translation: 文脈に即した日本語訳（8字以内）
 - pos: 品詞を漢字1字で（動/名/形/副）
-- collocation: よく使うコロケーション2例を "A / B" 形式で（例: "obfuscate the issue / obfuscate the truth"）
-- incorrectReason: 不正解の選択肢のみ。パターンA/B/Cを明記（25字以内）
-  パターンA「意味が逆」/パターンB「焦点がズレる」/パターンC「文脈と無関係」
+- collocation: よく使うコロケーション2例を "A / B" 形式で
+- incorrectReason: 不正解のみ。パターンA「意味が逆」/パターンB「焦点がズレる」/パターンC「文脈と無関係」（25字以内）
 
-【読解問題の各選択肢】
-- translation: 自然な日本語訳（直訳禁止、主語・接続詞を補う）
-- pos: ""（空文字）
-- collocation: ""（空文字）
-- incorrectReason: 不正解の選択肢のみ。技法1/2/3を明記（30字以内）
+【readingChoiceExplanations ルール（必須）】
+読解問題の各設問について、4択すべてに以下を生成する：
+- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順）
+- choiceText: 問題の選択肢テキストと完全一致させること
+- choiceTranslation: 自然な日本語訳（直訳禁止。主語・接続詞を補い、長ければ2文に分ける）
+- isCorrect: 正解のみtrue（1問につき必ず1つだけ）
+- 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"本文引用", paraphraseExplanation:"対応説明" }
+- 不正解の場合: incorrectReason = { technique:"技法名", originalText:"本文引用", explanation:"具体的な誤りの説明" }
+  technique は以下から1つ選ぶ：
+  "因果関係の逆転"：本文のA→BがB→Aに逆転している
+  "範囲の拡大"：一部→すべて／限定→一般化
+  "誇張・断定化"：could/may/suggests → has proven/will/inevitably に変質
+  "本文に根拠なし"：本文に一切記述がない（originalTextは空文字）
 
-【正解選択肢のincorrectReason】省略（フィールドごと省く）
-
-## 出力形式（JSONのみ）
+## 出力形式（JSONのみ、コメント禁止）
 {
   "choiceAnnotations": {
     "vocabulary": [
@@ -423,21 +456,81 @@ ${readingSummary}
   },
   "confusingPairs": [
     { "choiceA": "deterrent", "choiceB": "reprimand", "explanation": "deterrentは未然防止、reprimandは事後対処。" }
+  ],
+  "readingChoiceExplanations": [
+    {
+      "questionNumber": 1,
+      "questionText": "設問文",
+      "choices": [
+        {
+          "choiceKey": "A",
+          "choiceText": "選択肢Aの英文（問題文と完全一致）",
+          "choiceTranslation": "自然な日本語訳",
+          "isCorrect": true,
+          "correctReason": {
+            "paragraphRef": "第2段落",
+            "originalText": "本文の該当箇所の引用",
+            "paraphraseExplanation": "本文の〜をparaphraseしており、〜という点が対応する"
+          }
+        },
+        {
+          "choiceKey": "B",
+          "choiceText": "選択肢Bの英文",
+          "choiceTranslation": "自然な日本語訳",
+          "isCorrect": false,
+          "incorrectReason": {
+            "technique": "範囲の拡大",
+            "originalText": "本文の該当箇所",
+            "explanation": "本文では〜に限定して述べているが、この選択肢では〜全体に拡大している"
+          }
+        },
+        {
+          "choiceKey": "C",
+          "choiceText": "選択肢Cの英文",
+          "choiceTranslation": "自然な日本語訳",
+          "isCorrect": false,
+          "incorrectReason": {
+            "technique": "因果関係の逆転",
+            "originalText": "本文の該当箇所",
+            "explanation": "本文ではA→Bという順序だが、この選択肢ではB→Aと逆になっている"
+          }
+        },
+        {
+          "choiceKey": "D",
+          "choiceText": "選択肢Dの英文",
+          "choiceTranslation": "自然な日本語訳",
+          "isCorrect": false,
+          "incorrectReason": {
+            "technique": "誇張・断定化",
+            "originalText": "本文の該当箇所",
+            "explanation": "本文ではcould/mayと可能性で述べているが、この選択肢では断定している"
+          }
+        }
+      ]
+    }
   ]
 }`;
 }
 
-export async function generateAnnotations(questions: GeneratedQuestions): Promise<{ choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] } | null> {
+export async function generateAnnotations(questions: GeneratedQuestions): Promise<{
+  choiceAnnotations: ChoiceAnnotations;
+  confusingPairs: ConfusingPair[];
+  readingChoiceExplanations?: ReadingQuestionExplanation[];
+} | null> {
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 3000,
+      max_tokens: 5000,
       messages: [{ role: 'user', content: buildAnnotationPrompt(questions) }],
     });
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    console.log('[Annotations] Response length:', text.length, '| First 200:', text.slice(0, 200));
-    const result = parseJson(text) as { choiceAnnotations: ChoiceAnnotations; confusingPairs: ConfusingPair[] };
-    console.log('[Annotations] Parse success. vocab:', result.choiceAnnotations?.vocabulary?.length, 'reading:', result.choiceAnnotations?.reading?.length);
+    console.log('[Annotations] Response length:', text.length);
+    const result = parseJson(text) as {
+      choiceAnnotations: ChoiceAnnotations;
+      confusingPairs: ConfusingPair[];
+      readingChoiceExplanations?: ReadingQuestionExplanation[];
+    };
+    console.log('[Annotations] vocab:', result.choiceAnnotations?.vocabulary?.length, 'reading:', result.choiceAnnotations?.reading?.length, 'readingExplanations:', result.readingChoiceExplanations?.length);
     return result;
   } catch (e) {
     console.error('[Annotations] FAILED:', String(e));

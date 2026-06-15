@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { GeneratedQuestions, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair, ReadingQuestionExplanation } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
 
 function ChoiceDissect({ annotationSet, choices, answer }: {
@@ -56,6 +56,78 @@ function ChoiceDissect({ annotationSet, choices, answer }: {
 
 const KEY_TO_NUM: Record<string, string> = { A: '1', B: '2', C: '3', D: '4' };
 
+const TECHNIQUE_COLOR: Record<string, string> = {
+  '因果関係の逆転': 'text-orange-700',
+  '範囲の拡大': 'text-purple-700',
+  '誇張・断定化': 'text-red-700',
+  '本文に根拠なし': 'text-gray-600',
+};
+
+function ReadingExplanationBlock({ q, qi, explanations }: {
+  q: { number: number; question: string; choices: Record<string, string>; answer: string; explanation: string };
+  qi: number;
+  explanations?: ReadingQuestionExplanation[];
+}) {
+  const exp = explanations?.[qi];
+  const keys = ['A', 'B', 'C', 'D'] as const;
+
+  if (!exp) {
+    // フォールバック: 既存の explanation 文字列表示
+    return (
+      <div className="mb-6 border-l-4 border-green-400 pl-4">
+        <p className="font-medium mb-2">({q.number}) {q.question}</p>
+        <div className="grid grid-cols-1 gap-1 text-sm text-gray-600 mb-2">
+          {keys.map((key, i) => (
+            <div key={key} className={`flex gap-2 ${q.answer === key ? 'font-bold text-green-700' : ''}`}>
+              <span>{i + 1}</span>
+              <span>{q.choices[key]}{q.answer === key ? ` （正解: ${KEY_TO_NUM[key]}）` : ''}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">{q.explanation}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-8">
+      <div className="bg-gray-800 text-white px-4 py-2 rounded-t text-sm font-bold">
+        【読解({q.number})】{q.question}
+      </div>
+      <div className="border border-gray-300 rounded-b divide-y divide-gray-200">
+        {exp.choices.map((c, i) => (
+          <div key={c.choiceKey} className={`px-4 py-3 ${c.isCorrect ? 'bg-green-50' : 'bg-white'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-gray-500 text-xs font-mono">選択肢{i + 1}</span>
+              {c.isCorrect
+                ? <span className="text-xs font-bold text-green-700 border border-green-400 rounded px-1">✅ 正解</span>
+                : <span className={`text-xs font-bold px-1 border rounded ${TECHNIQUE_COLOR[c.incorrectReason?.technique ?? ''] ?? 'text-gray-500'} border-current`}>❌ {c.incorrectReason?.technique}</span>
+              }
+            </div>
+            <p className="text-sm text-gray-800 leading-relaxed mb-1">{c.choiceText}</p>
+            <p className="text-xs text-gray-500 mb-2">訳：{c.choiceTranslation}</p>
+            {c.isCorrect && c.correctReason && (
+              <div className="text-xs text-green-800 bg-green-50 border border-green-200 rounded p-2">
+                <span className="font-bold">{c.correctReason.paragraphRef}</span>
+                {' '}「{c.correctReason.originalText}」<br />
+                {c.correctReason.paraphraseExplanation}
+              </div>
+            )}
+            {!c.isCorrect && c.incorrectReason && (
+              <div className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded p-2">
+                {c.incorrectReason.originalText && (
+                  <span className="text-gray-500">本文「{c.incorrectReason.originalText}」<br /></span>
+                )}
+                {c.incorrectReason.explanation}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function renderPassageWithBlanks(passage: string) {
   // (1), (2)... を太字の下線付きに変換
   const parts = passage.split(/(\(\d+\))/g);
@@ -73,6 +145,7 @@ function renderPassageWithBlanks(passage: string) {
 interface AnnotationData {
   choiceAnnotations: ChoiceAnnotations;
   confusingPairs: ConfusingPair[];
+  readingChoiceExplanations?: ReadingQuestionExplanation[];
 }
 
 function getJSTDateKey(): string {
@@ -450,19 +523,13 @@ export default function Home() {
               </div>
 
               {/* 設問解説 */}
-              {data.readingQuestions.map((q) => (
-                <div key={q.number} className="mb-6 border-l-4 border-green-400 pl-4">
-                  <p className="font-medium mb-2">({q.number}) {q.question}</p>
-                  <div className="grid grid-cols-1 gap-1 text-sm text-gray-600 mb-2">
-                    {(['A', 'B', 'C', 'D'] as const).map((key, i) => (
-                      <div key={key} className={`flex gap-2 ${q.answer === key ? 'font-bold text-green-700' : ''}`}>
-                        <span>{i + 1}</span>
-                        <span>{q.choices[key]}{q.answer === key ? ` （正解: ${KEY_TO_NUM[key]}）` : ''}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">{q.explanation}</p>
-                </div>
+              {data.readingQuestions.map((q, qi) => (
+                <ReadingExplanationBlock
+                  key={q.number}
+                  q={q}
+                  qi={qi}
+                  explanations={annotations?.readingChoiceExplanations}
+                />
               ))}
             </section>
           </div>
