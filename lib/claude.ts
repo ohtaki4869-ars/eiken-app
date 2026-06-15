@@ -611,11 +611,8 @@ function validateExplanationMapping(questions: GeneratedQuestions): ValidationRe
 }
 
 // ===== 校閲ステップ =====
-async function reviewQuestions(draft: GeneratedQuestions, explanationErrors?: string[]): Promise<GeneratedQuestions> {
-  let prompt = buildReviewPrompt(draft);
-  if (explanationErrors && explanationErrors.length > 0) {
-    prompt += `\n\n## ⚠️ 解説バリデーションエラー（必ず修正してください）\n${explanationErrors.map(e => `- ${e}`).join('\n')}`;
-  }
+async function reviewQuestions(draft: GeneratedQuestions): Promise<GeneratedQuestions> {
+  const prompt = buildReviewPrompt(draft);
 
   let reviewText = '';
   try {
@@ -813,11 +810,10 @@ export async function generateQuestions(
   // ===== Step 3: 校閲・修正 =====
   draft = await reviewQuestions(draft);
 
-  // ===== Step 3b: 解説バリデーション（最大1回再校閲） =====
+  // ===== Step 3b: 解説バリデーション（ログのみ・非ブロッキング） =====
   const explanationValidation = validateExplanationMapping(draft);
   if (!explanationValidation.valid) {
-    console.warn('Explanation validation failed:', explanationValidation.errors);
-    draft = await reviewQuestions(draft, explanationValidation.errors);
+    console.warn('[ExplanationValidation] Issues found:', explanationValidation.errors);
   }
 
   // ===== Step 4: 難易度評価 =====

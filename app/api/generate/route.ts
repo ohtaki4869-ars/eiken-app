@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { fetchNewsArticle } from '@/lib/rss';
 import { generateQuestions, getTodayFormat, GeneratedQuestions } from '@/lib/claude';
 
+export const maxDuration = 60;
+
 export function getJSTDateKey(date?: Date): string {
   const now = date || new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
