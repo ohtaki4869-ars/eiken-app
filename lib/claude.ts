@@ -93,7 +93,8 @@ export interface GeneratedQuestions {
 }
 
 export function getTodayFormat(): ReadingFormat {
-  const day = new Date().getDate();
+  const jstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const day = jstDate.getUTCDate();
   return day % 2 === 1 ? 'content' : 'fill-in-blank';
 }
 
