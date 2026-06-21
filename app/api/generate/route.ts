@@ -76,6 +76,14 @@ export async function GET(request: Request) {
     if (cached) return NextResponse.json(cached);
   }
 
+  // force refresh 時は古いアノテーションキャッシュを削除して不整合を防ぐ
+  if (forceRefresh) {
+    try {
+      const kv = await getKV();
+      if (kv) await kv.del(`annotations:${todayKey}`);
+    } catch { /* ignore */ }
+  }
+
   try {
     const format = getTodayFormat();
     const article = await fetchNewsArticle();

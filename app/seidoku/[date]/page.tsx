@@ -205,7 +205,8 @@ export default function SeidokuPage() {
                 (['A', 'B', 'C', 'D'] as const).map((key) => {
                   const word = q.choices[key];
                   const isCorrect = q.answer === key;
-                  const ann = annotations?.choiceAnnotations?.vocabulary?.[qi]?.[key];
+                  const ann = annotations?.choiceAnnotations?.vocabAnnotations?.[word]
+                    ?? annotations?.choiceAnnotations?.vocabulary?.[qi]?.[key];
                   const rowIdx = qi * 4 + ['A','B','C','D'].indexOf(key);
                   return (
                     <tr key={`${qi}-${key}`} style={{ background: rowIdx % 2 === 0 ? 'white' : '#fafafa' }}>
@@ -307,7 +308,6 @@ export default function SeidokuPage() {
               ■ 語彙問題　選択肢解剖
             </div>
             {data.vocabQuestions.map((q, qi) => {
-              const annotationSet = annotations?.choiceAnnotations?.vocabulary?.[qi];
               const choices = Object.entries(q.choices) as [string, string][];
               return (
                 <div key={qi} style={{ marginBottom: '14px', borderLeft: '3px solid #2c6fad', paddingLeft: '8px' }}>
@@ -316,7 +316,8 @@ export default function SeidokuPage() {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
                     {choices.map(([key, val]) => {
-                      const ann = annotationSet?.[key as 'A'|'B'|'C'|'D'];
+                      const ann = annotations?.choiceAnnotations?.vocabAnnotations?.[val]
+                        ?? annotations?.choiceAnnotations?.vocabulary?.[qi]?.[key as 'A'|'B'|'C'|'D'];
                       const isCorrect = q.answer === key;
                       return (
                         <div key={key} style={{

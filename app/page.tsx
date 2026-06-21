@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { GeneratedQuestions, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair, ReadingQuestionExplanation } from '@/lib/claude';
+import { GeneratedQuestions, ChoiceAnnotation, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair, ReadingQuestionExplanation } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
 
-function ChoiceDissect({ annotationSet, choices, answer }: {
-  annotationSet: ChoiceAnnotationSet;
+function ChoiceDissect({ vocabAnnotations, choices, answer }: {
+  vocabAnnotations: Record<string, ChoiceAnnotation>;
   choices: { A: string; B: string; C: string; D: string };
   answer: string;
 }) {
@@ -26,7 +26,7 @@ function ChoiceDissect({ annotationSet, choices, answer }: {
           {keys.map((key, i) => {
             const val = choices[key];
             const isCorrect = answer === key;
-            const ann = annotationSet[key];
+            const ann = vocabAnnotations[val];
             return (
               <div key={key} className={`px-4 py-3 border-b last:border-b-0 ${isCorrect ? 'bg-green-50' : 'bg-white'}`}>
                 <div className="flex items-center gap-2 mb-1">
@@ -353,9 +353,9 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                  {annotations?.choiceAnnotations?.vocabulary?.[qi] && (
+                  {annotations?.choiceAnnotations?.vocabAnnotations && (
                     <ChoiceDissect
-                      annotationSet={annotations?.choiceAnnotations.vocabulary[qi]}
+                      vocabAnnotations={annotations.choiceAnnotations.vocabAnnotations}
                       choices={q.choices}
                       answer={q.answer}
                     />
@@ -418,13 +418,13 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                  {annotations?.choiceAnnotations?.reading?.[qi] && (
-                    <ChoiceDissect
-                      annotationSet={annotations?.choiceAnnotations.reading[qi]}
-                      choices={q.choices}
-                      answer={q.answer}
-                    />
-                  )}
+                  {annotations?.choiceAnnotations?.reading?.[qi] && (() => {
+                    const set = annotations.choiceAnnotations.reading[qi];
+                    const map = Object.fromEntries(
+                      (['A','B','C','D'] as const).map(k => [q.choices[k], set[k]])
+                    );
+                    return <ChoiceDissect vocabAnnotations={map} choices={q.choices} answer={q.answer} />;
+                  })()}
                 </div>
               ))}
             </section>

@@ -62,8 +62,10 @@ export interface ConfusingPair {
 }
 
 export interface ChoiceAnnotations {
-  vocabulary: ChoiceAnnotationSet[];
+  // 単語テキストをキーにした辞書（インデックスずれによるデータ混入を防ぐ）
+  vocabAnnotations: Record<string, ChoiceAnnotation>;
   reading: ChoiceAnnotationSet[];
+  vocabulary?: ChoiceAnnotationSet[];  // 旧フォーマット互換用（参照のみ、書き込み禁止）
 }
 
 export interface ReadingChoiceExplanation {
@@ -443,7 +445,9 @@ ${vocabSummary}
 ${readingDetail}
 
 ## ルール
-【語彙問題の各選択肢】
+【語彙問題のvocabAnnotations】
+■ 形式: { "単語テキスト": { ... } } — 単語テキスト自体をキーにすること（A/B/C/Dや番号はキーにしない）
+■ 全20単語（5問×4択）について必ず出力する
 - translation: 文脈に即した日本語訳（8字以内）
 - pos: 品詞を漢字1字で（動/名/形/副）
 - collocation: よく使うコロケーション2例を "A / B" 形式で
@@ -453,14 +457,12 @@ ${readingExplanationRules}
 ## 出力形式（JSONのみ、コメント禁止）
 {
   "choiceAnnotations": {
-    "vocabulary": [
-      {
-        "A": { "translation": "抑止力", "pos": "名", "collocation": "a deterrent effect / act as a deterrent" },
-        "B": { "translation": "叱責", "pos": "名", "collocation": "a formal reprimand / receive a reprimand", "incorrectReason": "パターンB: 事後対処で文脈に不一致" },
-        "C": { "translation": "制約", "pos": "名", "collocation": "a legal constraint / under constraint", "incorrectReason": "パターンB: 心理的抑止力なし" },
-        "D": { "translation": "誘因", "pos": "名", "collocation": "financial inducement / an inducement to act", "incorrectReason": "パターンA: 意味が逆（誘発）" }
-      }
-    ],
+    "vocabAnnotations": {
+      "deterrent": { "translation": "抑止力", "pos": "名", "collocation": "a deterrent effect / act as a deterrent" },
+      "reprimand": { "translation": "叱責", "pos": "名", "collocation": "a formal reprimand / receive a reprimand", "incorrectReason": "パターンB: 事後対処で文脈に不一致" },
+      "constraint": { "translation": "制約", "pos": "名", "collocation": "a legal constraint / under constraint", "incorrectReason": "パターンB: 心理的抑止力なし" },
+      "inducement": { "translation": "誘因", "pos": "名", "collocation": "financial inducement / an inducement to act", "incorrectReason": "パターンA: 意味が逆（誘発）" }
+    },
     "reading": [
       {
         "A": { "translation": "正解の自然な日本語訳", "pos": "", "collocation": "" },
