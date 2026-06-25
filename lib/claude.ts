@@ -895,12 +895,11 @@ export async function generateQuestions(
   const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
   const sampledWords = sampleWords(30, jstDay);
 
-  // ===== Step 1: 問題生成（失敗時1回リトライ） =====
-  let draft = await generateOnce(article, format, sampledWords);
+  // ===== Step 1: 問題生成（タイムアウト防止のためリトライなし） =====
+  const draft = await generateOnce(article, format, sampledWords);
   const validation = validateVocabQuestions(draft.vocabQuestions);
   if (!validation.valid) {
-    console.warn('Validation failed, retrying once:', validation.errors);
-    draft = await generateOnce(article, format, sampledWords, undefined, validation.errors);
+    console.warn('Validation issues (continuing anyway):', validation.errors);
   }
 
   // ===== Step 2: 選択肢シャッフル =====
