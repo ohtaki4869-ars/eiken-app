@@ -189,13 +189,13 @@ export default function Home() {
     setAnnotations(null);
     try {
       const res = await fetch(`/api/generate${refresh ? '?refresh=true' : ''}`);
-      if (!res.ok) throw new Error('Failed to fetch');
       const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       setData(json);
       const dateKey = getJSTDateKey();
       fetchAnnotations(dateKey);
-    } catch {
-      setError('問題の取得に失敗しました。APIキーを確認してください。');
+    } catch (e) {
+      setError(`問題の取得に失敗しました: ${String(e)}`);
     } finally {
       setLoading(false);
     }
