@@ -153,6 +153,7 @@ export default function QuizPage() {
   const [annotations, setAnnotations] = useState<AnnotationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showJa, setShowJa] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
   useEffect(() => {
     fetch(`/api/quiz/${date}`)
@@ -188,6 +189,9 @@ export default function QuizPage() {
           </button>
           <button onClick={() => window.open(`/seidoku/${date}`, '_blank')} className="px-4 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">
             📄 精読ノート
+          </button>
+          <button onClick={() => setShowAnswers(!showAnswers)} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
+            {showAnswers ? '解答・解説を隠す' : '解答・解説を表示'}
           </button>
           <button onClick={() => { document.body.setAttribute('data-print', 'questions'); window.print(); document.body.removeAttribute('data-print'); }} className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">
             問題を印刷
@@ -323,7 +327,7 @@ export default function QuizPage() {
             </div>
           </div>
 
-          <div className="max-w-3xl mx-auto px-6 py-8 print-answers">
+          <div className={`max-w-3xl mx-auto px-6 py-8 print-answers${showAnswers ? '' : ' answers-hidden'}`}>
             <div className="border-t-4 border-gray-800 pt-8 mt-4">
               <div className="print-only mb-6 text-center border-b-2 border-gray-800 pb-4">
                 <h1 className="text-2xl font-bold">英検1級 毎日トレーニング　解答・解説</h1>

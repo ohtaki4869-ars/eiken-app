@@ -30,6 +30,11 @@ body {
   display: none;
 }
 
+/* 画面上で解答・解説を隠す（印刷時はCSSで復元） */
+.answers-hidden {
+  display: none;
+}
+
 @media print {
   .no-print {
     display: none !important;
@@ -58,5 +63,10 @@ body {
   /* 別紙の先頭で改ページ */
   .print-answers {
     page-break-before: always;
+  }
+
+  /* 画面上で非表示でも印刷では表示（data-print="questions"のみ除外） */
+  .print-answers.answers-hidden {
+    display: block !important;
   }
 }

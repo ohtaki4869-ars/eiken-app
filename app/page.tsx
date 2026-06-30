@@ -162,6 +162,7 @@ export default function Home() {
   const [annotationsLoading, setAnnotationsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showJa, setShowJa] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
   useEffect(() => {
     fetchQuestions();
@@ -249,6 +250,12 @@ export default function Home() {
             className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
           >
             再生成
+          </button>
+          <button
+            onClick={() => setShowAnswers(!showAnswers)}
+            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            {showAnswers ? '解答・解説を隠す' : '解答・解説を表示'}
           </button>
           <button
             onClick={() => {
@@ -450,7 +457,7 @@ export default function Home() {
 
       {/* ===== 解答・解説用紙 ===== */}
       {data && !loading && (
-        <div className="max-w-3xl mx-auto px-6 py-8 print-answers">
+        <div className={`max-w-3xl mx-auto px-6 py-8 print-answers${showAnswers ? '' : ' answers-hidden'}`}>
           <div className="border-t-4 border-gray-800 pt-8 mt-4">
             <div className="print-only mb-6 text-center border-b-2 border-gray-800 pb-4">
               <h1 className="text-2xl font-bold">英検1級 毎日トレーニング　解答・解説</h1>
