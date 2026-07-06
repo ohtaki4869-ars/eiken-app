@@ -1,0 +1,487 @@
+{
+  "meta": {
+    "label": "fillinblank-2",
+    "genre": "健康・医療",
+    "format": "fill-in-blank",
+    "generationModel": "claude-fable-5",
+    "annotationModel": "claude-fable-5"
+  },
+  "questions": {
+    "article": {
+      "title": "NHS app to use AI to determine which service best for patients",
+      "content": "NHS app to use AI to determine which service best for patients. The update will be available to all users in England by April 2028, the health service says.",
+      "source": "BBC Health",
+      "link": "https://www.bbc.co.uk/news/articles/c0my2kjjnp2o?at_medium=RSS&at_campaign=rss",
+      "genre": "健康・医療"
+    },
+    "readingFormat": "fill-in-blank",
+    "vocabQuestions": [
+      {
+        "number": 1,
+        "sentence": "Hundreds of mourners held a silent ____ outside the parliament building overnight, demanding justice for the assassinated opposition leader.",
+        "blank": "vigil",
+        "choices": {
+          "A": "strain",
+          "B": "latitude",
+          "C": "vigil",
+          "D": "quandary"
+        },
+        "answer": "C",
+        "explanation": "【正解】\"held a silent ____ outside the parliament building overnight\"より、夜通し屋外にとどまって追悼・抗議の意思を示す「寝ずの見守り」を意味するvigilが最適。hold a vigilは定型的なコロケーションであり、「夜通し（overnight）」という手がかりと完全に合致する。【A: quandary】パターンB「意味が近いが文脈の焦点がズレる」─板挟み・困惑という内面的な心理状態を指し、屋外で集団が夜通し行う行為を表せない。【C: latitude】パターンC「文脈と無関係」─裁量・自由の意で、追悼集会の文脈に合わない。【D: strain】パターンB「意味が近いが文脈の焦点がズレる」─政治的緊張という分野の連想は近いが、holdの目的語として追悼の行為を表す機能を持たない。【紛らわしいペア】vigil vs strain：vigilは「夜通し見守る行為そのもの」、strainは「状況にかかる緊張・圧力」を指す。"
+      },
+      {
+        "number": 2,
+        "sentence": "To observe the animals' natural behavior, researchers attached ____ tracking devices to the birds, ensuring the equipment would go unnoticed by both the subjects and predators.",
+        "blank": "inconspicuous",
+        "choices": {
+          "A": "frugal",
+          "B": "inconspicuous",
+          "C": "treacherous",
+          "D": "elusive"
+        },
+        "answer": "B",
+        "explanation": "【正解】\"the equipment would go unnoticed\"という直後の手がかりより、装置が視覚的に「目立たない」ことを表すinconspicuousが最適。観察対象の行動を変えないよう装置の存在感を消すという設計上の特徴を示す語である。【A: elusive】パターンB「意味が近いが文脈の焦点がズレる」─「捕まえにくい・捉えにくい」は動く対象（鳥など）の性質を表す語であり、静的な装置の視認性の低さを表さない。【B: frugal】パターンB「意味が近いが文脈の焦点がズレる」─「質素な・地味な」という連想は近いが、金銭的な節約が焦点であり、目立たないという視覚的特徴とは異なる。【C: treacherous】パターンC「文脈と無関係」─「油断できない危険」の意で、追跡装置の描写に合わない。【紛らわしいペア】inconspicuous vs elusive：inconspicuousは「注意を引かない」、elusiveは「追っても捕捉できない」という違いがある。"
+      },
+      {
+        "number": 3,
+        "sentence": "The central bank governor's reassuring remarks helped ____ investors' lingering fears that the economy was sliding toward a prolonged recession.",
+        "blank": "dispel",
+        "choices": {
+          "A": "dispel",
+          "B": "efface",
+          "C": "mock",
+          "D": "condone"
+        },
+        "answer": "A",
+        "explanation": "【正解】\"reassuring remarks helped ____ investors' lingering fears\"より、安心させる発言によって不安や疑念を積極的に払いのけるというdispel固有のニュアンスが文脈と合致。dispel fears/doubtsは典型的なコロケーションである。【B: condone】パターンC「文脈と無関係」─「容認する・大目に見る」の意で、不安を取り除くという文脈に合わない。【C: efface】パターンB「意味が近いが文脈の焦点がズレる」─「消す」という方向性は近いが、記憶や痕跡を目立たなくする語であり、発言が人々の恐怖を追い払うという能動的な働きかけを表さない。【D: mock】パターンB「意味が近いが文脈の焦点がズレる」─恐怖を「あざ笑う」ことは可能だが、reassuring（安心させる）という手がかりと態度の方向性が矛盾する。【紛らわしいペア】dispel vs efface：dispelは「不安・疑念を追い散らす」、effaceは「記憶・痕跡をかき消す」対象の違いがある。"
+      },
+      {
+        "number": 4,
+        "sentence": "Veteran critics lamented that many young actors in the industry become ____ toward influential directors, showering them with flattery in hopes of winning coveted roles.",
+        "blank": "obsequious",
+        "choices": {
+          "A": "apathetic",
+          "B": "obsequious",
+          "C": "relentless",
+          "D": "staunch"
+        },
+        "answer": "B",
+        "explanation": "【正解】\"showering them with flattery in hopes of winning coveted roles\"より、利益を得るために権力者にこびへつらう卑屈さを表すobsequiousが最適。お世辞を浴びせるという直後の描写がobsequious固有の追従のニュアンスと合致する。【A: staunch】パターンB「意味が近いが文脈の焦点がズレる」─「忠実な・誠実な」は肯定的な忠誠を表し、見返り目当ての卑屈な追従という否定的ニュアンスを持たない。【B: apathetic】パターンA「意味が逆」─「無関心な」であり、監督に積極的に取り入る姿勢とは正反対の方向を示す。【D: relentless】パターンB「意味が近いが文脈の焦点がズレる」─「容赦ない・執拗な」は行為の持続性を表す語で、へつらいの卑屈さという態度の質を表さない。【紛らわしいペア】obsequious vs staunch：obsequiousは「打算的で卑屈な追従」、staunchは「揺るがぬ誠実な忠誠」と評価の方向が異なる。"
+      },
+      {
+        "number": 5,
+        "sentence": "Because bus services to the remote village were suspended, elderly residents had no choice but to ____ several kilometers through the snow to collect their weekly supplies.",
+        "blank": "trudge",
+        "choices": {
+          "A": "strain",
+          "B": "condone",
+          "C": "trudge",
+          "D": "lurk"
+        },
+        "answer": "C",
+        "explanation": "【正解】\"had no choice but to ____ several kilometers through the snow\"より、雪の中を重い足取りで長距離を歩くというtrudge固有のニュアンスが文脈と合致。trudge through the snowは典型的なコロケーションであり、やむを得ず苦労して歩くという状況描写と一致する。【A: lurk】パターンB「意味が近いが文脈の焦点がズレる」─移動・所在を表す動詞だが、「こっそり潜む」意であり、目的地へ向かって疲れながら歩く様態を表さない。【C: strain】パターンB「意味が近いが文脈の焦点がズレる」─懸命に力を入れるという苦労のニュアンスは近いが、歩行の様態そのものを表す語ではなく、距離表現とも結びつかない。【D: condone】パターンC「文脈と無関係」─「容認する」の意で、歩行の文脈に合わない。【紛らわしいペア】trudge vs strain：trudgeは「重い足取りで歩く動作」、strainは「力や神経を張り詰める負荷」を指す。"
+      }
+    ],
+    "readingPassage": "The National Health Service has announced a major upgrade to its smartphone app, which will use artificial intelligence to assess patients' symptoms and direct them to the most suitable service. Rather than automatically arranging a doctor's appointment, the system will analyse the information users provide and recommend options ranging from a pharmacy consultation to urgent care. Health officials say the update, which will be available to all users in England by April 2028, is intended to ( 1 ), allowing clinicians to concentrate on patients who genuinely require face-to-face treatment.\n\nThe plan, however, has drawn scrutiny from parts of the medical community. Patient safety advocates point out that AI triage tools, while promising, can misinterpret symptoms that are vague, unusual, or poorly described. A significant challenge for developers has therefore been ( 2 ), since an algorithm that directs a seriously ill patient to a pharmacist rather than a hospital could have grave consequences. The health service insists that the technology will undergo extensive clinical evaluation before its rollout and that human professionals will continue to supervise how recommendations are made.\n\nBeyond these technical hurdles, the initiative raises broader questions about equitable access to healthcare. Millions of people, particularly the elderly and those on low incomes, do not use smartphones confidently, and critics caution that an increasingly digital-first approach could ( 3 ), even as it streamlines services for everyone else. The government maintains that traditional routes to treatment, such as telephone lines and in-person visits, will remain fully available alongside the app. Nevertheless, the success or failure of this project is likely to shape public attitudes for years to come, as it represents one of the most ambitious attempts yet to embed artificial intelligence in a national healthcare system. If the technology proves both safe and genuinely useful, it may pave the way for AI to take on a far larger role in everyday medicine.",
+    "readingPassageJa": "国民保健サービス（NHS）は、スマートフォンアプリの大規模なアップデートを発表した。このアプリは人工知能を用いて患者の症状を評価し、最も適切なサービスへと案内するものである。自動的に医師の予約を取るのではなく、システムは利用者が提供する情報を分析し、薬局での相談から救急医療まで幅広い選択肢を提案する。保健当局によれば、2028年4月までにイングランドの全利用者が使えるようになるこのアップデートは、__(1)__ことを目的としており、臨床医が対面での治療を真に必要とする患者に集中できるようにするという。\n\nしかし、この計画は医療界の一部から厳しい視線を向けられている。患者安全の擁護団体は、AIトリアージツールは有望ではあるものの、曖昧な症状や珍しい症状、うまく説明されていない症状を誤って解釈する可能性があると指摘する。したがって開発者にとっての大きな課題は__(2)__であった。重篤な患者を病院ではなく薬剤師のもとへ案内するアルゴリズムは、重大な結果を招きかねないからである。NHSは、この技術は導入前に徹底的な臨床評価を受け、推奨の出され方については人間の専門家が引き続き監督すると強調している。\n\nこうした技術的課題を超えて、この取り組みは医療への公平なアクセスをめぐるより広範な問いを提起している。特に高齢者や低所得者層など、何百万もの人々はスマートフォンを自信を持って使えておらず、批判者たちは、デジタル優先の傾向が強まるアプローチは、他の人々にとってサービスを効率化する一方で、__(3)__可能性があると警告する。政府は、電話窓口や対面での受診といった従来の治療への経路は、アプリと並行して完全に利用可能であり続けると主張している。それでも、このプロジェクトの成否は今後何年にもわたって世論を左右する可能性が高い。国家の医療制度に人工知能を組み込む、これまでで最も野心的な試みの一つだからである。この技術が安全かつ真に有用であると証明されれば、AIが日常の医療においてはるかに大きな役割を担う道が開かれるかもしれない。",
+    "readingQuestions": [
+      {
+        "number": 1,
+        "question": "Which phrase best completes blank (1)?",
+        "choices": {
+          "A": "channel more patients into emergency departments",
+          "B": "accelerate the recruitment of hospital staff",
+          "C": "replace family doctors with automated consultations",
+          "D": "ease the pressure on overstretched frontline services"
+        },
+        "answer": "D",
+        "explanation": "直後の「臨床医が対面治療を真に必要とする患者に集中できるようにする」という記述から、アプリの目的は逼迫した現場の負担軽減であるとわかる。Bは患者を救急に誘導するという流れの逆転（技法A）、Cは「自動化」というキーワードを使うが、本文は医師の代替ではなく補助を述べており論理が合わない（技法B）、Dは人員採用の話で段落の論点とズレる。"
+      },
+      {
+        "number": 2,
+        "question": "Which phrase best completes blank (2)?",
+        "choices": {
+          "A": "convincing doctors to abandon traditional diagnosis",
+          "B": "proving that human oversight is unnecessary",
+          "C": "ensuring the system does not miss serious illness",
+          "D": "reducing the amount of testing the software requires"
+        },
+        "answer": "C",
+        "explanation": "直後の「重篤な患者を病院ではなく薬剤師へ案内すれば重大な結果を招く」という理由づけから、重い病気の見落とし防止が開発者の課題だとわかる。Aは「従来の診断」というキーワードを含むが本文の論旨と合わない（技法B）、Cは「徹底的な臨床評価を行う」という本文の流れの逆転（技法A）、Dは「監督」という語を使うが本文は人間の監督継続を明言しており逆である。"
+      },
+      {
+        "number": 3,
+        "question": "Which phrase best completes blank (3)?",
+        "choices": {
+          "A": "widen the pay gap between doctors and pharmacists",
+          "B": "make services more convenient for older patients",
+          "C": "force the government to subsidise smartphone purchases",
+          "D": "leave vulnerable groups struggling to access care"
+        },
+        "answer": "D",
+        "explanation": "直前の「高齢者や低所得者層はスマートフォンを自信を持って使えていない」という記述と、criticsによる警告という文脈から、弱い立場の人々が医療を受けにくくなるという懸念が入る。Bは高齢者にとって便利になるという流れの逆転（技法A）、Cは「スマートフォン」というキーワードを使うが政府補助の話は本文の論点と合わない（技法B）、Dは職種間の格差の話で段落の主題である患者のアクセス格差とズレる。"
+      }
+    ],
+    "generatedAt": "2026-07-06T00:07:18.919Z"
+  },
+  "annotations": {
+    "choiceAnnotations": {
+      "vocabAnnotations": {
+        "strain": {
+          "translation": "重圧",
+          "pos": "名",
+          "collocation": "put a strain on / financial strain",
+          "incorrectReason": "パターンB: 負荷の意で焦点がズレる"
+        },
+        "latitude": {
+          "translation": "裁量の幅",
+          "pos": "名",
+          "collocation": "give latitude to / considerable latitude",
+          "incorrectReason": "パターンC: 自由裁量は文脈と無関係"
+        },
+        "vigil": {
+          "translation": "寝ずの番",
+          "pos": "名",
+          "collocation": "keep a vigil / a candlelight vigil"
+        },
+        "quandary": {
+          "translation": "板挟み",
+          "pos": "名",
+          "collocation": "be in a quandary / face a quandary",
+          "incorrectReason": "パターンB: 迷いの状態で焦点がズレる"
+        },
+        "frugal": {
+          "translation": "倹約な",
+          "pos": "形",
+          "collocation": "a frugal lifestyle / frugal with money",
+          "incorrectReason": "パターンC: 金銭の節約は文脈と無関係"
+        },
+        "inconspicuous": {
+          "translation": "目立たない",
+          "pos": "形",
+          "collocation": "remain inconspicuous / an inconspicuous corner"
+        },
+        "treacherous": {
+          "translation": "危険な",
+          "pos": "形",
+          "collocation": "treacherous roads / a treacherous journey",
+          "incorrectReason": "パターンA: 危険性を示し意味が逆"
+        },
+        "elusive": {
+          "translation": "捉え難い",
+          "pos": "形",
+          "collocation": "an elusive goal / remain elusive",
+          "incorrectReason": "パターンB: 到達困難で焦点がズレる"
+        },
+        "dispel": {
+          "translation": "払拭する",
+          "pos": "動",
+          "collocation": "dispel doubts / dispel a myth"
+        },
+        "efface": {
+          "translation": "消し去る",
+          "pos": "動",
+          "collocation": "efface a memory / efface oneself",
+          "incorrectReason": "パターンB: 痕跡の抹消で焦点がズレる"
+        },
+        "mock": {
+          "translation": "嘲笑する",
+          "pos": "動",
+          "collocation": "mock an idea / openly mock",
+          "incorrectReason": "パターンC: 嘲りは文脈と無関係"
+        },
+        "condone": {
+          "translation": "容認する",
+          "pos": "動",
+          "collocation": "condone violence / condone such behavior",
+          "incorrectReason": "パターンA: 黙認の意で意味が逆"
+        },
+        "apathetic": {
+          "translation": "無関心な",
+          "pos": "形",
+          "collocation": "apathetic voters / apathetic about politics",
+          "incorrectReason": "パターンA: 無関心は意味が逆"
+        },
+        "obsequious": {
+          "translation": "卑屈な",
+          "pos": "形",
+          "collocation": "an obsequious manner / obsequious flattery"
+        },
+        "relentless": {
+          "translation": "容赦ない",
+          "pos": "形",
+          "collocation": "relentless pressure / a relentless pursuit",
+          "incorrectReason": "パターンB: 執拗さで焦点がズレる"
+        },
+        "staunch": {
+          "translation": "忠実な",
+          "pos": "形",
+          "collocation": "a staunch supporter / a staunch ally",
+          "incorrectReason": "パターンA: 誠実さを示し意味が逆"
+        },
+        "trudge": {
+          "translation": "重い足取り",
+          "pos": "動",
+          "collocation": "trudge through snow / trudge home wearily"
+        },
+        "lurk": {
+          "translation": "潜む",
+          "pos": "動",
+          "collocation": "lurk in the shadows / danger lurks",
+          "incorrectReason": "パターンB: 潜伏で焦点がズレる"
+        }
+      },
+      "reading": [
+        {
+          "A": {
+            "translation": "より多くの患者を救急部門に送り込む",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法1: 負担軽減の趣旨と逆方向"
+          },
+          "B": {
+            "translation": "病院職員の採用を加速する",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法3: 採用の話は本文に存在しない"
+          },
+          "C": {
+            "translation": "かかりつけ医を自動診察に置き換える",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法2: 医師の監督継続の記述と矛盾"
+          },
+          "D": {
+            "translation": "逼迫した最前線の医療サービスの負担を軽減する",
+            "pos": "",
+            "collocation": ""
+          }
+        },
+        {
+          "A": {
+            "translation": "医師に従来の診断法を放棄するよう説得すること",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法2: 医師の説得は論点でない"
+          },
+          "B": {
+            "translation": "人間による監督が不要であると証明すること",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法1: 監督継続の記述と逆"
+          },
+          "C": {
+            "translation": "システムが重篤な病気を見逃さないようにすること",
+            "pos": "",
+            "collocation": ""
+          },
+          "D": {
+            "translation": "ソフトウェアに必要な検証の量を減らすこと",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法1: 広範な臨床評価の記述と逆"
+          }
+        },
+        {
+          "A": {
+            "translation": "医師と薬剤師の賃金格差を広げる",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法3: 賃金の話は本文に存在しない"
+          },
+          "B": {
+            "translation": "高齢の患者にとってサービスをより便利にする",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法1: 高齢者の不利益の論旨と逆"
+          },
+          "C": {
+            "translation": "政府にスマートフォン購入への補助を強いる",
+            "pos": "",
+            "collocation": "",
+            "incorrectReason": "技法3: 補助金は本文で言及なし"
+          },
+          "D": {
+            "translation": "弱い立場の人々を医療へのアクセスに苦しむ状態に置き去りにする",
+            "pos": "",
+            "collocation": ""
+          }
+        }
+      ]
+    },
+    "confusingPairs": [
+      {
+        "choiceA": "dispel",
+        "choiceB": "efface",
+        "explanation": "dispelは疑念・不安など無形のものを払拭、effaceは痕跡や記憶を物理的・比喩的に消し去る。"
+      },
+      {
+        "choiceA": "vigil",
+        "choiceB": "quandary",
+        "explanation": "vigilは見守りのために起きている行為、quandaryは判断に迷う板挟みの状態。"
+      },
+      {
+        "choiceA": "obsequious",
+        "choiceB": "staunch",
+        "explanation": "obsequiousは過剰にへつらう否定的態度、staunchは信念に基づく肯定的な忠実さ。"
+      },
+      {
+        "choiceA": "trudge",
+        "choiceB": "lurk",
+        "explanation": "trudgeは疲れて重い足取りで歩く動作、lurkは身を隠して潜む状態。"
+      }
+    ],
+    "readingChoiceExplanations": [
+      {
+        "questionNumber": 1,
+        "questionText": "Which phrase best completes blank (1)?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "channel more patients into emergency departments",
+            "choiceTranslation": "より多くの患者を救急部門に送り込む",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "recommend options ranging from a pharmacy consultation to urgent care",
+              "explanation": "本文はアプリが薬局相談など幅広い選択肢へ患者を振り分け、医療機関の負担を減らす趣旨であり、救急に患者を増やすのは論旨と逆方向である"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "accelerate the recruitment of hospital staff",
+            "choiceTranslation": "病院職員の採用を加速する",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "allowing clinicians to concentrate on patients who genuinely require face-to-face treatment",
+              "explanation": "clinicians（医療従事者）というキーワードには関連するが、本文で述べられているのは既存の医師の負担軽減であり、職員採用の加速には一切言及がない"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "replace family doctors with automated consultations",
+            "choiceTranslation": "かかりつけ医を自動診察に置き換える",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "Rather than automatically arranging a doctor's appointment ... human professionals will continue to supervise",
+              "explanation": "自動化というキーワードは本文と重なるが、本文は医師の予約を自動手配しない仕組みと人間の監督継続を述べており、医師の置き換えとは論理的に合わない"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "ease the pressure on overstretched frontline services",
+            "choiceTranslation": "逼迫した最前線の医療サービスの負担を軽減する",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第1段落",
+              "originalText": "allowing clinicians to concentrate on patients who genuinely require face-to-face treatment",
+              "paraphraseExplanation": "AIが症状に応じて患者を適切なサービスへ振り分け、医師が対面治療を本当に必要とする患者に集中できるという直後の記述と自然につながり、負担軽減という目的を的確に表している"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 2,
+        "questionText": "Which phrase best completes blank (2)?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "convincing doctors to abandon traditional diagnosis",
+            "choiceTranslation": "医師に従来の診断法を放棄するよう説得すること",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "AI triage tools, while promising, can misinterpret symptoms",
+              "explanation": "医師や診断というキーワードは本文に登場するが、空所後の「重症患者を薬剤師に誘導すると重大な結果を招く」という理由と論理的に接続しない"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "proving that human oversight is unnecessary",
+            "choiceTranslation": "人間による監督が不要であると証明すること",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "human professionals will continue to supervise how recommendations are made",
+              "explanation": "本文では人間の専門家が推奨内容の監督を継続すると明言しており、監督が不要と証明することは本文の方針と正反対である"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "ensuring the system does not miss serious illness",
+            "choiceTranslation": "システムが重篤な病気を見逃さないようにすること",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第2段落",
+              "originalText": "since an algorithm that directs a seriously ill patient to a pharmacist rather than a hospital could have grave consequences",
+              "paraphraseExplanation": "空所直後のsince節が「重症患者を病院でなく薬局へ誘導すれば重大な結果を招きうる」と理由を述べており、重篤な病気の見逃し防止という課題がこの理由と完全に対応する"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "reducing the amount of testing the software requires",
+            "choiceTranslation": "ソフトウェアに必要な検証の量を減らすこと",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "the technology will undergo extensive clinical evaluation before its rollout",
+              "explanation": "本文は導入前に広範な臨床評価を行うと述べており、検証を減らすことは安全性重視の論旨と逆方向である"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 3,
+        "questionText": "Which phrase best completes blank (3)?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "widen the pay gap between doctors and pharmacists",
+            "choiceTranslation": "医師と薬剤師の間の賃金格差を広げる",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "equitable access to healthcare",
+              "explanation": "格差（equitable）というキーワードには重なるが、本文の論点は医療アクセスの公平性であり、医療従事者間の賃金格差には言及がない"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "make services more convenient for older patients",
+            "choiceTranslation": "高齢の患者にとってサービスをより便利にする",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "Millions of people, particularly the elderly and those on low incomes, do not use smartphones confidently",
+              "explanation": "本文は高齢者がスマートフォンを使いこなせず不利になる懸念を述べており、高齢者に便利になるという内容は批判者の警告と正反対である"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "force the government to subsidise smartphone purchases",
+            "choiceTranslation": "政府にスマートフォン購入への補助を強いる",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "do not use smartphones confidently",
+              "explanation": "スマートフォンというキーワードは本文と共通するが、批判者が警告しているのはアクセス格差であり、政府補助金という政策は本文で一切述べられていない"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "leave vulnerable groups struggling to access care",
+            "choiceTranslation": "弱い立場の人々を医療へのアクセスに苦しむ状態に置き去りにする",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第3段落",
+              "originalText": "Millions of people, particularly the elderly and those on low incomes, do not use smartphones confidently ... even as it streamlines services for everyone else",
+              "paraphraseExplanation": "高齢者や低所得者がスマートフォンを使いこなせないという直前の記述をvulnerable groupsと言い換え、「他の人々には効率化する一方で」という直後の対比構造とも整合する"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

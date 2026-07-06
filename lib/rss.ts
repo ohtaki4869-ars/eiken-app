@@ -90,8 +90,10 @@ function extractContent(item: Record<string, unknown>): string {
   return '';
 }
 
-export async function fetchNewsArticle(): Promise<Article> {
-  const { genre, index } = getTodayGenre();
+export async function fetchNewsArticle(genreIndexOverride?: number): Promise<Article> {
+  const { genre, index } = genreIndexOverride !== undefined
+    ? { genre: GENRE_FEEDS[genreIndexOverride].genre, index: genreIndexOverride }
+    : getTodayGenre();
   const feeds = GENRE_FEEDS[index].feeds;
 
   // 全フィードを試す

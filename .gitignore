@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# local generation cache (dev only)
+/.cache
+
 # debug
 npm-debug.log*
 yarn-debug.log*

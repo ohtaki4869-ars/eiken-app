@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchNewsArticle } from '@/lib/rss';
 import { generateQuestions, getTodayFormat, GeneratedQuestions } from '@/lib/claude';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export function getJSTDateKey(date?: Date): string {
   const now = date || new Date();
@@ -16,6 +16,30 @@ async function getKV() {
     return kv;
   }
   return null;
+}
+
+// force refresh 連打で毎回同じ単語抽選にならないよう、日付ごとの再生成回数を数えて
+// generateQuestions の attempt（WordBankシードのオフセット）に渡す
+async function getAndIncrementRefreshAttempt(dateKey: string): Promise<number> {
+  try {
+    const kv = await getKV();
+    if (kv) {
+      const count = await kv.incr(`refresh_attempt:${dateKey}`);
+      await kv.expire(`refresh_attempt:${dateKey}`, 60 * 60 * 24);
+      return count;
+    }
+    const fs = await import('fs');
+    const path = await import('path');
+    const dir = path.join(process.cwd(), '.cache');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const counterFile = path.join(dir, `refresh-attempt-${dateKey}.json`);
+    const current = fs.existsSync(counterFile) ? JSON.parse(fs.readFileSync(counterFile, 'utf-8')).count : 0;
+    const next = current + 1;
+    fs.writeFileSync(counterFile, JSON.stringify({ count: next }));
+    return next;
+  } catch {
+    return 0;
+  }
 }
 
 export async function loadQuestions(dateKey: string): Promise<GeneratedQuestions | null> {
@@ -87,7 +111,8 @@ export async function GET(request: Request) {
   try {
     const format = getTodayFormat();
     const article = await fetchNewsArticle();
-    const questions = await generateQuestions(article, format);
+    const attempt = forceRefresh ? await getAndIncrementRefreshAttempt(todayKey) : 0;
+    const questions = await generateQuestions(article, format, attempt);
     await saveQuestions(todayKey, questions);
     return NextResponse.json(questions);
   } catch (e) {

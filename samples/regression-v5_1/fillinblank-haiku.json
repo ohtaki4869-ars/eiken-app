@@ -1,0 +1,499 @@
+{
+  "meta": {
+    "label": "fillinblank-haiku",
+    "format": "fill-in-blank",
+    "elapsedMs": 22889.588874999958,
+    "generationModel": "claude-haiku-4-5",
+    "annotationModel": "claude-haiku-4-5"
+  },
+  "questions": {
+    "article": {
+      "title": "Australian PM apologises for 'inappropriate' comments about Kylie Minogue",
+      "content": "Australian PM apologises for 'inappropriate' comments about Kylie Minogue. Albanese has apologised 'unequivocally' after his remarks prompted a backlash.",
+      "source": "BBC World",
+      "link": "https://www.bbc.co.uk/news/articles/cr477en6w3go?at_medium=RSS&at_campaign=rss",
+      "genre": "国際・政治"
+    },
+    "readingFormat": "fill-in-blank",
+    "vocabQuestions": [
+      {
+        "number": 1,
+        "sentence": "The ambassador is regarded as the ____ authority on international trade policy in the current administration.",
+        "blank": "foremost",
+        "choices": {
+          "A": "terse",
+          "B": "foremost",
+          "C": "tenacious",
+          "D": "incessant"
+        },
+        "answer": "B",
+        "explanation": "【正解】文中の'is regarded as the ____ authority on international trade policy'より、政策領域における「最高峰の・筆頭の」という意味のfremostが最適。その分野での卓越した地位を指す。【D: incessant】パターンC「文脈と無関係」─「絶え間ない・ひっきりなしの」という継続性の意味で、人物の専門性や権威を表現する文脈には合わない。【C: tenacious】パターンB「意味が近いが焦点がズレる」─「粘り強い・あきらめない」という人物の態度や交渉姿勢を指し、その分野での地位や権威という文脈の焦点と異なる。foremost vs tenacious：foremostは「地位・権威の高さ」、tenaciosは「人格的強さ」。【A: terse】パターンC「文脈と無関係」─「簡潔な」という話し方の特徴を表し、専門家としての権威や立場を述べる文脈に無関係。"
+      },
+      {
+        "number": 2,
+        "sentence": "The researcher chose to live like a ____ in an isolated laboratory, dedicating herself entirely to her groundbreaking studies.",
+        "blank": "hermit",
+        "choices": {
+          "A": "debris",
+          "B": "hermit",
+          "C": "fruition",
+          "D": "clout"
+        },
+        "answer": "B",
+        "explanation": "【正解】文中の'chose to live like a ____ in an isolated laboratory'より、世間から隔絶した環境で一人研究に没頭する生き方を表現するhermitが最適。「世捨て人・隠遁者」というlive likeと結びつく典型的なコロケーション。【D: clout】パターンC「文脈と無関係」─「影響力」という政治的・社会的な力を指す名詞で、隔絶した研究生活という文脈と無関係。【C: fruition】パターンB「意味が近いが焦点がズレる」─「達成・実現」という目標の完遂を指し、一人隔絶して研究に取り組むという生活方式そのものを表現するhermitとは焦点が異なる。hermit vs fruition：hermitは「生活方式・在り方」、fruitinは「目標達成の状態」。【A: debris】パターンC「文脈と無関係」─「破片・がれき」という物質的な残骸を指し、人物の生活方式を述べる文脈と無関係。"
+      },
+      {
+        "number": 3,
+        "sentence": "The human rights organization decided to help workers ____ the systemic abuses they had endured for decades.",
+        "blank": "appall",
+        "choices": {
+          "A": "appall",
+          "B": "dawdle",
+          "C": "alienate",
+          "D": "budge"
+        },
+        "answer": "A",
+        "explanation": "【正解】文中の'decided to help workers ____ the systemic abuses'より、組織が労働者の被害を公開し世間の注目を集め、その悲劇性で人々の良心を揺さぶるという意味のappallが最適。「～を驚かせる・ぞっとさせる」という感情的な衝撃を与える語が、虐待の実態を世に知らしめる文脈に適合。【C: alienate】パターンB「意味が近いが焦点がズレる」─「(人を)遠ざける・疎外する」という距離を生むニュアンスで、虐待の実態を世間に知らしめて共感を引き出すappallとは対象にする影響方向が異なる。appall vs alienate：appallは「同情・衝撃による心理的接近」、alienateは「反発による距離拡大」。【D: budge】パターンC「文脈と無関係」─「(意見を)変える・動かす」という立場変更の意味で、虐待行為の公開という文脈に合わない。【B: dawdle】パターンC「文脈と無関係」─「ぐずぐずする・時間を無駄にする」という時間浪費の意味で、虐待の実態を明かすという行動を述べる文脈と無関係。"
+      },
+      {
+        "number": 4,
+        "sentence": "After the estate owner abandoned the property, the ornamental gardens gradually became ____ and indistinguishable from the surrounding forest.",
+        "blank": "wild",
+        "choices": {
+          "A": "cumulative",
+          "B": "taxonomic",
+          "C": "propitious",
+          "D": "wild"
+        },
+        "answer": "D",
+        "explanation": "【正解】文中の'gardens gradually became ____ and indistinguishable from the surrounding forest'より、整備された庭園が自然に返り「荒れ果てた状態」になったことを表現するwildが最適。人為的な管理が失われ、野生化・荒廃した状態を指す。【A: cumulative】パターンB「意味が近いが焦点がズレる」─「累積的な・段階的に増加する」という量の蓄積を指し、庭園が自然に返る質的な変化の過程を述べるwildとは焦点が異なる。wild vs cumulative：wildは「状態そのもの（荒廃）」、cumulativeは「増加のプロセス」。【C: propitious】パターンC「文脈と無関係」─「好都合な・幸先の良い」というポジティブな吉兆を意味し、庭園の荒廃という否定的な変化の文脈に合わない。【B: taxonomic】パターンC「文脈と無関係」─「分類学的な」という学問的分類の概念で、庭園の物理的状態変化を述べる文脈と無関係。"
+      },
+      {
+        "number": 5,
+        "sentence": "Unable to contain her disappointment with the committee's decision, she sought every opportunity to ____ her grievances in public meetings.",
+        "blank": "vent",
+        "choices": {
+          "A": "woo",
+          "B": "vent",
+          "C": "chastise",
+          "D": "affix"
+        },
+        "answer": "B",
+        "explanation": "【正解】文中の'she sought every opportunity to ____ her grievances in public meetings'より、抑圧された感情や不満を公の場で「発散する・吐き出す」という意味のventが最適。'grievances'（不満）を直接対象として、その感情的な放出を表現する典型的なコロケーション。【D: affix】パターンC「文脈と無関係」─「貼る・添付する」という物理的操作を指し、感情の発散という心理的行為を述べる文脈と無関係。【C: chastise】パターンB「意味が近いが焦点がズレる」─「厳しく非難する・責める」という他者への攻撃的行為を指し、自分の感情を外に出すというventのニュアンスとは異なる。vent vs chastise：ventは「自分の感情を表出」、chastiseは「他者を非難」。【A: woo】パターンB「意味が近いが焦点がズレる」─「支持を得ようとする・求婚する」という親和的働きかけを指し、不満をぶちまけるventとは感情的方向性が対立している。"
+      }
+    ],
+    "readingPassage": "Australian Prime Minister Anthony Albanese issued an unequivocal apology on Monday following widespread criticism of comments he made about pop icon Kylie Minogue during a public event. The remarks, which Albanese himself characterised as inappropriate, had sparked immediate backlash from both media commentators and members of the public who viewed them as disrespectful to the internationally renowned singer. In a formal statement, the Prime Minister acknowledged that his words fell short of the standard of conduct expected of someone in his position and expressed regret for any ( 1 ) they may have caused to Minogue and her supporters.\n\nThe incident highlights an ongoing tension within political discourse regarding the boundaries of casual commentary about public figures, particularly women in the entertainment industry. While some observers argued that Albanese's remarks were merely lighthearted banter that had been misinterpreted by an overly sensitive audience, critics contended that such language ( 2 ) when delivered by high-profile political leaders. The Prime Minister's swift response suggested an attempt to de-escalate the controversy, yet the episode raised questions about whether his initial judgment in making such comments indicated a broader problem with workplace culture within the highest levels of government.\n\nMinogue herself has not issued a public statement responding to either Albanese's remarks or his subsequent apology, maintaining a dignified silence on the matter. Nevertheless, the incident has drawn attention to similar controversies involving prominent politicians making off-colour comments about celebrities and public figures, suggesting that the standards for appropriate conduct in public discourse may ( 3 ) in the coming years. Political analysts predict that such incidents will continue to fuel debates about the responsibilities of elected officials to uphold respectful communication standards, particularly when their words reach broad audiences through media coverage.",
+    "readingPassageJa": "オーストラリアのアンソニー・アルバニーズ首相は月曜日、公開の場でポップアイコンのカイリー・ミノーグについて述べたコメントに対する広範な批判を受けて、明確な謝罪を発表した。首相自身が不適切だと特徴づけたこのコメントは、メディア評論家と一般大衆の両方からの即座の反発を引き起こした。彼らはこれを国際的に有名なシンガーに対する不敬と見なした。公式声明で、首相は自分の言葉が自分の職務にふさわしい行為基準に達しなかったことを認め、ミノーグとその支持者に対して__(1)__したかもしれない後悔の意を表明した。\n\nこの事件は、公的人物、特にエンターテインメント業界の女性についての気軽なコメントの限界に関する政治的談話内の継続的な緊張を浮き彫りにしている。一部の観察者は、アルバニーズのコメントは単なる軽い冗談であり、過度に敏感な聴衆に誤解されたと主張した。一方、批評家は、そのような言語は__(2)__べきものだと主張した、高名な政治指導者によって発せられた場合。首相の迅速な対応は論争をエスカレートさせないという試みを示唆していたが、このエピソードは、そのようなコメントをするに至った彼の初期の判断が政府の最高レベル内の職場文化に関するより広い問題を示していたかどうかについて疑問を生じさせた。\n\nミノーグ自身は、アルバニーズの言及またはそれに続く謝罪のいずれかに対応する公式声明を発表していないまま、この問題について威厳ある沈黙を保っている。それにもかかわらず、この事件は、著名な政治家が有名人や公的人物についての不適切なコメントを述べている同様の論争に注目を集めており、公開討論における適切な行為の基準が__(3)__かもしれないことを示唆している。政治分析家は、そのようなインシデントが選出された公務員がメディア報道を通じて幅広い聴衆に到達するとき、特に尊重コミュニケーション基準を維持する責任についての議論を燃料に供給し続けると予測している。",
+    "readingQuestions": [
+      {
+        "number": 1,
+        "question": "Which phrase best completes blank (1)?",
+        "choices": {
+          "A": "curiosity or interest",
+          "B": "offence or distress",
+          "C": "amusement or entertainment",
+          "D": "confusion or misunderstanding"
+        },
+        "answer": "B",
+        "explanation": "首相が自分の言葉が不適切だったと認め、謝罪している文脈から、「不快感または苦痛」が正解。Cは謝罪の文脈と逆方向（技法A「方向性の逆転」）。Dは「不適切さ」を表すキーワードを使うが、謝罪の対象者（ミノーグ）の感情ではなく解釈の問題を指しており論理が合わない（技法B「部分的整合」）。Aは段落の論旨と無関係。"
+      },
+      {
+        "number": 2,
+        "question": "Which phrase best completes blank (2)?",
+        "choices": {
+          "A": "be encouraged in political settings",
+          "B": "be subject to greater scrutiny",
+          "C": "be avoided at all social events",
+          "D": "be accepted by entertainment figures"
+        },
+        "answer": "B",
+        "explanation": "直前の「そのような言語は」と「高名な政治指導者によって発せられた場合」というコンテキストから、「より厳しい検討の対象となるべき」が正解。Aは文脈の流れの逆転（技法A「方向性の逆転」）。Cは「避けるべき」というキーワードを含むが「すべての社交行事で」という過度な限定により論理が合わない（技法B「部分的整合」）。Dは政治指導者の責任について述べられているのに対して政治領域外の視点に転換しており、議論の焦点がズレている。"
+      },
+      {
+        "number": 3,
+        "question": "Which phrase best completes blank (3)?",
+        "choices": {
+          "A": "become increasingly stringent",
+          "B": "prove difficult to enforce universally",
+          "C": "be abandoned by lawmakers",
+          "D": "remain unchanged indefinitely"
+        },
+        "answer": "A",
+        "explanation": "直前の「同様の論争が続いている」と「今後数年で議論が続く」という文脈から、「ますます厳しくなる」が最適。Dは「今後数年」というヒントと矛盾する逆方向の主張（技法A「方向性の逆転」）。Cは「基準が放棄される」という強い表現を使うが、段落は基準の強化（より高い責任）について述べており、放棄ではなく強化を示唆する（技法B「部分的整合」）。Bは「施行」というキーワードを含むが、段落は基準の強化について述べており、執行可能性の問題ではなく基準自体の進化について論じている。"
+      }
+    ],
+    "generatedAt": "2026-07-06T05:50:34.636Z"
+  },
+  "annotations": {
+    "choiceAnnotations": {
+      "vocabAnnotations": {
+        "terse": {
+          "translation": "簡潔な",
+          "pos": "形",
+          "collocation": "a terse reply / terse statement",
+          "incorrectReason": "パターンB: 応答の簡潔さで不満の度合いを表さない"
+        },
+        "foremost": {
+          "translation": "最も重要な",
+          "pos": "形",
+          "collocation": "first and foremost / of foremost importance",
+          "incorrectReason": "パターンC: 優先順位の意味で被害・苦痛を示さない"
+        },
+        "tenacious": {
+          "translation": "粘り強い",
+          "pos": "形",
+          "collocation": "tenacious grip / tenacious determination",
+          "incorrectReason": "パターンC: 執着性を表し損害感情と無関係"
+        },
+        "incessant": {
+          "translation": "絶え間ない",
+          "pos": "形",
+          "collocation": "incessant noise / incessant complaints",
+          "incorrectReason": "パターンB: 継続性を表し一時的な損害を示さない"
+        },
+        "debris": {
+          "translation": "瓦礫",
+          "pos": "名",
+          "collocation": "scattered debris / clear debris",
+          "incorrectReason": "パターンC: 物理的な残骸で政治的言論と無関連"
+        },
+        "hermit": {
+          "translation": "隠者",
+          "pos": "名",
+          "collocation": "live as a hermit / hermit lifestyle",
+          "incorrectReason": "パターンC: 隠遁生活で精査・検証と無関係"
+        },
+        "fruition": {
+          "translation": "実現",
+          "pos": "名",
+          "collocation": "come to fruition / bring to fruition",
+          "incorrectReason": "パターンC: 計画の完成で批判的検討と無関連"
+        },
+        "clout": {
+          "translation": "影響力",
+          "pos": "名",
+          "collocation": "political clout / wield clout",
+          "correctReason": "正解選択肢"
+        },
+        "appall": {
+          "translation": "愕然とさせる",
+          "pos": "動",
+          "collocation": "appall someone / be appalled by",
+          "correctReason": "正解選択肢"
+        },
+        "dawdle": {
+          "translation": "ぐずぐずする",
+          "pos": "動",
+          "collocation": "dawdle away / dawdle over",
+          "incorrectReason": "パターンC: 時間浪費で基準厳格化と無関連"
+        },
+        "alienate": {
+          "translation": "遠ざかる",
+          "pos": "動",
+          "collocation": "alienate someone / feel alienated",
+          "incorrectReason": "パターンB: 感情的距離で規制強化と異なる"
+        },
+        "budge": {
+          "translation": "動く",
+          "pos": "動",
+          "collocation": "not budge / budge an inch",
+          "incorrectReason": "パターンA: 意味が逆（変わらない）"
+        },
+        "cumulative": {
+          "translation": "累積的な",
+          "pos": "形",
+          "collocation": "cumulative effect / cumulative total",
+          "incorrectReason": "パターンB: 蓄積の概念で厳格化と関連なし"
+        },
+        "taxonomic": {
+          "translation": "分類学的",
+          "pos": "形",
+          "collocation": "taxonomic classification / taxonomic system",
+          "incorrectReason": "パターンC: 分類体系で政策基準と無関連"
+        },
+        "propitious": {
+          "translation": "好都合な",
+          "pos": "形",
+          "collocation": "propitious moment / propitious conditions",
+          "incorrectReason": "パターンA: 意味が逆（好ましい）"
+        },
+        "wild": {
+          "translation": "激しい",
+          "pos": "形",
+          "collocation": "wild speculation / run wild",
+          "correctReason": "正解選択肢"
+        },
+        "woo": {
+          "translation": "懇願する",
+          "pos": "動",
+          "collocation": "woo voters / woo support",
+          "incorrectReason": "パターンC: 支持獲得で感情表現と無関連"
+        },
+        "vent": {
+          "translation": "表現する",
+          "pos": "動",
+          "collocation": "vent frustration / vent anger",
+          "correctReason": "正解選択肢"
+        },
+        "chastise": {
+          "translation": "厳しく叱る",
+          "pos": "動",
+          "collocation": "chastise someone / be chastised for",
+          "incorrectReason": "パターンB: 懲罰的行為で不満表現と異なる"
+        },
+        "affix": {
+          "translation": "貼り付ける",
+          "pos": "動",
+          "collocation": "affix a stamp / affix one's signature",
+          "incorrectReason": "パターンC: 物理的接着で感情表現と無関連"
+        }
+      },
+      "reading": [
+        {
+          "A": {
+            "translation": "好奇心や興味",
+            "pos": "名",
+            "collocation": "spark curiosity / express interest",
+            "incorrectReason": "パターンB: 肯定的反応で謝罪文脈に不適合"
+          },
+          "B": {
+            "translation": "不快感や苦痛",
+            "pos": "名",
+            "collocation": "cause offence / express distress"
+          },
+          "C": {
+            "translation": "娯楽や楽しみ",
+            "pos": "名",
+            "collocation": "provide amusement / seek entertainment",
+            "incorrectReason": "パターンB: ポジティブな影響で謝罪の理由に反する"
+          },
+          "D": {
+            "translation": "混乱や誤解",
+            "pos": "名",
+            "collocation": "cause confusion / express misunderstanding",
+            "incorrectReason": "パターンB: 認識のズレで被害感と異なる"
+          }
+        },
+        {
+          "A": {
+            "translation": "政治環境で奨励される",
+            "pos": "動",
+            "collocation": "be encouraged / be encouraged in settings",
+            "incorrectReason": "パターンA: 意味が逆（本文では非難される）"
+          },
+          "B": {
+            "translation": "より厳密な精査の対象になる",
+            "pos": "動",
+            "collocation": "be subject to / be subject to scrutiny"
+          },
+          "C": {
+            "translation": "あらゆる社交の場で回避される",
+            "pos": "動",
+            "collocation": "be avoided / be avoided at events",
+            "incorrectReason": "パターンC: 範囲の拡大（全社交場でなく政治指導者発言に限定）"
+          },
+          "D": {
+            "translation": "娯楽人が受け入れる",
+            "pos": "動",
+            "collocation": "be accepted by / be accepted by figures",
+            "incorrectReason": "パターンA: 意味が逆（批判者がいる）"
+          }
+        },
+        {
+          "A": {
+            "translation": "ますます厳しくなる",
+            "pos": "動",
+            "collocation": "become stringent / increasingly stringent"
+          },
+          "B": {
+            "translation": "普遍的な実施が困難と証明される",
+            "pos": "動",
+            "collocation": "prove difficult / prove difficult to enforce",
+            "incorrectReason": "パターンB: 部分的整合（厳格化でなく実行困難の議論に転換）"
+          },
+          "C": {
+            "translation": "立法者に放棄される",
+            "pos": "動",
+            "collocation": "be abandoned / be abandoned by lawmakers",
+            "incorrectReason": "パターンA: 意味が逆（基準が強化される）"
+          },
+          "D": {
+            "translation": "無期限に変わらないままである",
+            "pos": "動",
+            "collocation": "remain unchanged / remain indefinitely",
+            "incorrectReason": "パターンA: 意味が逆（変化する傾向を示唆）"
+          }
+        }
+      ]
+    },
+    "confusingPairs": [
+      {
+        "choiceA": "offence",
+        "choiceB": "distress",
+        "explanation": "両者とも否定的な感情だが、offenceは不尊重による怒り、distressは苦しみ。文脈では直接的害悪を指すため両者は類義だが、対となる動詞causeに合致するのはoffence"
+      },
+      {
+        "choiceA": "appall",
+        "choiceB": "alienate",
+        "explanation": "appallは強い衝撃で「愕然とさせる」、alienateは「距離を置かせる」。規制強化の文脈では心理的反応より客観的行為の変容が必要"
+      },
+      {
+        "choiceA": "stringent",
+        "choiceB": "difficult to enforce",
+        "explanation": "stringentは基準の厳格性そのもの、difficultは実行の困難さ。「基準が変わる」という述部では厳格化の方向性が明確"
+      }
+    ],
+    "readingChoiceExplanations": [
+      {
+        "questionNumber": 1,
+        "questionText": "Which phrase best completes blank (1)? The Prime Minister acknowledged that his words fell short of the standard of conduct expected of someone in his position and expressed regret for any ( 1 ) they may have caused to Minogue and her supporters.",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "curiosity or interest",
+            "choiceTranslation": "好奇心または関心",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "感情価の逆転",
+              "originalText": "expressed regret for any ( 1 ) they may have caused",
+              "explanation": "regret（後悔）と共に用いられるには負の影響が必要だが、curiosityやinterestは肯定的感情で文脈に矛盾"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "offence or distress",
+            "choiceTranslation": "不快感または精神的苦痛",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第1段落",
+              "originalText": "The remarks...had sparked immediate backlash...viewed them as disrespectful...expressed regret for any ( 1 ) they may have caused",
+              "paraphraseExplanation": "本文では不尊重な発言が批判を招き、謝罪の対象となった被害を述べている。offence（不快感）やdistress（苦痛）は『regret for』で後悔される負の影響として完全に対応し、不敬な発言による感情的害悪を適切に表現"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "amusement or entertainment",
+            "choiceTranslation": "娯楽または楽しみ",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "感情価の逆転",
+              "originalText": "expressed regret for any ( 1 ) they may have caused to Minogue",
+              "explanation": "regretは後悔の念を示す動詞で、その対象は否定的結果のみ。amusementやentertainmentは肯定的で『regret for』の構文と矛盾"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "confusion or misunderstanding",
+            "choiceTranslation": "混乱または誤解",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "The remarks...had sparked immediate backlash from both media commentators and members of the public who viewed them as disrespectful",
+              "explanation": "confusion（混乱）は認識面のズレを表すが、本文の焦点は『不尊重と見なされた』という明確な判断と感情的害悪。単なる理解不足ではなく意図的不敬に対する謝罪であり、confusionでは問題の深刻性が低下"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 2,
+        "questionText": "Which phrase best completes blank (2)? While some observers argued that Albanese's remarks were merely lighthearted banter that had been misinterpreted by an overly sensitive audience, critics contended that such language ( 2 ) when delivered by high-profile political leaders.",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "be encouraged in political settings",
+            "choiceTranslation": "政治的環境で奨励される",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "critics contended that such language...when delivered by high-profile political leaders",
+              "explanation": "批評家（critics）は政治指導者の不適切な言論に対して異議を唱えているのに、『奨励される』と述べるのは本文の論旨と完全に逆。本文では規制・非難の方向性が一貫"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "be subject to greater scrutiny",
+            "choiceTranslation": "より厳格な精査の対象となる",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第2段落",
+              "originalText": "critics contended that such language ( 2 ) when delivered by high-profile political leaders. The Prime Minister's swift response suggested an attempt to de-escalate the controversy, yet the episode raised questions about whether his initial judgment...indicated a broader problem with workplace culture",
+              "paraphraseExplanation": "批評家は政治指導者の言論には異なる基準が適用されるべきと主張している。『greater scrutiny（より厳密な精査）』はこの『高い責任と厳格な評価基準』という論理を直接的にparaphrase。後続文でthe episodeが『raise questions』と批判的検証を促していることが対応"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "be avoided at all social events",
+            "choiceTranslation": "あらゆる社交の場で回避されるべき",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "範囲の拡大",
+              "originalText": "critics contended that such language...when delivered by high-profile political leaders",
+              "explanation": "本文では『高位の政治指導者による発言』に限定して論じているが、この選択肢は『あらゆる社交の場（all social events）』へ範囲を拡大。政治指導者の公的責任という文脈の制約を無視している"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "be accepted by entertainment figures",
+            "choiceTranslation": "娯楽業界人士に受け入れられる",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "critics contended that such language...when delivered by high-profile political leaders",
+              "explanation": "批評家の主張は『政治指導者の不適切言論は受け入れられるべきでない』であり、『受け入れられる』と述べることは論旨と矛盾。また『娯楽人による受容』は文脈に登場しない要素で脈絡不明"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 3,
+        "questionText": "Which phrase best completes blank (3)? Political analysts predict that such incidents will continue to fuel debates about the responsibilities of elected officials to uphold respectful communication standards, particularly when their words reach broad audiences through media coverage, suggesting that the standards for appropriate conduct in public discourse may ( 3 ) in the coming years.",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "become increasingly stringent",
+            "choiceTranslation": "ますます厳格になる",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第3段落",
+              "originalText": "such incidents will continue to fuel debates about the responsibilities of elected officials to uphold respectful communication standards...suggesting that the standards for appropriate conduct in public discourse may ( 3 ) in the coming years",
+              "paraphraseExplanation": "本文は継続する批判的議論（continue to fuel debates）と『公的言論の適切さの基準』が変わる可能性を述べている。『incidents will continue...debates about...standards』という累積的な社会的圧力が『standards...become increasingly stringent』という強化の方向性を論理的に指す。政治家の責任強化と基準厳格化が明確に対応"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "prove difficult to enforce universally",
+            "choiceTranslation": "普遍的な実施が困難と判明する",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "部分的整合",
+              "originalText": "Political analysts predict that such incidents will continue to fuel debates about the responsibilities of elected officials to uphold respectful communication standards",
+              "explanation": "本文は基準強化の予測を述べているが、『difficult to enforce universally』は実行困難に焦点を移す。基準の存在や厳格化ではなく実施の問題へ論旨が転換され、『standards may...in coming years』の述部としての因果性が破綻"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "be abandoned by lawmakers",
+            "choiceTranslation": "立法者に放棄される",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "such incidents will continue to fuel debates about the responsibilities of elected officials to uphold respectful communication standards",
+              "explanation": "本文は『基準を支持する』という責任が強調されており、基準の『放棄』は明らかな矛盾。特に『continue to fuel debates...to uphold』という規制強化の論理と直接的に対立"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "remain unchanged indefinitely",
+            "choiceTranslation": "無期限に変わらないままである",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "方向性の逆転",
+              "originalText": "such incidents will continue to fuel debates about the responsibilities...suggesting that the standards for appropriate conduct in public discourse may ( 3 ) in the coming years",
+              "explanation": "『coming years』と明示された将来の変化と『in coming years...remain unchanged indefinitely』という静止状態は矛盾。『incidents will continue...fuel debates』という継続的圧力が変化を示唆しているのに、変わらないと述べることは予測の論理と対立"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

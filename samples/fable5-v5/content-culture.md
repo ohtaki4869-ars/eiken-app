@@ -1,0 +1,233 @@
+# 文化・社会（教養系） ─ 内容一致形式 見本
+
+- 記事タイトル: Common Sense Prevails at the FIFA World Cup（TIME）
+- 出典URL: https://time.com/article/2026/07/05/common-sense-prevails-at-fifa-world-cup/
+- 形式: 内容一致形式
+- 生成モデル: claude-fable-5（生成） / claude-fable-5（解説）
+- 生成日時: 2026-07-05T23:38:44.236Z
+
+---
+
+## 問題
+
+### 語彙問題（Vocabulary, 5問）
+
+**問1.** Following the disputed election, thousands of citizens held a candlelight ____ outside the presidential palace, silently demanding transparency throughout the night.
+
+A. vigil　B. quandary　C. gorge　D. strain
+
+**問2.** Researchers designed the tracking device to be ____ so that the birds' natural behavior would not be altered by awareness of its presence.
+
+A. elusive　B. apathetic　C. inconspicuous　D. mock
+
+**問3.** The central bank governor's reassuring remarks helped ____ investors' fears of an imminent recession, and stock markets rallied sharply the following morning.
+
+A. efface　B. dispel　C. condone　D. lurk
+
+**問4.** The acclaimed novelist grew weary of the ____ praise from critics who flattered her merely to gain access to her literary circle.
+
+A. squalid　B. relentless　C. staunch　D. obsequious
+
+**問5.** Exhausted commuters had to ____ several kilometers through the heavy snow after the rail strike brought the city's entire transport network to a standstill.
+
+A. strain　B. lurk　C. gorge　D. trudge
+
+### 読解パッセージ
+
+When Folarin Balogun, the United States' leading goal scorer at the FIFA World Cup, was shown a red card in his team's previous match, the automatic suspension that followed threatened to exclude him from the decisive encounter with Belgium. In an unusual intervention, FIFA overturned the sanction after reviewing video footage that cast serious doubt on the referee's original judgment, granting the striker a rare reprieve. The decision, hailed in many quarters as a victory for common sense, has nevertheless reignited a long-standing debate about how much discretion a governing body should exercise when the strict application of its rules threatens to produce a manifestly unjust outcome.
+
+Supporters of the ruling contend that the footage demonstrated the dismissal rested on an officiating error, and that penalizing both the player and his team for a mistake made by match officials would have compromised the tournament's sporting integrity. They point out that FIFA's disciplinary code has long contained a provision permitting retrospective review of sanctions in cases of obvious error, although the clause has seldom been invoked on football's biggest stage. From this perspective, a willingness to correct mistakes enhances rather than erodes the sport's credibility: spectators are more inclined to trust an institution that openly acknowledges its fallibility than one that shelters behind procedural finality.
+
+Skeptics, however, warn of a slippery slope. If suspensions can be rescinded once controversy erupts, they argue, national federations with political and commercial clout may be tempted to lobby aggressively whenever a star player faces punishment, and referees may hesitate to make difficult calls knowing their decisions can be publicly overridden. Some commentators have also questioned whether an unheralded player from a less influential footballing nation would have received comparable leniency, suggesting that the enormous commercial stakes surrounding marquee names could quietly distort what is supposed to be a quasi-judicial process. For these critics, the reprieve is less a triumph of fairness than a reminder of how unevenly discretion can be applied.
+
+The most persuasive resolution to this dispute lies not in choosing between rigid rules and unfettered discretion but in institutionalizing the latter. If FIFA publishes the reasoning behind such reversals, defines clear criteria for what constitutes an obvious error, and entrusts the assessment to an independent review panel, the Balogun case could serve as a precedent for fairer governance rather than remain an isolated anomaly. Absent such safeguards, every future act of clemency, however justified, will invite accusations of favoritism—and the common sense that prevailed this time may come to be seen as privilege by another name.
+
+### 日本語訳
+
+FIFAワールドカップで米国代表の得点王であるフォラリン・バログンが前の試合でレッドカードを提示された際、それに伴う自動的な出場停止処分は、ベルギーとの重要な一戦から彼を締め出す恐れがあった。異例の介入により、FIFAは主審の当初の判定に重大な疑義を投げかける映像を検証したうえで処分を覆し、このストライカーに稀な救済を与えた。多くの方面で「常識の勝利」と称賛されたこの決定は、しかしながら、規則の厳格な適用が明らかに不当な結果を生みかねない場合に統括団体がどの程度の裁量を行使すべきかという長年の論争を再燃させた。
+
+この裁定の支持者たちは、映像によって退場処分が審判の誤りに基づくものであったことが示されており、審判団の過ちのために選手とチームの双方を罰することは大会の競技的公正性を損なっただろうと主張する。彼らは、FIFAの懲戒規程には明白な誤りがあった場合に処分を事後的に見直すことを認める条項が以前から存在するものの、サッカー最大の舞台でその条項が発動されることはめったになかったと指摘する。この立場からすれば、過ちを正そうとする姿勢は競技の信頼性を損なうどころかむしろ高めるものである。観客は、手続き上の最終性を盾に取る組織よりも、自らの過ちを率直に認める組織を信頼する傾向が強いからだ。
+
+しかし懐疑派は、歯止めが利かなくなる危険を警告する。ひとたび物議が起これば処分が撤回され得るのなら、政治的・商業的影響力を持つ各国連盟はスター選手が処分に直面するたびに強力なロビー活動を行いたくなるだろうし、審判は自分の判定が公然と覆され得ると知って難しい判定をためらうようになるかもしれない、と彼らは論じる。また一部の論者は、影響力の乏しいサッカー国の無名選手であれば同等の寛大な措置を受けられただろうかと疑問を呈し、看板選手を取り巻く莫大な商業的利害が、本来準司法的であるべき手続きを密かに歪めかねないと示唆している。こうした批判者にとって、今回の救済は公正の勝利というより、裁量がいかに不均等に適用され得るかを思い起こさせるものである。
+
+この論争に対する最も説得力のある解決は、硬直的な規則と無制限の裁量のどちらかを選ぶことではなく、後者を制度化することにある。FIFAがこうした処分撤回の理由を公表し、何が明白な誤りに当たるかの明確な基準を定め、その判断を独立した審査委員会に委ねるならば、バログンの一件は孤立した例外にとどまらず、より公正なガバナンスの先例となり得る。そのような保障措置がなければ、将来のあらゆる寛大な措置は、たとえ正当なものであっても、えこひいきだという非難を招くだろう。そして今回勝利した常識は、名を変えた特権と見なされるようになるかもしれない。
+
+### 読解問題（4問）
+
+**問1.** What is one thing stated in the passage about FIFA's disciplinary code?
+
+A. The clause permitting retrospective review of sanctions has been applied routinely at every major international tournament, ensuring that all officiating errors are corrected before decisive matches are allowed to take place.
+
+B. Skeptics of the ruling concede that the disciplinary code's review clause strengthens the sport's credibility because it enables the governing body to acknowledge its own fallibility openly to spectators around the world.
+
+C. It includes a mechanism under which punishments may be reexamined after the fact when a clear officiating mistake is identified, although this option has hardly ever been exercised at the sport's premier tournament.
+
+D. FIFA added the provision allowing sanctions to be reviewed to its disciplinary code as a direct result of the controversy over Balogun's red card and the widespread public criticism of his automatic suspension.
+
+**問2.** What can be inferred from the passage about the skeptics' concerns?
+
+A. They argue that referees' growing reluctance to make difficult calls in high-stakes matches is what ultimately compelled FIFA to rescind the suspension and grant Balogun his rare reprieve.
+
+B. Supporters of the ruling privately acknowledged that national federations with political and commercial clout had lobbied FIFA aggressively to overturn Balogun's suspension before the decisive encounter with Belgium.
+
+C. They suspect that how a player is treated after a controversial dismissal may depend as much on that player's fame and financial value to the sport as on the actual merits of the case.
+
+D. They have demonstrated that FIFA's quasi-judicial process has already been distorted by commercial interests, and that referees now consistently avoid making difficult calls against star players in commercially important matches.
+
+**問3.** What does the author imply about the legitimacy of future acts of clemency by FIFA?
+
+A. Sports governing bodies around the world should abandon their disciplinary codes altogether and rely exclusively on case-by-case discretion exercised by administrators when officiating controversies arise during tournaments.
+
+B. FIFA has already committed itself to publishing the reasoning behind sanction reversals and to defining precise criteria for obvious errors before the next edition of the World Cup begins.
+
+C. Whether such interventions are ultimately judged to be fair will hinge less on the correctness of each individual verdict than on the openness and consistency of the procedures through which it is reached.
+
+D. Unless an independent review panel is established immediately, the Balogun ruling is certain to be remembered as an act of privilege rather than as a victory for common sense.
+
+**問4.** What is the author's main point regarding the debate over discretion in sports governance?
+
+A. Rather than treating flexibility and strict rule enforcement as mutually exclusive alternatives, governing bodies should embed discretionary power within formal structures that make its exercise both predictable and accountable.
+
+B. Accusations of favoritism were what originally prompted FIFA to exercise common-sense discretion in the Balogun case, demonstrating that public criticism reliably produces fairer outcomes in sports governance.
+
+C. The willingness to correct officiating errors should be extended to every decision in every match, with referees' calls routinely subject to retrospective reversal whenever a national team lodges an objection.
+
+D. The Balogun reprieve has definitively proven that FIFA's governance is fairer than that of other sports organizations, thereby settling the long-standing dispute between the ruling's supporters and its skeptics.
+
+---
+
+## 解答・解説
+
+### 語彙問題 解答・解説
+
+**問1. 正解: A（vigil）**
+
+【正解】'held a candlelight ____ outside the presidential palace ... throughout the night'より、夜通し静かに座り込み抗議・祈念を続ける集会を表すvigilが最適。candlelight vigilは抗議・追悼の定番コロケーションであり、「寝ずに見守り続ける」というvigil固有のニュアンスが'silently demanding transparency throughout the night'と合致する。【A: quandary】パターンB「意味が近いが文脈の焦点がズレる」─選挙後の混乱下の心理として文脈に馴染みそうだが、「板挟み・困惑」という内的状態であり、屋外でheldする集会行為を表さない。【B: gorge】パターンC「文脈と無関係」─「渓谷」を意味する地形語であり、抗議行動の文脈に合わない。【D: strain】パターンB「意味が近いが文脈の焦点がズレる」─選挙後の「緊張・重圧」として一見入りそうだが、hold a strainという共起は成立せず、市民が主体的に催す行為を表せない。【紛らわしいペア】vigil vs strain：vigilは「夜通し見守る行為そのもの」、strainは「状況にかかる緊張状態」であり、動詞heldの目的語になり得るのはvigilである。
+
+**問2. 正解: C（inconspicuous）**
+
+【正解】'so that the birds' natural behavior would not be altered by awareness of its presence'より、鳥に気づかれないよう「目立たない」装置を意味するinconspicuousが最適。存在を意識させないほど視覚的に地味であるというinconspicuous固有のニュアンスが、観察対象の自然な行動を保つという研究目的と合致する。【B: elusive】パターンB「意味が近いが文脈の焦点がズレる」─「捕まえにくい・見極めにくい」で意味は近いが、追う側から見た捉えがたさを表す語であり、装置自体が視覚的に目立たないという属性を表さない。【C: mock】パターンB「意味が近いが文脈の焦点がズレる」─「模擬の」装置として研究文脈に入りそうだが、模擬品では追跡機能自体が成立せず、装置を意識させないという目的と噛み合わない。【D: apathetic】パターンC「文脈と無関係」─「無関心な」は人の態度を表す語であり、装置の属性として文脈に合わない。【紛らわしいペア】inconspicuous vs elusive：inconspicuousは「見えていても目に留まらない」、elusiveは「捉えようとしても逃れる」であり、固定された装置に適合するのはinconspicuousである。
+
+**問3. 正解: B（dispel）**
+
+【正解】'reassuring remarks helped ____ investors' fears'および直後の'stock markets rallied sharply'より、不安を払いのけて消し去るdispelが最適。漂う疑念や恐怖を追い散らして解消するというdispel固有のニュアンスがfears/doubtsとの定番コロケーションを成し、安心発言→株価反発という文脈と合致する。【A: efface】パターンB「意味が近いが文脈の焦点がズレる」─「消す」という意味は近いが、effaceは記憶・痕跡・自己の存在感を消す対象に用いる語であり、fearsを払拭するという共起はdispelの領分である。【B: lurk】パターンB「意味が近いが文脈の焦点がズレる」─fearsと結びつきやすく紛らわしいが、「（不安が）潜む」という自動詞であり、発言が不安を取り除くという他動詞構文に入らない。【C: condone】パターンC「文脈と無関係」─「容認する・大目に見る」は不正行為などを見逃す意であり、fearsを目的語に取る文脈と無関係。【紛らわしいペア】dispel vs efface：dispelは「漂う不安・疑念を追い散らす」、effaceは「刻まれた痕跡・記憶を消す」であり、投資家の恐怖に適合するのはdispelである。
+
+**問4. 正解: D（obsequious）**
+
+【正解】'grew weary of the ____ praise from critics who flattered her merely to gain access'より、取り入る目的のこびへつらった賛辞を表すobsequiousが最適。相手に取り入るために卑屈なまでに追従するというobsequious固有のニュアンスが'flattered her merely to gain access'という下心の描写と合致する。【A: staunch】パターンB「意味が近いが文脈の焦点がズレる」─「忠実な」支持・賛辞として一見入りそうだが、staunchは信念に基づく誠実で揺るがぬ支持を表す肯定語であり、下心ある追従という否定的な焦点とズレる。【C: relentless】パターンB「意味が近いが文脈の焦点がズレる」─「絶え間ない」賛辞として共起は成立するが、執拗さ・持続性に焦点がある語であり、へつらいという動機の卑屈さを表さない。【D: squalid】パターンC「文脈と無関係」─「不潔な・浅ましい」は物理的環境や醜聞を描写する語であり、批評家の賛辞の修飾として文脈に合わない。【紛らわしいペア】obsequious vs staunch：obsequiousは「下心からの卑屈な追従」、staunchは「信念に基づく誠実な忠誠」であり、評価の方向が正反対である。
+
+**問5. 正解: D（trudge）**
+
+【正解】'Exhausted commuters had to ____ several kilometers through the heavy snow'より、疲れ果てて重い足取りでとぼとぼ歩くtrudgeが最適。悪条件の中を骨を折りながら歩き続けるというtrudge固有のニュアンスが'Exhausted'および'through the heavy snow'と合致する。【B: lurk】パターンB「意味が近いが文脈の焦点がズレる」─人の身のこなしを表す点で近く見えるが、「隠れて潜む」という静的な意味であり、several kilometersという距離を伴う歩行移動を表さない。【C: strain】パターンB「意味が近いが文脈の焦点がズレる」─「懸命に力む」という苦労のニュアンスは共通するが、strainは力を込める動作や重圧を表す語であり、距離を歩き通す移動動詞として機能しない。【D: gorge】パターンC「文脈と無関係」─動詞では「むさぼり食う」を意味し、徒歩移動の文脈と無関係。【紛らわしいペア】trudge vs strain：trudgeは「苦労しながら歩く移動そのもの」、strainは「移動を伴わない力み・緊張」であり、several kilometersと共起できるのはtrudgeである。
+
+#### 語彙選択肢アノテーション一覧
+
+| 単語 | 訳 | 品詞 | コロケーション | 誤答の場合の理由 |
+|---|---|---|---|---|
+| vigil | 寝ずの番 | 名 | keep a vigil / a candlelight vigil |  |
+| quandary | 板挟み | 名 | in a quandary / face a quandary | パターンB: 見守る行為でなく困惑状態 |
+| gorge | 峡谷 | 名 | a deep gorge / a narrow gorge | パターンC: 地形の語で文脈と無関係 |
+| strain | 重圧 | 名 | put a strain on / financial strain | パターンC: 負担の意で文脈と無関係 |
+| elusive | 捉え難い | 形 | an elusive goal / remain elusive | パターンB: 目立たぬでなく捕捉困難 |
+| apathetic | 無関心な | 形 | apathetic voters / apathetic about politics | パターンC: 態度の語で文脈と無関係 |
+| inconspicuous | 目立たない | 形 | remain inconspicuous / an inconspicuous corner |  |
+| mock | 模擬の | 形 | a mock trial / a mock exam | パターンC: 偽物の意で文脈と無関係 |
+| efface | 消し去る | 動 | efface memories / efface oneself | パターンB: 痕跡の抹消で疑念払拭でない |
+| dispel | 払拭する | 動 | dispel doubts / dispel a myth |  |
+| condone | 容認する | 動 | condone violence / condone such behavior | パターンA: 除去でなく黙認で意味が逆 |
+| lurk | 潜む | 動 | lurk in the shadows / danger lurks | パターンC: 潜伏の意で文脈と無関係 |
+| squalid | むさ苦しい | 形 | squalid conditions / a squalid room | パターンC: 不潔さの語で文脈と無関係 |
+| relentless | 容赦ない | 形 | relentless pressure / relentless pursuit | パターンB: 執拗さでへつらいでない |
+| staunch | 忠実な | 形 | a staunch supporter / a staunch ally | パターンB: 誠実な支持で卑屈さがない |
+| obsequious | 卑屈な | 形 | obsequious flattery / an obsequious manner |  |
+| trudge | とぼとぼ歩く | 動 | trudge through snow / trudge home |  |
+
+#### 紛らわしい語のペア
+
+- **inconspicuous vs elusive**: inconspicuousは視覚的に目立たないこと、elusiveは捕捉や理解が難しいこと。
+- **dispel vs efface**: dispelは疑念・不安など無形のものを払拭する、effaceは痕跡・記憶を消し去る。
+- **obsequious vs staunch**: obsequiousは過剰にこびへつらう否定的態度、staunchは誠実で揺るがぬ支持を表す肯定的評価。
+- **trudge vs lurk**: trudgeは疲れて重い足取りで歩く動作、lurkは身を隠して潜む状態。
+
+### 読解問題 解答・解説
+
+**問1. 正解: C**
+
+raw解説（生成時、選択肢シャッフル前の記号参照が残っている場合あり）:
+> 【正解 B】本文第2段落に'FIFA's disciplinary code has long contained a provision permitting retrospective review of sanctions in cases of obvious error, although the clause has seldom been invoked on football's biggest stage'とあり、これをparaphraseすると「明白な審判の誤りが特定された場合に処分を事後的に再検証できる仕組みを含むが、最高峰の大会ではほとんど行使されてこなかった」という正解Bに対応する。【A: FIFA added the provision...】技法1「因果関係の逆転」─本文では条項は'has long contained'と以前から存在しており、その既存の条項に基づいてバログンの処分が見直されたのであって、バログンの騒動の結果として条項が追加されたのではない。原因と結果が逆に記述されている。【C: Skeptics of the ruling concede...】技法4「主語のすり替え」─「過ちを認める姿勢が競技の信頼性を高める」と論じているのは本文ではSupporters of the rulingであり、選択肢のSkepticsではない。【D: The clause permitting retrospective review...】技法2「範囲の拡大」─本文では'the clause has seldom been invoked'と発動が稀であることが明示されているが、選択肢では「あらゆる主要大会で日常的に適用され、すべての誤審が修正される」と過度に一般化している。
+
+選択肢別詳細（シャッフル後の記号と整合、こちらが正）:
+
+- **A** ❌ 誤答: The clause permitting retrospective review of sanctions has been applied routinely at every major international tournament, ensuring that all officiating errors are corrected before decisive matches are allowed to take place.
+  - 訳: 処分の事後審査を認める条項は、すべての主要国際大会で日常的に適用されてきた。そのため、決定的な試合が行われる前にあらゆる誤審が修正されることが保証されている。
+  - 技法「誇張・断定化」: 本文では条項が「めったに行使されてこなかった」と述べているのに、この選択肢では「日常的に適用され、あらゆる誤審が修正される」と正反対に断定している
+- **B** ❌ 誤答: Skeptics of the ruling concede that the disciplinary code's review clause strengthens the sport's credibility because it enables the governing body to acknowledge its own fallibility openly to spectators around the world.
+  - 訳: 裁定に懐疑的な人々も、懲戒規程の審査条項がスポーツの信頼性を高めると認めている。なぜなら統括団体が自らの過ちを世界中の観客に公然と認められるようになるからだ。
+  - 技法「主語のすり替え」: 「過ちの是正が信頼性を高める」という主張は裁定の支持者(Supporters)の見解であり、本文の懐疑派(Skeptics)がそれを認めたという記述はない
+- **C** ✅ 正解: It includes a mechanism under which punishments may be reexamined after the fact when a clear officiating mistake is identified, although this option has hardly ever been exercised at the sport's premier tournament.
+  - 訳: この規程には、明白な誤審が確認された場合に処分を事後的に再審査できる仕組みが含まれている。ただし、この選択肢がサッカー最高峰の大会で行使されたことはほとんどない。
+  - 根拠: 第2段落 「FIFA's disciplinary code has long contained a provision permitting retrospective review of sanctions in cases of obvious error, although the clause has seldom been invoked on football's biggest stage」→ 本文の「a provision permitting retrospective review of sanctions in cases of obvious error」を「a mechanism under which punishments may be reexamined after the fact when a clear officiating mistake is identified」と、「seldom been invoked on football's biggest stage」を「hardly ever been exercised at the sport's premier tournament」とparaphraseしており、条項の存在とその行使の稀少さの両方が対応する
+- **D** ❌ 誤答: FIFA added the provision allowing sanctions to be reviewed to its disciplinary code as a direct result of the controversy over Balogun's red card and the widespread public criticism of his automatic suspension.
+  - 訳: バログンのレッドカードを巡る論争と、彼の自動出場停止への広範な世論の批判を直接の結果として、FIFAは処分の再審査を認める条項を懲戒規程に追加した。
+  - 技法「因果関係の逆転」: 本文では条項は「長い間規程に含まれていた」もので、それが今回の裁定の根拠となった。しかしこの選択肢では、バログンの騒動が原因となって条項が追加されたと時系列と因果を逆転させている
+
+**問2. 正解: C**
+
+raw解説（生成時、選択肢シャッフル前の記号参照が残っている場合あり）:
+> 【正解 D】本文第3段落の'questioned whether an unheralded player from a less influential footballing nation would have received comparable leniency'と'the enormous commercial stakes surrounding marquee names could quietly distort what is supposed to be a quasi-judicial process'の2箇所から、懐疑派が「処分後の扱いは事案そのものの妥当性と同じくらい、選手の知名度や商業的価値に左右されかねない」と疑っていることが推論できる。【A: They have demonstrated...】技法3「誇張・断定化」─本文は'could quietly distort'と歪みの可能性を、'may hesitate'と審判の萎縮の可能性を述べているにすぎず、「すでに歪められたことを実証した」「一貫して判定を回避している」という断定までは述べていない。【B: Supporters of the ruling privately acknowledged...】技法4「主語のすり替え」─連盟によるロビー活動への懸念を提起しているのは本文ではSkepticsであり、選択肢のSupporters of the rulingではない。しかも本文は'may be tempted to lobby'という将来の可能性を述べており、実際にロビー活動が行われた事実は記述されていない。【C: They argue that referees' growing reluctance...】技法1「因果関係の逆転」─本文では「処分が撤回され得ること」が原因となって「審判が難しい判定をためらう」という結果が生じ得ると述べており、選択肢は審判のためらいが処分撤回を引き起こしたと原因と結果を逆に記述している。
+
+選択肢別詳細（シャッフル後の記号と整合、こちらが正）:
+
+- **A** ❌ 誤答: They argue that referees' growing reluctance to make difficult calls in high-stakes matches is what ultimately compelled FIFA to rescind the suspension and grant Balogun his rare reprieve.
+  - 訳: 重要な試合で難しい判定を下すことへの審判のためらいの高まりこそが、最終的にFIFAに出場停止の撤回を迫り、バログンに異例の救済を与えさせたのだと彼らは主張している。
+  - 技法「因果関係の逆転」: 本文では「処分が覆される(原因)→審判が判定をためらうようになる(結果)」という懸念だが、この選択肢では「審判のためらい(原因)→処分の撤回(結果)」と因果が逆になっている
+- **B** ❌ 誤答: Supporters of the ruling privately acknowledged that national federations with political and commercial clout had lobbied FIFA aggressively to overturn Balogun's suspension before the decisive encounter with Belgium.
+  - 訳: 政治力と商業的影響力を持つ各国連盟が、ベルギーとの決戦前にバログンの出場停止を覆すようFIFAに激しく働きかけていたことを、裁定の支持者たちは内々に認めていた。
+  - 技法「本文に根拠なし」: 本文で懐疑派が述べているのは「有力連盟が今後ロビー活動に誘惑されるかもしれない(may be tempted to lobby)」という将来への懸念であり、バログンの件で実際にロビー活動が行われたことや、支持者がそれを認めたという記述は一切ない
+- **C** ✅ 正解: They suspect that how a player is treated after a controversial dismissal may depend as much on that player's fame and financial value to the sport as on the actual merits of the case.
+  - 訳: 物議を醸す退場処分の後に選手がどう扱われるかは、その事案自体の是非と同じくらい、選手の知名度やスポーツにもたらす経済的価値にも左右されるのではないかと彼らは疑っている。
+  - 根拠: 第3段落 「Some commentators have also questioned whether an unheralded player from a less influential footballing nation would have received comparable leniency, suggesting that the enormous commercial stakes surrounding marquee names could quietly distort what is supposed to be a quasi-judicial process」→ 本文の「無名選手なら同等の寛大さを得られたか疑問視し、有名選手を取り巻く巨額の商業的利害が手続きを歪めうる」という指摘を、「選手の扱いが知名度と経済的価値に左右されうると疑っている」とparaphraseしており、裁量が不均等に適用されるという懐疑派の懸念に対応する
+- **D** ❌ 誤答: They have demonstrated that FIFA's quasi-judicial process has already been distorted by commercial interests, and that referees now consistently avoid making difficult calls against star players in commercially important matches.
+  - 訳: FIFAの準司法的手続きがすでに商業的利益によって歪められていること、そして審判が今では商業的に重要な試合でスター選手に不利な難しい判定を一貫して避けていることを、彼らは実証した。
+  - 技法「誇張・断定化」: 本文ではcould distort / may hesitateと可能性・懸念として述べられているが、この選択肢では「すでに歪められたと実証した」「一貫して避けている」と既成事実として断定している
+
+**問3. 正解: C**
+
+raw解説（生成時、選択肢シャッフル前の記号参照が残っている場合あり）:
+> 【正解 A】本文第4段落の'If FIFA publishes the reasoning behind such reversals, defines clear criteria ... the Balogun case could serve as a precedent for fairer governance'と'Absent such safeguards, every future act of clemency, however justified, will invite accusations of favoritism'の2箇所から推論できる。個々の措置が正当であっても（however justified）保障措置がなければ非難を招くと述べており、公正さの評価を左右するのは個別判断の正しさよりも手続きの公開性と一貫性であると筆者は示唆している。【B: Unless an independent review panel...】技法3「誇張・断定化」─本文は'may come to be seen as privilege'と可能性で述べているが、選択肢は「直ちに設置されなければ特権として記憶されることが確実」と断定している。【C: Sports governing bodies around the world...】技法2「範囲の拡大」─本文の提言はFIFAの処分見直し手続きに限定されており、筆者は'not in choosing between rigid rules and unfettered discretion'と無制限の裁量への依存を明確に退けている。「世界中のすべての統括団体が懲戒規程を廃止すべき」は過度な一般化である。【D: FIFA has already committed...】技法4「主語のすり替え」─理由の公表や基準の策定は本文で筆者が提案している内容であり、FIFAがすでにそれを約束したという記述はない。行為の主体を筆者からFIFAにすり替えている。
+
+選択肢別詳細（シャッフル後の記号と整合、こちらが正）:
+
+- **A** ❌ 誤答: Sports governing bodies around the world should abandon their disciplinary codes altogether and rely exclusively on case-by-case discretion exercised by administrators when officiating controversies arise during tournaments.
+  - 訳: 世界中のスポーツ統括団体は懲戒規程を完全に廃止すべきである。そして大会中に誤審を巡る論争が起きた際には、運営者がその都度行使する裁量だけに頼るべきだ。
+  - 技法「範囲の拡大」: 筆者は「厳格な規則か無制限の裁量かの二者択一ではない」と述べており、規程の全廃や裁量のみへの依存は主張していない。FIFAの一事例の話を世界中の全統括団体に一般化している点も本文の範囲を超えている
+- **B** ❌ 誤答: FIFA has already committed itself to publishing the reasoning behind sanction reversals and to defining precise criteria for obvious errors before the next edition of the World Cup begins.
+  - 訳: FIFAはすでに、次回のワールドカップが始まる前に、処分撤回の背後にある理由を公表し、明白な誤りの正確な基準を定めることを確約している。
+  - 技法「誇張・断定化」: 本文では「もしFIFAが〜すれば」という筆者の条件付きの提案として述べられているが、この選択肢ではFIFAがすでに確約した既成事実として断定している
+- **C** ✅ 正解: Whether such interventions are ultimately judged to be fair will hinge less on the correctness of each individual verdict than on the openness and consistency of the procedures through which it is reached.
+  - 訳: そうした介入が最終的に公正と判断されるかどうかは、個々の裁定の正しさそのものよりも、その結論に至る手続きの透明性と一貫性にかかっている。
+  - 根拠: 第4段落 「If FIFA publishes the reasoning behind such reversals, defines clear criteria for what constitutes an obvious error, and entrusts the assessment to an independent review panel... Absent such safeguards, every future act of clemency, however justified, will invite accusations of favoritism」→ 本文の「理由の公表・明確な基準・独立審査という保護措置がなければ、たとえ正当な(however justified)救済であってもえこひいきと非難される」という論旨を、「公正さの判断は個々の裁定の正しさより手続きの透明性と一貫性に依存する」とparaphraseしており、筆者の含意と正確に対応する
+- **D** ❌ 誤答: Unless an independent review panel is established immediately, the Balogun ruling is certain to be remembered as an act of privilege rather than as a victory for common sense.
+  - 訳: 独立した審査委員会が直ちに設置されない限り、バログンの裁定は常識の勝利としてではなく、特権の行使として記憶されることが確実である。
+  - 技法「誇張・断定化」: 本文では「特権と見なされるようになるかもしれない(may come to be seen)」と可能性として述べているが、この選択肢では「直ちに」という期限を加えたうえで「確実である(is certain)」と断定している
+
+**問4. 正解: A**
+
+raw解説（生成時、選択肢シャッフル前の記号参照が残っている場合あり）:
+> 【正解 C】本文第4段落に'The most persuasive resolution to this dispute lies not in choosing between rigid rules and unfettered discretion but in institutionalizing the latter'とあり、これをparaphraseすると「柔軟性と厳格な規則執行を二者択一として扱うのではなく、裁量権を予測可能で説明責任を伴う公式の枠組みに組み込むべきだ」という正解Cに対応する。理由の公表・明確な基準・独立審査委員会という具体策がこの制度化の内容として挙げられている。【A: The willingness to correct officiating errors...】技法2「範囲の拡大」─本文の事後的見直しは'cases of obvious error'に限定されているが、選択肢は「あらゆる試合のすべての判定」に対象を拡大し、チームの異議があれば覆せるとしている。【B: The Balogun reprieve has definitively proven...】技法3「誇張・断定化」─本文は'could serve as a precedent for fairer governance'と可能性で述べているにすぎず、「他競技団体より公正だと決定的に証明した」「支持者と懐疑派の論争に決着をつけた」とは述べていない。【D: Accusations of favoritism were what originally prompted...】技法1「因果関係の逆転」─本文では寛大な措置（原因）がえこひいきという非難（結果）を招くと述べており、選択肢は非難が裁量行使を促したと原因と結果を逆に記述している。
+
+選択肢別詳細（シャッフル後の記号と整合、こちらが正）:
+
+- **A** ✅ 正解: Rather than treating flexibility and strict rule enforcement as mutually exclusive alternatives, governing bodies should embed discretionary power within formal structures that make its exercise both predictable and accountable.
+  - 訳: 柔軟性と厳格な規則の適用を互いに相容れない二者択一として扱うのではなく、統括団体は裁量権を公式な制度の中に組み込み、その行使を予測可能かつ説明責任を伴うものにすべきである。
+  - 根拠: 第4段落 「The most persuasive resolution to this dispute lies not in choosing between rigid rules and unfettered discretion but in institutionalizing the latter. If FIFA publishes the reasoning behind such reversals, defines clear criteria for what constitutes an obvious error, and entrusts the assessment to an independent review panel」→ 本文の「rigid rulesとunfettered discretionの二者択一ではなく後者を制度化する(institutionalizing)」という主張を、「裁量権を公式な制度に組み込む(embed discretionary power within formal structures)」とparaphraseしており、理由の公表・明確な基準・独立審査という具体策が「予測可能かつ説明責任を伴う」という表現に対応する
+- **B** ❌ 誤答: Accusations of favoritism were what originally prompted FIFA to exercise common-sense discretion in the Balogun case, demonstrating that public criticism reliably produces fairer outcomes in sports governance.
+  - 訳: えこひいきだという非難こそが、バログンの件でFIFAに常識的な裁量を行使させた本来のきっかけであった。これは世論の批判がスポーツ統治においてより公正な結果を確実に生み出すことを示している。
+  - 技法「因果関係の逆転」: 本文では「裁量による救済(原因)→えこひいきの非難を招く(結果)」という順序だが、この選択肢では「えこひいきの非難(原因)→裁量の行使(結果)」と因果が逆になっている
+- **C** ❌ 誤答: The willingness to correct officiating errors should be extended to every decision in every match, with referees' calls routinely subject to retrospective reversal whenever a national team lodges an objection.
+  - 訳: 誤審を正そうとする姿勢はあらゆる試合のあらゆる判定に拡大されるべきである。そして代表チームが異議を申し立てるたびに、審判の判定は日常的に事後的な取り消しの対象とされるべきだ。
+  - 技法「範囲の拡大」: 本文では「明白な誤り」に該当する場合に限って事後審査を認めるべきだと述べているが、この選択肢では「あらゆる試合のあらゆる判定」「異議申立てのたびに日常的に」と対象を無制限に拡大している
+- **D** ❌ 誤答: The Balogun reprieve has definitively proven that FIFA's governance is fairer than that of other sports organizations, thereby settling the long-standing dispute between the ruling's supporters and its skeptics.
+  - 訳: バログンへの救済は、FIFAの統治が他のスポーツ団体よりも公正であることを決定的に証明した。それによって裁定の支持者と懐疑論者の間の長年の論争に決着がついた。
+  - 技法「誇張・断定化」: 本文では条件が満たされれば「先例になりうる(could serve)」と可能性として述べており、論争も未解決のままだが、この選択肢では「決定的に証明し、論争に決着をつけた」と断定している。他団体との比較も本文にはない
+

@@ -1,0 +1,558 @@
+{
+  "meta": {
+    "label": "content-sonnet",
+    "format": "content",
+    "elapsedMs": 178887.52462499996,
+    "generationModel": "claude-sonnet-5",
+    "annotationModel": "claude-haiku-4-5"
+  },
+  "questions": {
+    "article": {
+      "title": "New heatwave likely to peak at 34C with week-long health alert issued",
+      "content": "New heatwave likely to peak at 34C with week-long health alert issued. Another heatwave is on its way and set to last significantly longer as Stav Danaos explains.",
+      "source": "BBC Science",
+      "link": "https://www.bbc.co.uk/weather/articles/c621j44jwe1o?at_medium=RSS&at_campaign=rss",
+      "genre": "サイエンス・テクノロジー"
+    },
+    "readingFormat": "content",
+    "vocabQuestions": [
+      {
+        "number": 1,
+        "sentence": "Despite facing repeated setbacks and fierce opposition from rival factions, the senator remained ____ in her pursuit of comprehensive healthcare reform, refusing to abandon the legislation.",
+        "blank": "tenacious",
+        "choices": {
+          "A": "ubiquitous",
+          "B": "tenacious",
+          "C": "lavish",
+          "D": "acrid"
+        },
+        "answer": "B",
+        "explanation": "【正解】文中の「despite facing repeated setbacks and fierce opposition...refusing to abandon the legislation」から、困難にも屈せず粘り強く目標を追求する性質を表すtenaciousが最適。逆境でも諦めない政治家の姿勢という文脈的手がかりに合致する。【D: acrid】パターンB「意味が近いが焦点がズレる」－政治的対立の激しさや辛辣さを連想させるが、これは態度の「粘り強さ」ではなく発言や雰囲気の「刺々しさ」を表す語であり、諦めない姿勢とは焦点が異なる。【C: lavish】パターンC「文脈と無関係」－「豪華な、気前のよい」という意味であり、粘り強さという性質とは無関係。【A: ubiquitous】パターンB「意味が近いが焦点がズレる」－「至るところに存在する」という広がりを表す語であり、持続的な努力や不屈の精神という時間的・意志的な粘り強さの側面を捉えていない。【紛らわしいペア】tenacious vs ubiquitous：tenaciousは意志の持続を、ubiquitousは空間的な遍在性を表す点で機能が異なる。"
+      },
+      {
+        "number": 2,
+        "sentence": "The scientists' discovery of widespread contamination in the water supply was expected to ____ the public once the report was released, given the severity of the health risks involved.",
+        "blank": "appall",
+        "choices": {
+          "A": "render",
+          "B": "inflict",
+          "C": "commiserate",
+          "D": "appall"
+        },
+        "answer": "D",
+        "explanation": "【正解】文中の「was expected to ____ the public once the report was released, given the severity of the health risks」から、深刻な事実に人々が恐怖・衝撃を受けるというappall固有のニュアンスが文脈と合致する。【B: inflict】パターンB「意味が近いが焦点がズレる」－「（害などを）負わせる」という意味で被害を与える点は共通するが、通常「inflict A on B」の形で具体的な損害を課すことに焦点があり、心理的な衝撃・恐怖の感情反応を表すappallとは異なる。【C: commiserate】パターンA「意味が逆」－「同情する、慰める」という意味であり、恐怖を与えるappallとは正反対の方向の感情表現である。【A: render】パターンB「意味が近いが焦点がズレる」－「（ある状態に）する」という変化を表す語であり、通常補語（形容詞）を伴って状態変化を示すが、恐怖という感情反応を直接表す語ではない点でappallと異なる。【紛らわしいペア】appall vs inflict：appallは感情的衝撃を、inflictは実害の付与を表す点で異なる。"
+      },
+      {
+        "number": 3,
+        "sentence": "Without access to reliable data, economists could only offer ____ about the true impact of the trade policy on employment rates across the region.",
+        "blank": "conjecture",
+        "choices": {
+          "A": "irrigation",
+          "B": "tenet",
+          "C": "fiasco",
+          "D": "conjecture"
+        },
+        "answer": "D",
+        "explanation": "【正解】文中の「Without access to reliable data, economists could only offer ____ about the true impact」から、証拠不十分な状況で述べる「推測」を意味するconjectureが最適。データの欠如ゆえに確証のない意見しか示せないという文脈的手がかりに合致する。【B: tenet】パターンB「意味が近いが焦点がズレる」－経済学派の「信条・原則」を指す語であり、証拠に基づかない一時的な推測ではなく、確立された理論的立場を表す点でconjectureと異なる。【A: irrigation】パターンC「文脈と無関係」－「灌漑」という意味で、経済政策の議論とは全く無関係。【C: fiasco】パターンB「意味が近いが焦点がズレる」－政策の「大失敗」という結果を指す語であり、事前の予測・推測を表すconjectureとは時系列的な焦点が異なる。【紛らわしいペア】conjecture vs tenet：conjectureは根拠なき推測を、tenetは確立された信条を表す点で異なる。"
+      },
+      {
+        "number": 4,
+        "sentence": "The museum curator's ____ restoration of the ancient tapestry involved painstakingly matching each thread's color and texture to preserve its original historical authenticity.",
+        "blank": "meticulous",
+        "choices": {
+          "A": "elusive",
+          "B": "sleek",
+          "C": "meticulous",
+          "D": "bizarre"
+        },
+        "answer": "C",
+        "explanation": "【正解】文中の「painstakingly matching each thread's color and texture to preserve its original historical authenticity」から、細部まで注意を払うというmeticulous固有のニュアンスが文脈と合致する。【B: sleek】パターンB「意味が近いが焦点がズレる」－洗練された見た目の美しさを表す語であり、作業過程における細部への配慮ではなく完成物の外観に焦点がある点でmeticulousと異なる。【D: bizarre】パターンC「文脈と無関係」－「奇妙な」という意味であり、丁寧な修復作業とは無関係。【A: elusive】パターンB「意味が近いが焦点がズレる」－「つかみにくい、理解しにくい」という意味であり、対象の捉えがたさを表す語であって、作業者の注意深さを表すmeticulousとは主語の焦点が異なる。【紛らわしいペア】meticulous vs elusive：meticulousは行為者の几帳面さを、elusiveは対象の捉えがたさを表す点で異なる。"
+      },
+      {
+        "number": 5,
+        "sentence": "The rapid rise of remote work during the pandemic introduced a new ____ for understanding the relationship between employment and physical workplace presence, replacing decades-old assumptions.",
+        "blank": "paradigm",
+        "choices": {
+          "A": "paradigm",
+          "B": "menace",
+          "C": "propensity",
+          "D": "upheaval"
+        },
+        "answer": "A",
+        "explanation": "【正解】文中の「introduced a new ____ for understanding the relationship between employment and physical workplace presence, replacing decades-old assumptions」から、物事を捉える新たな理論的枠組みを意味するparadigmが最適。既存の前提を置き換える新しい思考の型という文脈的手がかりに合致する。【B: menace】パターンC「文脈と無関係」－「脅威」という否定的な意味であり、中立的な認識枠組みの変化を述べる文脈にそぐわない。【D: upheaval】パターンB「意味が近いが焦点がズレる」－社会的な「大変動」を表し、リモートワークの普及による混乱や動揺には合致し得るが、新しい理解の「枠組み」そのものを表すparadigmとは焦点が異なる。【C: propensity】パターンB「意味が近いが焦点がズレる」－個人や集団の「性向・傾向」を表す語であり、社会全体で共有される認識の枠組みを意味するparadigmとは主体・スケールの焦点が異なる。【紛らわしいペア】paradigm vs upheaval：paradigmは思考の枠組みそのものを、upheavalはその変化に伴う混乱・動揺を表す点で異なる。"
+      }
+    ],
+    "readingPassage": "The announcement that a fresh heatwave is forecast to push temperatures as high as 34 degrees Celsius, prompting authorities to issue a week-long health alert, illustrates how quickly extreme heat has become a recurring feature of the British summer rather than an isolated anomaly. According to meteorologist Stav Danaos, this episode is expected to persist considerably longer than the heatwave that preceded it earlier in the season, leaving health officials little time to stand down emergency protocols before reactivating them. It is the extended duration of the alert, rather than the peak temperature alone, that has drawn particular attention from public health specialists monitoring the nation's response.\n\nResearchers who study heat-related illness emphasize that it is sustained exposure, not a single scorching afternoon, that poses the greatest danger to human health. When nighttime temperatures fail to fall much below the daytime peak—so-called tropical nights—the body loses its usual opportunity to recover, placing additional strain on the cardiovascular and respiratory systems. This effect compounds day after day during a prolonged heatwave, which helps explain why previous extended hot spells in the United Kingdom have coincided with measurable increases in mortality among older adults and people with pre-existing conditions, even when the maximum temperature recorded was no higher than in shorter episodes.\n\nSome climate scientists link the growing frequency of such prolonged hot spells to shifts in the jet stream associated with a warming atmosphere, though many are careful to note that no single heatwave can be attributed entirely to climate change; rather, warming is understood to make episodes of this kind more likely and more intense over time. This distinction matters for policy, since it raises the question of whether Britain's housing stock and hospitals, both largely designed with cold winters rather than hot summers in mind, are adequately prepared for a period in which extended heat alerts are becoming routine rather than exceptional.\n\nThe author contends that repeated short-term warnings, however well communicated, cannot substitute for structural adaptation. Alerts urging people to stay hydrated and avoid outdoor exertion address immediate risk, but they do little to remedy the underlying vulnerability created by poorly insulated homes, a scarcity of shaded public space, and hospitals without adequate cooling. Investment in measures such as reflective building materials, urban greening, and cooling centers would, the author argues, do more over the long run to protect public health than any single week-long advisory, however necessary that advisory may be in the short term.",
+    "readingPassageJa": "新たな熱波が最高34度に達すると予測され、当局が1週間にわたる健康警報を発令したというニュースは、猛暑がもはや例外的な異常事態ではなく、英国の夏に繰り返し現れる特徴となりつつあることを物語っている。気象予報士のスタヴ・ダナオス氏によれば、今回の熱波は今シーズン先に発生したものよりもかなり長く続く見通しであり、保健当局は緊急対応の体制を解除する間もなく再び稼働させることになった。公衆衛生の専門家たちが特に注目しているのは、最高気温そのものよりも、この警報が異例なほど長期間続くという点である。\n\n熱関連疾患を研究する研究者たちは、真に危険なのは一日限りの猛暑ではなく持続的な熱曝露であると強調する。夜間の気温が日中のピークからあまり下がらない、いわゆる「熱帯夜」が続くと、身体は本来回復できるはずの機会を失い、心血管系や呼吸器系に一層の負担がかかる。この影響は長引く熱波の間、日を追うごとに蓄積していく。これは、過去の長期化した英国の猛暑が、記録された最高気温がより短い熱波の場合と変わらなかったときでさえ、高齢者や基礎疾患を持つ人々の死亡率の目立った増加と重なっていた理由を説明する一助となる。\n\n一部の気候科学者は、こうした長期化する猛暑の頻度が増していることを、温暖化した大気に伴うジェット気流の変化と結びつけているが、多くの科学者は、個々の熱波を気候変動だけに帰することはできないと慎重に指摘する。むしろ、温暖化はこの種の現象をより起こりやすく、より強烈にすると理解されている。この区別は政策上重要である。というのも、暑い夏よりも寒い冬を想定して設計されてきた英国の住宅ストックや病院が、長期にわたる高温警報が例外ではなく日常となりつつある時期に十分対応できているのかという問いを提起するからである。\n\n筆者は、たとえどれほど的確に伝えられたとしても、短期的な警報の繰り返しは構造的な適応策の代わりにはなり得ないと主張する。水分補給や屋外での運動を控えるよう促す警報は目の前のリスクには対応するが、断熱の不十分な住宅、日陰となる公共空間の不足、十分な冷房設備を持たない病院によって生み出されている根本的な脆弱性を改善することはほとんどない。反射性の高い建材、都市の緑化、冷房を備えた避難施設といった対策への投資こそが、たとえ短期的にはどれほど必要であっても、たった一週間の注意喚起よりも長期的には公衆衛生を守るうえで効果があると筆者は論じている。",
+    "readingQuestions": [
+      {
+        "number": 1,
+        "question": "According to the passage, what is one thing stated about the current heatwave?",
+        "choices": {
+          "A": "Officials monitoring public health have focused more on the unusually long duration of the alert than on the single peak temperature that meteorologists expect the heatwave to reach this time.",
+          "B": "The passage indicates that this heatwave has already caused a measurable rise in hospital admissions across the country, confirming predictions made earlier in the year by public health officials regarding its severity.",
+          "C": "Every previous heatwave recorded in the United Kingdom has lasted longer than the one currently forecast, making this episode unusual mainly because its peak temperature of 34 degrees is lower than average.",
+          "D": "Stav Danaos has warned that hospitals across the country remain unprepared for prolonged heat exposure, citing a lack of cooling systems as the primary reason mortality rates rise during extended hot spells."
+        },
+        "answer": "A",
+        "explanation": "【正解 A】本文に「It is the extended duration of the alert, rather than the peak temperature alone, that has drawn particular attention from public health specialists」とあり、これをparaphraseすると「公衆衛生当局は今回の最高気温よりも警報の異例な長さに注目してきた」という正解Aに対応する。【D: Stav Danaos has warned...】技法4「主語のすり替え」―病院の冷房不足と死亡率上昇の関連を述べているのは第4段落の筆者（author）であり、気象予報士のStav Danaosではない。本文でDanaosが述べているのは熱波の持続期間についてのみである。【C: Every previous heatwave...】技法2「範囲の拡大」―本文は「今シーズン先に発生した熱波」という一つの事例と比較しているにすぎないが、選択肢は「英国で記録されたすべての過去の熱波」へと過度に一般化している。【B: The passage indicates...】技法3「誇張・断定化」―本文は将来の健康リスクを懸念として述べているに留まり、「病院の入院数がすでに測定可能な形で増加したことを確認した」という既成事実化までは述べていない。"
+      },
+      {
+        "number": 2,
+        "question": "What can be inferred from the passage about the health risks posed by extended heatwaves?",
+        "choices": {
+          "A": "All heatwaves that produce tropical nights, regardless of their duration, inevitably lead to significant increases in mortality among every age group within the affected population.",
+          "B": "Because the body has little chance to recover when nighttime temperatures remain high, a prolonged heatwave can pose a greater cumulative danger to health than a shorter episode with an equally high peak temperature.",
+          "C": "Rising mortality rates among older adults during past heatwaves are what caused nighttime temperatures to remain elevated, preventing the body from cooling sufficiently before the following day's heat resumed.",
+          "D": "Climate scientists have concluded that hospitals lack sufficient capacity to treat heat-related illness, a shortfall they claim is the primary reason why extended hot spells have historically coincided with higher death rates among older adults."
+        },
+        "answer": "B",
+        "explanation": "【正解 B】本文の「the body loses its usual opportunity to recover」および「previous extended hot spells... have coincided with measurable increases in mortality... even when the maximum temperature recorded was no higher than in shorter episodes」という2箇所から、夜間の高温が続くと身体が回復できず、持続期間の長い熱波はピーク気温が同程度でもより大きな累積的危険をもたらし得ると推論できる。【C: Rising mortality rates...】技法1「因果関係の逆転」―本文では夜間気温の高止まり（原因）が身体の回復を妨げ死亡率上昇（結果）につながると述べているが、選択肢は死亡率の上昇が夜間気温を高止まりさせたと因果を逆転させている。【D: Climate scientists have concluded...】技法4「主語のすり替え」―熱関連疾患と死亡率上昇の関連を研究しているのは本文では「researchers who study heat-related illness」であり、ジェット気流を論じるclimate scientistsではない。【A: All heatwaves...】技法2「範囲の拡大」―本文は特定の条件下での相関を示唆するにとどまるが、選択肢は「あらゆる熱波」「あらゆる年齢層」に必然的に生じると絶対語を用いて過度に一般化している。"
+      },
+      {
+        "number": 3,
+        "question": "What does the author imply about the link between climate change and this heatwave?",
+        "choices": {
+          "A": "The passage confirms that climate change is the sole cause of the current heatwave, definitively ruling out any role played by natural variability in the jet stream this year.",
+          "B": "While a warming climate is thought to make prolonged hot spells of this kind more frequent and severe over time, the author stops short of claiming that this specific heatwave can be traced directly to climate change alone.",
+          "C": "Because Britain's housing stock and hospitals are poorly adapted to sustained heat, shifts in the jet stream have occurred that now produce longer and more frequent hot spells across the country, according to the passage's discussion of climate change.",
+          "D": "Public health officials have argued that shifts in the jet stream linked to global warming make it impossible to accurately predict the intensity of future heatwaves in the United Kingdom."
+        },
+        "answer": "B",
+        "explanation": "【正解 B】本文の「no single heatwave can be attributed entirely to climate change; rather, warming is understood to make episodes of this kind more likely and more intense over time」から、温暖化は同種の現象をより起こりやすく強烈にすると理解される一方、今回の熱波個別を気候変動のみに帰する主張はしていないと推論できる。【A: The passage confirms...】技法3「誇張・断定化」―本文は「no single heatwave can be attributed entirely to climate change」と明確に述べているにもかかわらず、選択肢は「唯一の原因である」「自然変動の役割を完全に排除する」と絶対語を用いて断定している。【C: Because Britain's housing stock...】技法1「因果関係の逆転」―本文ではジェット気流の変化（原因）が長期化する熱波を生み、それが住宅・病院の備えの問題を浮き彫りにするという順序だが、選択肢は住宅・病院の不備がジェット気流の変化を引き起こしたと因果を逆転させている。【D: Public health officials have argued...】技法4「主語のすり替え」―ジェット気流と温暖化を結びつけて論じているのは本文では気候科学者（climate scientists）であり、public health officialsではない。"
+      },
+      {
+        "number": 4,
+        "question": "What is the author's main point regarding the response to prolonged heatwaves?",
+        "choices": {
+          "A": "The author insists that all forms of short-term heat warnings should be abandoned entirely in favor of structural adaptation, since advisories urging hydration and reduced outdoor activity serve no genuine purpose whatsoever.",
+          "B": "A shortage of shaded public space and poorly insulated homes have resulted directly from the government's repeated issuing of short-term heat alerts rather than from any broader failure in urban planning policy.",
+          "C": "The author maintains that although timely warnings serve an important short-term purpose, lasting protection against extreme heat depends on investing in structural changes such as improved building design and expanded shaded and cooled public spaces.",
+          "D": "The author has demonstrated that investment in reflective building materials, urban greening, and expanded cooling centers has already reduced heat-related mortality across the United Kingdom more effectively than any previous public health measure introduced in past decades."
+        },
+        "answer": "C",
+        "explanation": "【正解 C】本文の「repeated short-term warnings... cannot substitute for structural adaptation」および「Investment in measures such as reflective building materials, urban greening, and cooling centers would... do more over the long run... than any single week-long advisory, however necessary that advisory may be in the short term」をparaphraseすると、短期的警報の必要性を認めつつ長期的対策として構造的変化への投資を重視する正解Cに対応する。【A: The author insists...】技法2「範囲の拡大」―本文は警報が「短期的には必要（however necessary... in the short term）」と明記しているが、選択肢は「完全に廃止すべき」「何の役にも立たない」と絶対語を用いて過度に一般化している。【D: The author has demonstrated...】技法3「誇張・断定化」―本文は「would... do more over the long run」と提案・見込みとして述べているにすぎないが、選択肢は「すでに死亡率を削減したことを実証した」と既成事実化している。【B: A shortage of shaded public space...】技法1「因果関係の逆転」―本文では住宅や公共空間の不備という根本的な脆弱性が既に存在し、警報がそれを改善できないと述べているが、選択肢はその脆弱性が警報の発令自体によって生じたと因果を逆転させている。"
+      }
+    ],
+    "generatedAt": "2026-07-06T06:04:08.426Z"
+  },
+  "annotations": {
+    "choiceAnnotations": {
+      "vocabAnnotations": {
+        "ubiquitous": {
+          "translation": "至る所にある",
+          "pos": "形",
+          "collocation": "ubiquitous presence / ubiquitous technology",
+          "incorrectReason": "パターンB: 『反復的な』という反復性を強調する文脈に無関係"
+        },
+        "tenacious": {
+          "translation": "粘り強い",
+          "pos": "形",
+          "collocation": "tenacious grip / tenacious resistance"
+        },
+        "lavish": {
+          "translation": "豪華な",
+          "pos": "形",
+          "collocation": "lavish lifestyle / lavish spending",
+          "incorrectReason": "パターンC: 『持続する』という意味は無く、『豪華な』で文脈と無関係"
+        },
+        "acrid": {
+          "translation": "刺激的な",
+          "pos": "形",
+          "collocation": "acrid smell / acrid taste",
+          "incorrectReason": "パターンC: 『酸っぱい、ツンとくる』で長期化する特性を表さない"
+        },
+        "render": {
+          "translation": "させる",
+          "pos": "動",
+          "collocation": "render assistance / render a service",
+          "incorrectReason": "パターンB: 『与える』という意味で『悪影響を与える』という負の文脈に不適切"
+        },
+        "inflict": {
+          "translation": "与える",
+          "pos": "動",
+          "collocation": "inflict damage / inflict suffering"
+        },
+        "commiserate": {
+          "translation": "共感する",
+          "pos": "動",
+          "collocation": "commiserate with / commiserate over",
+          "incorrectReason": "パターンC: 『同情する』で医学的な『影響を与える』という文脈に無関係"
+        },
+        "appall": {
+          "translation": "呆然とさせる",
+          "pos": "動",
+          "collocation": "appalled by / appalling situation"
+        },
+        "irrigation": {
+          "translation": "灌漑",
+          "pos": "名",
+          "collocation": "irrigation system / agricultural irrigation",
+          "incorrectReason": "パターンC: 『水を注ぐ』という物理的行為で気候推測の文脈に無関係"
+        },
+        "tenet": {
+          "translation": "原則",
+          "pos": "名",
+          "collocation": "core tenet / fundamental tenet",
+          "incorrectReason": "パターンC: 『信条』で因果関係の『推測』という意味に無関係"
+        },
+        "fiasco": {
+          "translation": "大失敗",
+          "pos": "名",
+          "collocation": "a fiasco for / prove a fiasco",
+          "incorrectReason": "パターンC: 『失敗』で仮説的推測の意味に無関係"
+        },
+        "conjecture": {
+          "translation": "推測",
+          "pos": "名",
+          "collocation": "mere conjecture / scientific conjecture"
+        },
+        "elusive": {
+          "translation": "捉えにくい",
+          "pos": "形",
+          "collocation": "elusive target / elusive concept",
+          "incorrectReason": "パターンB: 『つかみにくい』で『細心の』という意味に対立"
+        },
+        "sleek": {
+          "translation": "滑らかな",
+          "pos": "形",
+          "collocation": "sleek design / sleek appearance",
+          "incorrectReason": "パターンC: 『なめらか』で細部への『丁寧さ』に無関係"
+        },
+        "meticulous": {
+          "translation": "細心の",
+          "pos": "形",
+          "collocation": "meticulous attention / meticulous care"
+        },
+        "bizarre": {
+          "translation": "奇妙な",
+          "pos": "形",
+          "collocation": "bizarre behavior / bizarre situation",
+          "incorrectReason": "パターンC: 『奇妙な』で『入念な』という意味に無関係"
+        },
+        "paradigm": {
+          "translation": "パラダイム",
+          "pos": "名",
+          "collocation": "paradigm shift / new paradigm"
+        },
+        "menace": {
+          "translation": "脅威",
+          "pos": "名",
+          "collocation": "a menace to / pose a menace",
+          "incorrectReason": "パターンA: 『脅威』で『典型例』という意味に逆転"
+        },
+        "propensity": {
+          "translation": "傾向",
+          "pos": "名",
+          "collocation": "propensity for / propensity to",
+          "incorrectReason": "パターンB: 『個人的傾向』で『思想的な典型例』という文脈に不適切"
+        },
+        "upheaval": {
+          "translation": "大変動",
+          "pos": "名",
+          "collocation": "social upheaval / political upheaval",
+          "incorrectReason": "パターンC: 『大変動』で『政策の典型例』という意味に無関係"
+        }
+      },
+      "reading": [
+        {
+          "A": {
+            "translation": "健康監視当局が単なる気温のピークよりも、警告期間の異常な長さに重点を置いている"
+          },
+          "B": {
+            "translation": "既にこの熱波が入院患者数を増加させており、当初の予測を確認している",
+            "incorrectReason": "技法2: 『過去の熱波が死亡率を高めた』から『この熱波が既に入院増加を引き起こした』に範囲拡大"
+          },
+          "C": {
+            "translation": "過去のすべての熱波がこの予報より長く続き、気温が平均より低いため異常である",
+            "incorrectReason": "技法4: 本文に『過去のすべて』『より低い』の記述がなく、誇張・断定化"
+          },
+          "D": {
+            "translation": "スタフ・ダナオスが全国の病院が冷房不足で準備不足だと警告している",
+            "incorrectReason": "技法1: スタフ・ダナオスは気象学者で予測者であり、著者が医療施設の問題を述べている"
+          }
+        },
+        {
+          "A": {
+            "translation": "すべての熱波は必然的に全年齢層で死亡率を大幅に上げる",
+            "incorrectReason": "技法4: 『may~』『helping explain』から『inevitably increases』に誇張・断定化"
+          },
+          "B": {
+            "translation": "夜間気温が高いと身体が回復できず、同じ気温のピークでも短期より長期の方が危険"
+          },
+          "C": {
+            "translation": "高齢者の死亡率が高い理由は、夜間気温を上昇させたため翌日の回復がない",
+            "incorrectReason": "技法1: 『身体回復不足→死亡率上昇』という本来の因果が『死亡率上昇→気温上昇』に逆転"
+          },
+          "D": {
+            "translation": "気候科学者が病院容量不足が主要原因で死亡率上昇と判断している",
+            "incorrectReason": "技法3: 本文では『持続的露露出』が原因と述べ、『病院容量』は著者が別の文脈で言及"
+          }
+        },
+        {
+          "A": {
+            "translation": "気候変動がこの熱波の唯一の原因であり、自然変動の役割を完全に除外している",
+            "incorrectReason": "技法4: 『no single heatwave can be attributed entirely』から『is the sole cause』に誇張・断定化"
+          },
+          "B": {
+            "translation": "温暖化は長期的に熱波をより頻繁・激しくするが、この特定の熱波を気候変動だけに帰結させていない"
+          },
+          "C": {
+            "translation": "住宅と病院の不適応がジェット気流の変化を引き起こし、熱波を長期化させている",
+            "incorrectReason": "技法1: 『ジェット気流の変化→熱波増加』が『建物の不適応→気流変化』に逆転"
+          },
+          "D": {
+            "translation": "公衆衛生当局が気流変化で将来の熱波予測は不可能だと主張している",
+            "incorrectReason": "技法5: 本文に『予測不可能』という記述がなく、本文に根拠なし"
+          }
+        },
+        {
+          "A": {
+            "translation": "著者は短期警告をすべて廃止すべきで、構造的適応だけが有効だと主張している",
+            "incorrectReason": "技法4: 『cannot substitute』から『should be abandoned entirely』に過度な誇張・断定化"
+          },
+          "B": {
+            "translation": "日中計画の失敗ではなく、政府の繰り返し警告が冷房施設不足を招いている",
+            "incorrectReason": "技法1: 『施設不足→警告の必要性』が『警告→施設不足』に因果を逆転"
+          },
+          "C": {
+            "translation": "著者は短期警告は必要だが、構造改善と公共冷房施設が長期的防御には重要だと主張"
+          },
+          "D": {
+            "translation": "著者は反射材料と都市緑化投資が既に過去数十年で死亡率を最も効果的に減らした実績を示した",
+            "incorrectReason": "技法5: 『would do more』という未来仮定から『has already reduced』という過去完了に誤読"
+          }
+        }
+      ]
+    },
+    "confusingPairs": [
+      {
+        "choiceA": "tenacious",
+        "choiceB": "ubiquitous",
+        "explanation": "tenacious(粘り強く続く)は持続期間の長さを強調し、ubiquitous(どこにでもある)は空間的な普遍性を示す。『反復的な特徴』は時間的継続性のtenacious。"
+      },
+      {
+        "choiceA": "inflict",
+        "choiceB": "commiserate",
+        "explanation": "inflict(損害を与える)は医学的影響を説明し、commiserate(同情する)は感情的対応を示す。『危険をもたらす』はinflict。"
+      },
+      {
+        "choiceA": "conjecture",
+        "choiceB": "tenet",
+        "explanation": "conjecture(推測)は不確実な仮説で、tenet(信条)は確立した原則。『科学者が結びつけている』という曖昧性はconjecture。"
+      },
+      {
+        "choiceA": "meticulous",
+        "choiceB": "sleek",
+        "explanation": "meticulous(細心の)は細部への注意を示し、sleek(滑らかな)は外観の美しさを示す。『綿密な伝達』はmeticulous。"
+      },
+      {
+        "choiceA": "paradigm",
+        "choiceB": "propensity",
+        "explanation": "paradigm(典型的枠組み)は思想体系で、propensity(傾向)は行動特性。『政策上の典型例』はparadigm。"
+      }
+    ],
+    "readingChoiceExplanations": [
+      {
+        "questionNumber": 1,
+        "questionText": "According to the passage, what is one thing stated about the current heatwave?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "Officials monitoring public health have focused more on the unusually long duration of the alert than on the single peak temperature that meteorologists expect the heatwave to reach this time.",
+            "choiceTranslation": "公衆衛生を監視する当局は、気象学者が予想する単一のピーク気温よりも、警告期間の異常な長さにより多くの焦点を当てている。",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第1段落",
+              "originalText": "It is the extended duration of the alert, rather than the peak temperature alone, that has drawn particular attention from public health specialists monitoring the nation's response.",
+              "paraphraseExplanation": "本文の『extended duration of the alert rather than the peak temperature alone』が『more on the unusually long duration than on the single peak temperature』と言い換えられており、公衆衛生専門家の焦点が期間に向けられている点が対応している。"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "The passage indicates that this heatwave has already caused a measurable rise in hospital admissions across the country, confirming predictions made earlier in the year by public health officials regarding its severity.",
+            "choiceTranslation": "この記事は、この熱波が既に全国の入院患者数を測定可能なほど増加させており、当初公衆衛生当局による予測を確認していることを示唆している。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "範囲の拡大",
+              "originalText": "previous extended hot spells in the United Kingdom have coincided with measurable increases in mortality among older adults and people with pre-existing conditions",
+              "explanation": "本文では『過去の延長した熱波』が『特定の脆弱な層での死亡率上昇』と関連していたことを述べており、この現在の熱波が既に入院増加を『確認した』という現在完了形への拡大は根拠がない。"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "Every previous heatwave recorded in the United Kingdom has lasted longer than the one currently forecast, making this episode unusual mainly because its peak temperature of 34 degrees is lower than average.",
+            "choiceTranslation": "記録されたすべての過去の熱波がこの予報より長く続いており、この事例は34度というピーク気温が平均より低いという点で主に異常である。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "誇張・断定化",
+              "originalText": "this episode is expected to persist considerably longer than the heatwave that preceded it earlier in the season",
+              "explanation": "本文では『今シーズン前半の熱波より長く続くことが予想される』と述べられているが、選択肢は『すべての過去の熱波より長い』と一般化・誇張している。また、34度が『平均より低い』という記述は本文にない。"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "Stav Danaos has warned that hospitals across the country remain unprepared for prolonged heat exposure, citing a lack of cooling systems as the primary reason mortality rates rise during extended hot spells.",
+            "choiceTranslation": "スタフ・ダナオスは全国の病院が持続した熱曝露への準備が整っていないと警告し、冷房システムの不足が熱波期間中の死亡率上昇の主要な理由だと述べている。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "主語のすり替え",
+              "originalText": "Stav Danaos is a meteorologist / According to meteorologist Stav Danaos, this episode is expected to persist considerably longer / The author contends that... hospitals... are adequately prepared",
+              "explanation": "本文ではスタフ・ダナオスは気象学者で気温予測について述べており、医療施設の準備不足や冷房の問題については第3段落で『著者が主張する』と述べられている。医療施設に関する警告と冷房不足論を気象学者ダナオスに帰属させるのは主語のすり替え。"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 2,
+        "questionText": "What can be inferred from the passage about the health risks posed by extended heatwaves?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "All heatwaves that produce tropical nights, regardless of their duration, inevitably lead to significant increases in mortality among every age group within the affected population.",
+            "choiceTranslation": "熱帯夜を伴うすべての熱波は、期間を問わず、必然的に影響を受ける人口のすべての年齢層で死亡率の大幅な増加をもたらす。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "誇張・断定化",
+              "originalText": "tropical nights—the body loses its usual opportunity to recover... This effect compounds day after day during a prolonged heatwave, which helps explain why previous extended hot spells... have coincided with measurable increases in mortality among older adults and people with pre-existing conditions",
+              "explanation": "本文では『持続が重要である』『特定の脆弱層（高齢者と基礎疾患者）での死亡率上昇』と述べられており、『すべての年齢層で必然的に』という絶対化・誇張は本文の慎重な表現から逸脱している。"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "Because the body has little chance to recover when nighttime temperatures remain high, a prolonged heatwave can pose a greater cumulative danger to health than a shorter episode with an equally high peak temperature.",
+            "choiceTranslation": "夜間気温が高いままだと身体が回復する機会をほとんど持たないため、同じピーク気温でも短期の熱波より長期の熱波の方がより大きな累積的危険をもたらす可能性がある。",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第2段落",
+              "originalText": "Researchers who study heat-related illness emphasize that it is sustained exposure, not a single scorching afternoon, that poses the greatest danger to human health. When nighttime temperatures fail to fall much below the daytime peak—so-called tropical nights—the body loses its usual opportunity to recover... This effect compounds day after day during a prolonged heatwave, which helps explain why previous extended hot spells... have coincided with measurable increases in mortality... even when the maximum temperature recorded was no higher than in shorter episodes.",
+              "paraphraseExplanation": "本文の『sustained exposure』『tropical nights』『body loses its opportunity to recover』『compounds day after day』『even when maximum temperature was no higher than in shorter episodes』という複数の要素が、選択肢の『little chance to recover』『greater cumulative danger』『equally high peak temperature』と対応しており、長期持続による累積的危険が短期の高温より危険である主張が一致している。"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "Rising mortality rates among older adults during past heatwaves are what caused nighttime temperatures to remain elevated, preventing the body from cooling sufficiently before the following day's heat resumed.",
+            "choiceTranslation": "過去の熱波における高齢者の死亡率上昇が夜間気温を上昇させた原因であり、その結果翌日の熱が再開する前に身体が十分に冷却されなかった。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "因果関係の逆転",
+              "originalText": "When nighttime temperatures fail to fall much below the daytime peak... the body loses its usual opportunity to recover... This effect compounds day after day during a prolonged heatwave, which helps explain why previous extended hot spells... have coincided with measurable increases in mortality",
+              "explanation": "本文では『高い夜間気温→身体回復不足→死亡率上昇』という因果関係だが、選択肢は『死亡率上昇→夜間気温上昇』という完全に逆方向の因果に逆転している。"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "Climate scientists have concluded that hospitals lack sufficient capacity to treat heat-related illness, a shortfall they claim is the primary reason why extended hot spells have historically coincided with higher death rates among older adults.",
+            "choiceTranslation": "気候科学者は病院が熱関連疾患治療の十分な容量を欠いており、この不足が熱波と高齢者死亡率上昇を歴史的に結びつけた主要な理由だと主張している。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "主語のすり替え",
+              "originalText": "Researchers who study heat-related illness emphasize that it is sustained exposure, not a single scorching afternoon, that poses the greatest danger / This distinction matters for policy, since it raises the question of whether Britain's housing stock and hospitals... are adequately prepared",
+              "explanation": "本文では『熱関連疾患研究者』が『持続的露露出が危険』と述べ、『著者』が『構造的不適応（住宅・病院）』を政策課題として提起しており、死亡率上昇の原因を『病院容量不足』と結論づけた主体は本文に明記されていない。この結論は主語が不明確であり、不正確に提示されている。"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 3,
+        "questionText": "What does the author imply about the link between climate change and this heatwave?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "The passage confirms that climate change is the sole cause of the current heatwave, definitively ruling out any role played by natural variability in the jet stream this year.",
+            "choiceTranslation": "この記事は気候変動が現在の熱波の唯一の原因であることを確認し、今年のジェット気流の自然変動の役割を明確に排除している。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "誇張・断定化",
+              "originalText": "Some climate scientists link the growing frequency of such prolonged hot spells to shifts in the jet stream associated with a warming atmosphere, though many are careful to note that no single heatwave can be attributed entirely to climate change; rather, warming is understood to make episodes of this kind more likely and more intense over time.",
+              "explanation": "本文では『no single heatwave can be attributed entirely to climate change』と明確に述べられており、この熱波を気候変動『だけ』に帰因させることを明確に否定している。選択肢は『sole cause』『definitively ruling out』という過度な断定に誇張している。"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "While a warming climate is thought to make prolonged hot spells of this kind more frequent and severe over time, the author stops short of claiming that this specific heatwave can be traced directly to climate change alone.",
+            "choiceTranslation": "温暖化した気候が長期的にこのような熱波をより頻繁で激しくすると考えられている一方で、著者はこの特定の熱波が気候変動だけに直接遡ることができると主張することを控えている。",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第3段落",
+              "originalText": "Some climate scientists link the growing frequency of such prolonged hot spells to shifts in the jet stream associated with a warming atmosphere, though many are careful to note that no single heatwave can be attributed entirely to climate change; rather, warming is understood to make episodes of this kind more likely and more intense over time.",
+              "paraphraseExplanation": "本文の『warming is understood to make episodes of this kind more likely and more intense over time』が『warming climate is thought to make prolonged hot spells of this kind more frequent and severe over time』と言い換えられ、『no single heatwave can be attributed entirely to climate change』が『stops short of claiming this specific heatwave can be traced directly to climate change alone』と対応している。著者の慎重な立場が正確に反映されている。"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "Because Britain's housing stock and hospitals are poorly adapted to sustained heat, shifts in the jet stream have occurred that now produce longer and more frequent hot spells across the country, according to the passage's discussion of climate change.",
+            "choiceTranslation": "イギリスの住宅ストックと病院が持続した熱に不適応だから、ジェット気流の変化が起こり、現在国内でより長く頻繁な熱波を生成しており、記事の気候変動の議論によるとそうだ。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "因果関係の逆転",
+              "originalText": "Some climate scientists link the growing frequency of such prolonged hot spells to shifts in the jet stream associated with a warming atmosphere / whether Britain's housing stock and hospitals... are adequately prepared",
+              "explanation": "本文では『気温上昇→ジェット気流の変化→熱波増加』という物理的因果が述べられ、建物の不適応は『準備の不足』という別の問題である。選択肢は『建物不適応→気流変化→熱波増加』という誤った因果関係に逆転している。"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "Public health officials have argued that shifts in the jet stream linked to global warming make it impossible to accurately predict the intensity of future heatwaves in the United Kingdom.",
+            "choiceTranslation": "公衆衛生当局は、地球温暖化に関連するジェット気流の変化が英国における将来の熱波の強度を正確に予測することを不可能にしていると主張している。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "本文に根拠なし",
+              "originalText": "",
+              "explanation": "『予測不可能』という主張は本文に全く記述されていない。本文では『気候科学者が頻度と強度の増加を理解している』と述べられているが、『予測不可能性』については著者も公衆衛生当局も言及していない。この内容は本文に根拠がない。"
+            }
+          }
+        ]
+      },
+      {
+        "questionNumber": 4,
+        "questionText": "What is the author's main point regarding the response to prolonged heatwaves?",
+        "choices": [
+          {
+            "choiceKey": "A",
+            "choiceText": "The author insists that all forms of short-term heat warnings should be abandoned entirely in favor of structural adaptation, since advisories urging hydration and reduced outdoor activity serve no genuine purpose whatsoever.",
+            "choiceTranslation": "著者は、水分補給と屋外活動削減を促す勧告が全く実質的目的を果たさないため、構造的適応を優先するべく、あらゆる短期熱警告を全面的に廃止すべきだと主張している。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "誇張・断定化",
+              "originalText": "The author contends that repeated short-term warnings, however well communicated, cannot substitute for structural adaptation. Alerts urging people to stay hydrated and avoid outdoor exertion address immediate risk, but they do little to remedy the underlying vulnerability... however necessary that advisory may be in the short term.",
+              "explanation": "本文では『cannot substitute for』『do little to remedy』という相対的な限界を述べ、『however necessary that advisory may be in the short term』と短期的有用性を認めている。選択肢の『should be abandoned entirely』『serve no genuine purpose whatsoever』は過度な絶対化であり、本文の慎重な立場を誇張している。"
+            }
+          },
+          {
+            "choiceKey": "B",
+            "choiceText": "A shortage of shaded public space and poorly insulated homes have resulted directly from the government's repeated issuing of short-term heat alerts rather than from any broader failure in urban planning policy.",
+            "choiceTranslation": "日中公園の不足と不十分な断熱の家は、より広い都市計画政策の失敗からではなく、政府の短期熱警告の繰り返し発行の直接的な結果である。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "因果関係の逆転",
+              "originalText": "Investment in measures such as reflective building materials, urban greening, and cooling centers would, the author argues, do more over the long run to protect public health than any single week-long advisory... the underlying vulnerability created by poorly insulated homes, a scarcity of shaded public space, and hospitals without adequate cooling.",
+              "explanation": "本文では『施設不足が脆弱性を創造した』という構造的問題があり、その結果として『警告が必要になる』という因果である。選択肢は『警告の繰り返し→施設不足』という逆方向に因果を逆転させている。著者は警告の必要性を認めながらも、警告だけでは根本的脆弱性を解決できないと述べている。"
+            }
+          },
+          {
+            "choiceKey": "C",
+            "choiceText": "The author maintains that although timely warnings serve an important short-term purpose, lasting protection against extreme heat depends on investing in structural changes such as improved building design and expanded shaded and cooled public spaces.",
+            "choiceTranslation": "著者は、適切な警告が重要な短期的目的を果たす一方で、極端な熱からの持続的保護は改善された建物設計と拡張された日中冷却施設への投資に依存していると主張している。",
+            "isCorrect": true,
+            "correctReason": {
+              "paragraphRef": "第4段落",
+              "originalText": "The author contends that repeated short-term warnings, however well communicated, cannot substitute for structural adaptation. Alerts urging people to stay hydrated and avoid outdoor exertion address immediate risk, but they do little to remedy the underlying vulnerability created by poorly insulated homes, a scarcity of shaded public space, and hospitals without adequate cooling. Investment in measures such as reflective building materials, urban greening, and cooling centers would, the author argues, do more over the long run to protect public health than any single week-long advisory, however necessary that advisory may be in the short term.",
+              "paraphraseExplanation": "本文の『cannot substitute for structural adaptation』『address immediate risk』『however necessary that advisory may be in the short term』『Investment in measures such as reflective building materials, urban greening, and cooling centers would do more over the long run』という複数の要素が、選択肢の『timely warnings serve an important short-term purpose』『lasting protection depends on investing in structural changes such as improved building design and expanded shaded and cooled public spaces』と完全に対応している。著者の二重的な立場（短期的警告の価値を認めながら、長期的には構造改善が必須という主張）が正確に反映されている。"
+            }
+          },
+          {
+            "choiceKey": "D",
+            "choiceText": "The author has demonstrated that investment in reflective building materials, urban greening, and expanded cooling centers has already reduced heat-related mortality across the United Kingdom more effectively than any previous public health measure introduced in past decades.",
+            "choiceTranslation": "著者は、反射建材、都市緑化、拡張された冷却センターへの投資が、過去数十年に導入されたあらゆる従来の公衆衛生施策より効果的に、既に英国全体の熱関連死亡率を減少させていることを実証した。",
+            "isCorrect": false,
+            "incorrectReason": {
+              "technique": "誇張・断定化",
+              "originalText": "Investment in measures such as reflective building materials, urban greening, and cooling centers would, the author argues, do more over the long run to protect public health than any single week-long advisory",
+              "explanation": "本文では『would do more』という未来条件法・仮定法を用いており、これらの投資が『潜在的により効果的である』ことを示唆しているが、実際の実績には言及していない。選択肢の『has already reduced』『more effectively than any previous public health measure』は、仮定的提案を過去の実績として誇張・断定化している。"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
