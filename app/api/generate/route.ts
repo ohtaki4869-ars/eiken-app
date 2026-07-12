@@ -42,6 +42,43 @@ async function getAndIncrementRefreshAttempt(dateKey: string): Promise<number> {
   }
 }
 
+// v5.2 A-1: 直近30日分の出題済み語（正解語・誤答語とも）を集めてsampleWordBankへの除外集合にする。
+// history側の日付一覧収集ロジック（KV question_dates / .cache配下のファイル一覧）と同じ考え方。
+async function getRecentlyUsedWords(): Promise<Set<string>> {
+  const words = new Set<string>();
+  try {
+    let dates: string[] = [];
+    const kv = await getKV();
+    if (kv) {
+      const allDates = (await kv.get<string[]>('question_dates')) || [];
+      dates = [...allDates].sort().reverse().slice(0, 30);
+    } else {
+      const fs = await import('fs');
+      const path = await import('path');
+      const dir = path.join(process.cwd(), '.cache');
+      if (fs.existsSync(dir)) {
+        dates = fs
+          .readdirSync(dir)
+          .filter((f: string) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+          .map((f: string) => f.replace('.json', ''))
+          .sort()
+          .reverse()
+          .slice(0, 30);
+      }
+    }
+
+    for (const date of dates) {
+      const data = await loadQuestions(date);
+      data?.vocabQuestions?.forEach(q => {
+        Object.values(q.choices).forEach(word => words.add(word.toLowerCase().trim()));
+      });
+    }
+  } catch (e) {
+    console.warn('[getRecentlyUsedWords] failed, continuing with seed list only:', e);
+  }
+  return words;
+}
+
 export async function loadQuestions(dateKey: string): Promise<GeneratedQuestions | null> {
   try {
     const kv = await getKV();
@@ -112,7 +149,8 @@ export async function GET(request: Request) {
     const format = getTodayFormat();
     const article = await fetchNewsArticle();
     const attempt = forceRefresh ? await getAndIncrementRefreshAttempt(todayKey) : 0;
-    const questions = await generateQuestions(article, format, attempt);
+    const recentlyUsedWords = await getRecentlyUsedWords();
+    const questions = await generateQuestions(article, format, attempt, recentlyUsedWords);
     await saveQuestions(todayKey, questions);
     return NextResponse.json(questions);
   } catch (e) {

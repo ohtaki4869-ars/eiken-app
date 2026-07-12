@@ -5,6 +5,19 @@ export interface WordEntry {
   pos: '動' | '名' | '形' | '副';
 }
 
+// v5.2: 週次レビュー(docs/weekly-review-checklist.md)でCEFR B2以下と判明した語のブロックリスト。
+// 英検1級語彙問題はC1〜C2水準を要求するため、sampleWordBank()はここに含まれる語を
+// 正解語・誤答語のどちらの候補にも選ばない。判明次第このSetに追記していく運用とする。
+export const CEFR_BELOW_C1_BLOCKLIST: Set<string> = new Set([
+  'collaborate', // B2: 学校英語で頻出、1級語彙としては平易すぎる
+  'legitimate',  // B2: 準1級レベルで既出の基本語
+  'extrovert',   // B2: 日常語彙化しており文脈推測が容易
+  'thermal',     // B2: 中学・高校基礎語彙相当
+  'retrieve',    // B2: IT・日常文脈で頻用され推測しやすい
+  'extremist',   // B2: ニュース語彙として平易、文脈からの推測が容易
+  'eminent',     // B2: 意味の推測難度が1級水準に達していない
+]);
+
 export const WORD_BANK: WordEntry[] = [
   {
     "word": "accolade",

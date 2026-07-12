@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Article } from './rss';
-import { WORD_BANK, WordEntry } from './wordbank';
+import { WORD_BANK, WordEntry, CEFR_BELOW_C1_BLOCKLIST } from './wordbank';
 import contentFewshotExample from '../samples/fable5-v5/content-culture.fewshot.json';
 import fillInBlankFewshotExample from '../samples/fable5-v5/fillinblank-2.fewshot.json';
 
@@ -20,6 +20,29 @@ const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
 const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-haiku-4-5';
 
 const VOCAB_THEMES = ['政治', '科学', '経済', '文化', '社会'];
+
+// v5.2 A-1: 出題済み語の除外。保存済み過去問データが無い/読めない期間の初期シードとして、
+// 2026-07-07〜2026-07-12の出題語をハードコードしておく（このシードは過去データに
+// 統合された後も残しておいて問題ない。重複除外の集合演算なので害がない）。
+const USED_WORDS_SEED: string[] = [
+  // 正解語
+  'tenacious', 'appall', 'conjecture', 'meticulous', 'paradigm', 'thermal', 'retrieve',
+  'referendum', 'swindle', 'pinnacle', 'rampant', 'diminish', 'foliage', 'meddle', 'transparent',
+  'quip', 'accentuate', 'propitious', 'rummage', 'solace', 'avid', 'vent', 'legitimate', 'overhaul',
+  'complacent', 'collaborate', 'pariah', 'extremist', 'eminent',
+  // 誤答語
+  'acrid', 'lavish', 'ubiquitous', 'render', 'commiserate', 'inflict', 'tenet', 'fiasco',
+  'irrigation', 'bizarre', 'sleek', 'elusive', 'propensity', 'upheaval', 'menace', 'fortuitous',
+  'pesky', 'frivolous', 'override', 'jostle', 'engender', 'offshoot', 'connoisseur', 'vie', 'brag',
+  'shroud', 'incision', 'eyewitness', 'prowess', 'frigid', 'inquisitive', 'state-of-the-art',
+  'emulate', 'withhold', 'epitomize', 'accomplice', 'farce', 'repository', 'allude', 'detest',
+  'hone', 'cessation', 'pseudonym', 'cogent', 'fastidious', 'microscopic', 'fixture',
+  'constellation', 'encroach', 'petrify', 'huddle', 'disproportionate', 'insidious',
+  'unscathed', 'resurrect', 'incubate', 'deter', 'feasibility', 'predator', 'hermit',
+  'impassive', 'wanton', 'curb', 'clamor', 'squander', 'momentous', 'abject', 'placid', 'absolve',
+  'juxtapose', 'assuage', 'reprehensible', 'resplendent', 'requisite', 'mar', 'prosecute',
+  'mystique', 'impunity', 'slur', 'kickback', 'consternation', 'inscrutable', 'pompous', 'diffident',
+];
 
 // ===== few-shot見本（v5.1 §1）。cache_control対象の静的プロンプト内に埋め込む =====
 // 見本データは samples/fable5-v5/*.fewshot.json （記号ズレをremapChoiceLettersで修正済み、
@@ -73,8 +96,11 @@ export interface SampledWordSet {
  * 品詞メタデータ（WordEntry.pos）を使い、各グループ内の4語を必ず同品詞にする。
  * attempt: 同日内に複数回生成する場合（?refresh=true の連続呼び出し等）に
  *          同じ抽選結果にならないよう変化させるオフセット（通常は0）
+ * excludedWords: v5.2 A-1。直近30日の出題済み語（呼び出し元がKV/ファイルキャッシュから収集）。
+ *                正解語・誤答語のどちらの候補にもしない。CEFR_BELOW_C1_BLOCKLISTと合わせて
+ *                候補プールから除外する。
  */
-function sampleWordBank(seed?: number, attempt = 0): SampledWordSet {
+function sampleWordBank(seed?: number, attempt = 0, excludedWords?: Set<string>): SampledWordSet {
   const s = (seed ?? new Date().getDate()) * 1000 + attempt;
   // simple seeded shuffle using the date+attempt as seed
   const shuffled = [...WORD_BANK];
@@ -85,9 +111,14 @@ function sampleWordBank(seed?: number, attempt = 0): SampledWordSet {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
 
-  // 品詞別バケツ（シャッフル順を保持）と、各バケツの走査位置ポインタ
+  const isBlocked = (word: string): boolean => {
+    const w = word.toLowerCase().trim();
+    return CEFR_BELOW_C1_BLOCKLIST.has(w) || (excludedWords?.has(w) ?? false);
+  };
+
+  // 品詞別バケツ（シャッフル順を保持、除外語は事前に取り除く）と、各バケツの走査位置ポインタ
   const buckets = new Map<WordEntry['pos'], WordEntry[]>();
-  shuffled.forEach(w => {
+  shuffled.filter(w => !isBlocked(w.word)).forEach(w => {
     const list = buckets.get(w.pos) ?? [];
     list.push(w);
     buckets.set(w.pos, list);
@@ -100,7 +131,7 @@ function sampleWordBank(seed?: number, attempt = 0): SampledWordSet {
 
   for (const candidate of shuffled) {
     if (groups.length >= 5) break;
-    if (usedWords.has(candidate.word)) continue;
+    if (isBlocked(candidate.word) || usedWords.has(candidate.word)) continue;
 
     const bucket = buckets.get(candidate.pos)!;
     let pointer = bucketPointers.get(candidate.pos)!;
@@ -189,7 +220,8 @@ export interface ReadingChoiceExplanation {
     paraphraseExplanation: string;
   };
   incorrectReason?: {
-    technique: '因果関係の逆転' | '範囲の拡大' | '誇張・断定化' | '主語のすり替え' | '本文に根拠なし';
+    // v5.2 D-12: 内容一致は次の5種に固定。fill-in-blankは従来通り別の2種（方向性の逆転/部分的整合）を使う
+    technique: '語句流用・内容ズレ' | '因果逆転' | '主語すり替え' | '極端化' | '本文に根拠なし' | '方向性の逆転' | '部分的整合';
     originalText: string;   // 本文引用（根拠なしの場合は空文字）
     explanation: string;    // 具体的な誤りの説明
   };
@@ -242,21 +274,21 @@ function buildVocabStaticInstructions(): string {
 Create EIKEN Grade 1 style vocabulary questions (語彙問題 - Part 1 style) in JSON format — exactly one question per word-assignment group provided in a separate context block below.
 The word assignment for each question (correct word + its 3 wrong choices) is FIXED — you do NOT choose which words to use. Your job is only to write the example sentence and explanation for each fixed word set.
 
-【語彙問題 生成ルール v5.1.1】
+【語彙問題 生成ルール v5.2】
 ■ 語彙問題はゼロから例文を作成する（記事や読解パッセージとは無関係）。
 ■ 各設問に指定された「正解語」「誤答3語」をそのまま使うこと。語を追加・変更・入れ替えてはならない（4択内の並び順=A/B/C/Dへの割り当ては自由）。
 ■ **指定語は与えられた形（原形・単数形）のまま一字も変えずに空所に入ること。** そのために、指定語がその形で文法的に成立する構文で例文を設計する：
   - 動詞なら: to不定詞の後（"decided to ____"）／助動詞の後（"must/should/could ____"）／"help (人) ____"や"had no choice but to ____"等の後
   - 名詞（単数形）なら: 単数で成立する枠を使う（"a/the ____"、"hold a ____"、"become a ____"等）
   - 活用形・複数形・三人称単数現在形などに変えてはならない（例: 正解語がappallなら"appalled"ではなく"appall"のまま入る構文にする）
+■ 正解語・誤答語は英検1級パス単収載レベル相当（CEFR C1〜C2）であることが前提（指定語は既にコード側でこの水準に絞り込み済みなので、語の選定について心配する必要はない）。
 ■ 各問題は、指定された正解語が最も自然・典型的に使われる例文を作る
   - **正解語には「コロケーション例」が与えられている。例文はこのコロケーション例と同じ構文パターン・同じ種類の目的語/主語を踏襲すること。** コロケーション例と異なる種類の目的語を使わない（例: コロケーション例が人物・集団を目的語に取るなら、抽象的な出来事・行為・概念を目的語にしない。"appall the abuses"のような、コロケーション例から外れた非文的な組み合わせを作らない）
   - 例文の長さは20〜30語、英検1級の語彙問題と同等の文体（新聞・論説調）
   - テーマは指定された通りにする
   - 空所は1文につき1箇所（____ で表す）。空所の前後に正解を特定できる文脈手がかりを必ず置く
-- 誤答3語は指定された品詞で統一済みなので、品詞の心配は不要（そのまま使うだけでよい）
-- 誤答3語のうち最低2語には「パターンB: 意味が近いが焦点がズレる」という説明の切り口を与える（文脈に一見入りそうだが、ニュアンス・共起・方向性が合わない、という説明にする）
-- 残りの誤答には「パターンC: 文脈と無関係」または「パターンA: 意味が逆」の説明を与える（実際の語同士の関係性に応じて自然な方を選ぶ）
+  - **固定コロケーションの穴埋めで即答できる設計を禁止する**（例: "paradigm ____" → shift、"thermal ____" → insulation、"witty ____" → quip、"seek ____ in" → solace のように、正解語がコロケーション相手の語から機械的に一意に決まる出題は不可）。正解は文脈の論理（因果・対比・程度・方向のいずれか）から導けるように設計し、コロケーション自体は正解語の使い方の自然さを担保するために使う（＝コロケーションだけで解けてはいけない）。
+- 誤答3語は指定された品詞で統一済みなので、品詞の心配は不要（そのまま使うだけでよい）。3語のうち最低2語には「意味近接・焦点ズレ」という説明の切り口を与える（文脈に一見入りそうだが、ニュアンス・共起・方向性が合わない、という説明にする）。残り最大1語には「文脈と不整合」（意味が逆、または文脈と無関係）の説明を与える
 - 正解率30〜60%を想定した説明の書き方にする（文脈から推測しにくい語という前提で解説する）
 - Include the correct answer with a structured Japanese explanation following this format:
 
@@ -264,29 +296,32 @@ The word assignment for each question (correct word + its 3 wrong choices) is FI
   ■ 断定形で書く。「〜とも読める」「とも言える」「ただし〜」「あり得るが」「解釈もある」等の留保表現は禁止。
     NG：「waneが正解。ただしcontrastive読みもあり得るが〜」
     OK：「時間経過とともに関心が薄れるという文脈でwaneが最適。直後の節はwaneの進行を抑制する対比表現である」
-  ■ 選択肢をA/B/C/Dで言及すること
-    各不正解をその記号と単語テキストで明示する。例：【B: curtail】パターンB「〜」
-    記号順（A→B→C→D）に記述すること
+  ■ 選択肢は数字(1〜4)で言及すること（A/B/C/Dのアルファベットは使わない。UI上の選択肢表示が1〜4の数字のため）
+    各不正解をその番号と単語テキストで明示する。例：【2: curtail】文脈と不整合「〜」
+    番号順（1→2→3→4）に記述すること
   ■ 解説文中で正解語を記述する際は問題文の表記と完全に一致させること（タイポ禁止）
   ■ 正解語の固有ニュアンスを1文で示す（訳語の羅列ではなく文脈での機能を優先）
     例：「事前に手を打つことで問題を未然に防ぐというobviate固有のニュアンスが文脈と合致」
   ■ 正解と最も混同しやすい選択肢との違いを1文で必ず言及すること
 
   【正解】問題文の該当箇所を引用し、正解語固有のニュアンスで説明。
-  【不正解各選択肢】記号と単語を明示しパターンを示す：
-    パターンA「意味が逆」：正解と反対方向の意味を持つ
-    パターンB「意味が近いが文脈の焦点がズレる」：ニュアンスの違いを具体的に1文で
-    パターンC「文脈と無関係」：なぜ文脈に合わないかを一言
+  【不正解各選択肢】番号と単語を明示しラベルを示す（ラベルは次の2種のみ。新しい呼称を作らない）：
+    「意味近接・焦点ズレ」：意味が近いが文脈の焦点・ニュアンス・共起がズレる語
+    「文脈と不整合」：意味が逆、または文脈と無関係で、そもそも文脈に合わない語
   【紛らわしいペア】正解と最も混同しやすい選択肢がある場合は「XvsY：違いの1文説明」を追記
 
-**SELF-CHECK（語彙・7項目、出力前に必ず確認）:**
+**生成後SELF-CHECK（出力前に必ず全て確認し、満たさない場合は問題文・選択肢を修正する）:**
+V1. 正解語を空所に入れた完全文を書き出し、文法的に成立するか確認する。成立しない場合は問題文を修正する。
+V2. 空所直前の冠詞(a/an)・前置詞が、4択のうち一部だけを文法的に排除してしまわないか確認する。排除する場合は冠詞を空所内に含めるか、選択肢（＝指定語なので実際には文構造）を調整して回避する。
+V3. 誤答3語それぞれについて「なぜ誤りか」と「なぜ選びたくなるか」を1文ずつ言語化できるか確認する。後者が言えない誤答は「文脈と不整合」ラベルに倒す（無理に「意味近接・焦点ズレ」を付けない）。
 - [ ] 指定された正解語・誤答3語をそのまま4択として使っている（語の追加・変更・入れ替えをしていない）
 - [ ] 4択すべてが指定された形（原形・単数形）のまま一字も変えず使われている（活用・語尾変化していない）
 - [ ] 正解語の例文が、与えられたコロケーション例と同じ構文パターン・目的語の種類になっている
+- [ ] 固定コロケーションの穴埋めだけで即答できる設計になっていない（文脈の論理で解ける）
 - [ ] 正解語が問題文中に出現していない（活用形・派生語も含む）
 - [ ] 問題文に ____ が1箇所だけある
-- [ ] 誤答3択のうち最低2択がパターンB（意味が近いが焦点がズレる）である
-- [ ] パターンC（文脈と無関係）の誤答は1語以内である
+- [ ] 誤答3択のうち最低2択が「意味近接・焦点ズレ」である
+- [ ] 「文脈と不整合」の誤答は1語以内である
 
 Return ONLY valid JSON in this exact format:
 {
@@ -302,13 +337,13 @@ Return ONLY valid JSON in this exact format:
         "D": "inducement"
       },
       "answer": "A",
-      "explanation": "【正解】文中の'regulations were intended to be a ____ to those who might otherwise violate'より、法律違反を未然に防ぐ「抑止力」を意味するdeterrentが最適。単なる制限でなく違反意図そのものを抑える語が必要。【B: reprimand】パターンB「意味が近いが焦点がズレる」─事後的な「叱責・懲戒」であり、違反を未然に抑止するdeterrentとは機能が異なる。deterrent vs reprimand：deterrentは「未然防止」、reprimandは「事後対処」。【C: constraint】パターンB「意味が近いが焦点がズレる」─「制約」そのものを指し、違反への抑止という心理的作用を持たない。【D: inducement】パターンA「意味が逆」─違反を促す「誘因」であり、意味が逆。"
+      "explanation": "【正解】文中の'regulations were intended to be a ____ to those who might otherwise violate'より、法律違反を未然に防ぐ「抑止力」を意味するdeterrentが最適。単なる制限でなく違反意図そのものを抑える語が必要。【2: reprimand】意味近接・焦点ズレ─事後的な「叱責・懲戒」であり、違反を未然に抑止するdeterrentとは機能が異なる。deterrent vs reprimand：deterrentは「未然防止」、reprimandは「事後対処」。【3: constraint】意味近接・焦点ズレ─「制約」そのものを指し、違反への抑止という心理的作用を持たない。【4: inducement】文脈と不整合─違反を促す「誘因」であり、意味が逆。"
     }
   ]
 }`;
 }
 
-function buildVocabDynamicContext(groups: VocabWordGroup[]): string {
+function buildVocabDynamicContext(groups: VocabWordGroup[], excludedWords?: Set<string>): string {
   const groupsText = groups
     .map((g, i) => {
       const distractorsText = g.distractors.map(d => `${d.word}（${d.meaning}／例：${d.phrase}）`).join(' / ');
@@ -319,15 +354,22 @@ function buildVocabDynamicContext(groups: VocabWordGroup[]): string {
     })
     .join('\n\n');
 
+  // v5.2 B-4: 出題済みリスト（コードから注入）。今回の使用語はこのリストから既に除外済みだが、
+  // 例文中で参考語・関連語として言及する際にもこのリストの語を再登場させないための安全網として渡す。
+  const usedListText = excludedWords && excludedWords.size > 0
+    ? `\n\n【出題済みリスト（直近30日分。この設問の4語には含まれていないが、例文中の他の語としても使用しないこと）】\n${[...excludedWords].join(', ')}`
+    : '';
+
   return `## 各設問の使用語（固定・変更禁止。この通りに1問ずつ割り当てて例文と解説を作成する）
-${groupsText}`;
+${groupsText}${usedListText}`;
 }
 
 async function generateVocabOnly(
   groups: VocabWordGroup[],
-  errors?: string[]
+  errors?: string[],
+  excludedWords?: Set<string>
 ): Promise<VocabQuestion[]> {
-  let dynamicContext = buildVocabDynamicContext(groups);
+  let dynamicContext = buildVocabDynamicContext(groups, excludedWords);
   if (errors && errors.length > 0) {
     dynamicContext += `\n\n## ⚠️ 前回の生成で以下のエラーが検出されました。必ず修正してください：\n${errors.map(e => `- ${e}`).join('\n')}`;
   }
@@ -359,8 +401,9 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
   // ===== 穴埋め形式 (Part 2 style) =====
   const fillInBlankInstructions = `
 2. **Reading Passage with 3 blanks** (長文穴埋め - EIKEN Grade 1 Part 2 style):
-   - Write a 3-paragraph passage (300-400 words total) on the article topic
+   - Write a 3-paragraph passage of approximately 500 words total (450-550 words is the acceptable range; 500 is the target)
    - Difficulty: EIKEN Grade 1 level academic English
+   - **Structure**: reconstruct the news source into an authentic academic argumentative essay — claim → supporting evidence → counterargument/qualification → synthesis (主張→根拠→反論・限定→総合). Do not just summarize the news article chronologically.
    - **No self-reference**: never refer to the passage's own author in the third person (e.g., "the author contends/argues/notes that..."). State claims directly as the passage's own prose, not as a description of what an external author is doing.
    - Place exactly 3 blanks marked as (1), (2), (3) — exactly one blank per paragraph
    - Each blank replaces a SHORT PHRASE (3-8 words) that fits grammatically and logically
@@ -398,9 +441,9 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
   // ===== 内容一致形式 (Part 3 style) =====
   const contentInstructions = `
 2. **Reading Passage** (長文 - EIKEN Grade 1 Part 3 style):
-   - Write a 3-4 paragraph passage (350-450 words) on the article topic
+   - Write a 3-4 paragraph passage of 550-650 words (this is an intentional intermediate target short of the real exam's ~800 words; hit this range even if it means trimming supporting detail)
    - Difficulty: EIKEN Grade 1 level academic English
-   - Structured argument with clear topic sentences and evidence
+   - **Structure**: reconstruct the news source into an authentic academic argumentative essay with clear topic sentences and evidence — claim → supporting evidence → counterargument/qualification → synthesis (主張→根拠→反論・限定→総合). Do not just summarize the news article chronologically.
    - **No self-reference**: never refer to the passage's own author in the third person (e.g., "the author contends/argues/notes that..."). State the argument directly as the passage's own prose, not as a description of what an external author is doing. (Referring to OTHER people/sources mentioned in the passage, such as "critics argue" or "researchers found," is fine — this rule only bans the passage narrating itself.)
 
 3. **Japanese translation** of the full passage:
@@ -414,8 +457,10 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
      stems: "What does the author argue about...?", "What is the author's main point regarding...?"
    - 細部一致問題 1問まで: factual detail only
      stems: "According to the passage...", "What is one thing stated about...?"
+   - **Distinct-paragraph requirement**: each of the 4 questions must draw its evidence from a DIFFERENT paragraph of the passage. Never let two questions rely on the same paragraph (or substantially the same point) as their evidence.
    - Each question has 4 choices that are COMPLETE SENTENCES, **20-33 words each — 35 words is a HARD CEILING that must never be exceeded, and 15 words is a hard floor**. Count your words before finalizing each choice; if a choice runs long, cut a subordinate clause rather than let it exceed 35.
    - **No length bias**: the correct choice must NOT be the single longest of the 4 by itself. At least one wrong choice must be the same length as or longer than the correct choice — otherwise a test-taker could answer correctly just by picking the longest option without reading.
+   - **Uniform construction**: keep all 4 choices similar in length and grammatical structure (e.g., don't make only the correct choice a complex sentence with subordinate clauses while the others are simple) — only the content should differ, not the shape.
 
    **CRITICAL RULES FOR CORRECT ANSWERS:**
    - **No direct quotation**: NEVER copy-paste from the passage.
@@ -423,62 +468,60 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
      ❌ NG: "the conditions focus on territorial integrity" → "the conditions address territorial integrity"（語の置換のみ）
      ✅ OK: "the conditions focus on territorial integrity" → "preserving national borders forms the basis of the proposed framework"
 
-   **CRITICAL RULES FOR WRONG CHOICES:**
-   Assign exactly one technique per wrong choice, choosing 3 distinct techniques out of the 4 below
-   (across all 4 questions in the passage, techniques 1-4 must each be used at least once):
+   **CRITICAL RULES FOR WRONG CHOICES（v5.2）:**
+   Choose exactly one type per wrong choice from the 5 fixed types below. **Never use the same type twice for the 3 wrong choices within a single question** (you may reuse a type across different questions in the passage). Do not invent new type names — these 5 are the fixed label set:
 
-   **技法1「因果関係の逆転」**
+   **1.「語句流用・内容ズレ」**
+   Reuse real words/phrases from the passage but shift the content so it no longer matches. This also covers: (i) taking the side of a contrast that the passage explicitly negated or set in opposition (対比節の言い換え) — e.g. 本文「AではなくB」→ 誤答「A」を正しい内容として提示, and (ii) pulling in content that actually belongs to a different paragraph than the one relevant to this question (別段落の内容の混入).
+   例: 本文「Aが重要だが、Bは限定的にしか有効でない」→ 誤答「Bが最も有効な手段である」（対比の逆側を採用）
+
+   **2.「因果逆転」**
    Swap cause and effect from the passage.
    例: 本文「Aが起きたのでBになった」→ 誤答「BのためにAが生じた」
 
-   **技法2「範囲の拡大・過度な一般化」**
-   Broaden a limited claim into an absolute one.
-   例: 本文「英国で導入」→ 誤答「すべての先進国で導入」
-   例: 本文「一部の専門家が懸念」→ 誤答「すべての専門家が反対」
-
-   **技法3「筆者の主張の誇張・断定化」**
-   Turn a tentative claim into a certainty, in this priority order:
-   (a) 既成事実化（優先）: turn could/may/suggests into has/did/demonstrated
-     例: 本文「～する可能性がある（could / may）」→ 誤答「～することが証明された / 必ず～する」
-   (b) 条件・留保の削除（優先）: drop qualifying phrases like "in part" / "some" / "において"
-   (c) 絶対語の使用（最終手段）: every / all / never / always / certainly / invariably / definitively / entirely / undoubtedly 等
-     例: 本文「～が重要だと示唆する」→ 誤答「～が唯一の解決策であると断言する」
-   - **(c)の絶対語は目立ちやすく消去法の手がかりになるため、1問の4択の中で絶対語を含む選択肢は1つまでとする**。(a)(b)による「穏やかな断定」を主力にすること。
-
-   **技法4「主語のすり替え」**
+   **3.「主語すり替え」**
    Present an action/claim made by subject A in the passage as if made by a different subject B that also appears in the passage.
    例: 本文「批評家が指摘した」→ 誤答「著者が主張している」
    例: 本文「NICEが推奨した」→ 誤答「NHSが実施した」
 
-   **「本文に根拠なし」型（本文に登場しない主体・事実の導入）**: use sparingly — at most 2 choices per passage (across all 4 questions). This does not count toward the 技法1〜4 rotation requirement above.
+   **4.「極端化」**
+   Turn a tentative claim into a certainty, in this priority order:
+   (a) 既成事実化（優先）: turn could/may/suggests into has/did/demonstrated
+   (b) 条件・留保の削除（優先）: drop qualifying phrases like "in part" / "some" / "において"
+   (c) 絶対語の使用（最終手段）: every / all / never / always / certainly / invariably / definitively / entirely / undoubtedly 等
+   - **絶対表現（all/every/never/always/certainly/invariably/definitively/entirely/undoubtedly等）を含む選択肢は、1問の4択の中で最大1つまでとする**。目立って消去法の手がかりになるため、(a)(b)による「穏やかな断定」を主力にすること。
+
+   **5.「本文に根拠なし」**
+   Introduce a subject/fact that never appears in the passage. **Use sparingly — at most 2 choices per passage (across all 4 questions)**, and **never construct this as a fully fabricated, lexically unconnected invention** (e.g. an invented ocean current, treaty, or study with no vocabulary overlap with the passage) — such choices are trivially eliminable by cross-checking and defeat the purpose of the question.
 
    **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
 
    **Explanation format for each reading question:**
    【解説文体ルール（必須）】
    ■ 断定形で書く。「〜とも読める」「ただし〜」等の留保表現は禁止。
-   ■ 各選択肢をA/B/C/Dで明示し、記号順（A→B→C→D）に記述すること
-   ■ 技法3「誇張・断定化」を使った誤答の場合は、本文の「可能性・当為」と誤答の「必然・義務」の具体的な差を示す
+   ■ 選択肢は数字(1〜4)で言及すること（A/B/C/Dのアルファベットは使わない。UI上の選択肢表示が1〜4の数字のため）。番号順（1→2→3→4）に記述すること
+   ■「極端化」を使った誤答の場合は、本文の「可能性・当為」と誤答の「必然・義務」の具体的な差を示す
      例：「本文はvigilant oversightという自発的改善を述べており、government controlsという外部強制の必然性までは主張していない」
-   ■ 技法4「主語のすり替え」を使った誤答の場合は、本文中の本来の主体と誤答が差し替えた主体を両方明示する
+   ■「主語すり替え」を使った誤答の場合は、本文中の本来の主体と誤答が差し替えた主体を両方明示する
      例：「本文で指摘しているのはcriticsであり、authorではない」
 
    【正解】本文の該当箇所を必ず引用：「本文に'～'とあり、これをparaphraseすると正解の'～'に対応する」。推論問題の場合は「本文の'A'と'B'から推論できる」と複数箇所を示す。
-   【各誤答】記号と技法を明示：
-     【B: ...】技法1「因果関係の逆転」　→「本文では原因と結果が逆に記述されている」
-     【C: ...】技法2「範囲の拡大」　　　→「本文では'～に限定'されているが、選択肢では過度に一般化している」
-     【D: ...】技法3「誇張・断定化」　　→「本文では'could/may'と可能性で述べているが、選択肢では断定している」
-     技法4「主語のすり替え」→「本文で～したのはAであり、選択肢のBではない」
-     「本文に根拠なし」→「この内容は本文中に記述がない」（使用時のみ、1パッセージにつき2択まで）
+   【各誤答】番号とラベルを明示（ラベルは上記5種のみ。新しい呼称を作らない）：
+     【2: ...】因果逆転　→「本文では原因と結果が逆に記述されている」
+     【3: ...】語句流用・内容ズレ　→「本文では'～'とあるが、選択肢では別の内容にズレている」
+     【4: ...】極端化　→「本文では'could/may'と可能性で述べているが、選択肢では断定している」
+     主語すり替え→「本文で～したのは(1)であり、選択肢の(2)ではない」
+     本文に根拠なし→「この内容は本文中に記述がない」（使用時のみ、1パッセージにつき2択まで）
 
-   **SELF-CHECK（内容一致・10項目）:**
+   **SELF-CHECK（内容一致・11項目）:**
    - [ ] 問題数が4問である
    - [ ] 正解がparaphrase（語の言い換え＋構文変換の両方）されている
-   - [ ] 4問全体で技法1・2・3・4がそれぞれ最低1回使われている
-   - [ ] 「本文に根拠なし」型は1パッセージにつき2択以内に収まっている
+   - [ ] 4問それぞれが互いに異なる段落を根拠としている（同じ段落・実質同じ論点を2問が根拠にしていない）
+   - [ ] 同一設問内で誤答3つの型（語句流用・内容ズレ/因果逆転/主語すり替え/極端化/本文に根拠なし）が重複していない
+   - [ ]「本文に根拠なし」型は1パッセージにつき2択以内に収まっており、本文と語彙的接点のない完全な捏造ではない
    - [ ] 各誤答に本文キーワードが2語以上含まれている
    - [ ] 誤答に「明らかな外れ」がない
-   - [ ] 正解選択肢が4択中で単独最長になっていない（誤答1つ以上が正解と同等以上の長さ）
+   - [ ] 正解選択肢が4択中で単独最長になっていない（誤答1つ以上が正解と同等以上の長さ）。4択の長さ・文法構造も揃っている
    - [ ] 絶対語（every/all/never/always/certainly等）を含む選択肢が1問につき1つ以内である
    - [ ] 全選択肢が35語を超えていない（20-33語が目安、35語は絶対に超えない上限）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
@@ -530,7 +573,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
     }
   ]`;
 
-  const contentJsonExample = `  "readingPassage": "The passage text here (3-4 paragraphs, 350-450 words)...",
+  const contentJsonExample = `  "readingPassage": "The passage text here (3-4 paragraphs, 550-650 words)...",
   "readingPassageJa": "日本語訳（段落ごと）...",
   "readingQuestions": [
     {
@@ -543,7 +586,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         "D": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions."
       },
       "answer": "A",
-      "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」をparaphraseしたAが正解。B【範囲の拡大】選択肢数が多いほど決定の「質」が上がると本文の限定的な記述を拡大解釈している。C【因果関係の逆転】Decision paralysisの原因と結果を入れ替え、経験不足が原因であるかのように描いている。D【筆者の主張の誇張】筆者が示唆する「適応の可能性」を「同等の結果に達する」と過度に強めている。"
+      "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」をparaphraseした(1)が正解。(2)語句流用・内容ズレ─選択肢数が多いほど決定の「質」が上がると本文の限定的な記述を拡大解釈している。(3)因果逆転─Decision paralysisの原因と結果を入れ替え、経験不足が原因であるかのように描いている。(4)極端化─筆者が示唆する「適応の可能性」を「同等の結果に達する」と過度に強めている。"
     }
   ]`;
 
@@ -616,7 +659,7 @@ function buildVocabAnnotationStaticRules(): string {
 - translation: 文脈に即した日本語訳（8字以内）
 - pos: 品詞を漢字1字で（動/名/形/副）
 - collocation: よく使うコロケーション2例を "A / B" 形式で
-- incorrectReason: **不正解語には必ず設定する**。パターンA「意味が逆」/パターンB「焦点がズレる」/パターンC「文脈と無関係」（25字以内）
+- incorrectReason: **不正解語には必ず設定する**。ラベルは次の2種のみに固定し、新しい呼称を作らない：「意味近接・焦点ズレ」（意味が近いが文脈の焦点・ニュアンス・共起がズレる）/「文脈と不整合」（意味が逆、または文脈と無関係）。ラベル名で書き始め、コロン以降に具体理由を続ける（25字以内）
 - **正解語には incorrectReason を設定しない**（フィールド自体を省略する）
 
 【confusingPairs】
@@ -627,9 +670,9 @@ function buildVocabAnnotationStaticRules(): string {
 {
   "vocabAnnotations": {
     "deterrent": { "translation": "抑止力", "pos": "名", "collocation": "a deterrent effect / act as a deterrent" },
-    "reprimand": { "translation": "叱責", "pos": "名", "collocation": "a formal reprimand / receive a reprimand", "incorrectReason": "パターンB: 事後対処で文脈に不一致" },
-    "constraint": { "translation": "制約", "pos": "名", "collocation": "a legal constraint / under constraint", "incorrectReason": "パターンB: 心理的抑止力なし" },
-    "inducement": { "translation": "誘因", "pos": "名", "collocation": "financial inducement / an inducement to act", "incorrectReason": "パターンA: 意味が逆（誘発）" }
+    "reprimand": { "translation": "叱責", "pos": "名", "collocation": "a formal reprimand / receive a reprimand", "incorrectReason": "意味近接・焦点ズレ: 事後対処で文脈に不一致" },
+    "constraint": { "translation": "制約", "pos": "名", "collocation": "a legal constraint / under constraint", "incorrectReason": "意味近接・焦点ズレ: 心理的抑止力なし" },
+    "inducement": { "translation": "誘因", "pos": "名", "collocation": "financial inducement / an inducement to act", "incorrectReason": "文脈と不整合: 意味が逆（誘発）" }
   },
   "confusingPairs": [
     { "choiceA": "deterrent", "choiceB": "reprimand", "explanation": "deterrentは未然防止、reprimandは事後対処。" }
@@ -722,7 +765,7 @@ function buildReadingAnnotationStaticRules(isFillInBlank: boolean): string {
   const readingExplanationRules = isFillInBlank ? `
 【readingChoiceExplanations ルール（穴埋め形式）】
 穴埋め問題の各設問について、4択すべてに以下を生成する：
-- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順）
+- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順。データ構造上のキーであり、explanation等のプローズ中で選択肢に言及する際は数字1〜4を使うこと）
 - choiceText: 問題の選択肢テキストと完全一致させること
 - choiceTranslation: 自然な日本語訳（フレーズなので文脈上の意味を補って訳す）
 - isCorrect: 正解のみtrue（1問につき必ず1つだけ）
@@ -731,20 +774,20 @@ function buildReadingAnnotationStaticRules(isFillInBlank: boolean): string {
   technique の選択：
   "方向性の逆転"：本文の論旨と逆方向の内容（本文が増加を示すのに減少を示す等）
   "部分的整合"：本文のキーワードを含むが論理的に前後と合わない` : `
-【readingChoiceExplanations ルール（内容一致形式）】
+【readingChoiceExplanations ルール（内容一致形式・v5.2）】
 読解問題の各設問について、4択すべてに以下を生成する：
-- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順）
+- choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順。データ構造上のキーであり、explanation等のプローズ中で選択肢に言及する際は数字1〜4を使うこと）
 - choiceText: 問題の選択肢テキストと完全一致させること
 - choiceTranslation: 自然な日本語訳（直訳禁止。主語・接続詞を補い、長ければ2文に分ける）
 - isCorrect: 正解のみtrue（1問につき必ず1つだけ）
 - 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"本文引用", paraphraseExplanation:"対応説明" }
-- 不正解の場合: incorrectReason = { technique:"技法名", originalText:"本文引用", explanation:"具体的な誤りの説明" }
-  technique は以下から1つ選ぶ：
-  "因果関係の逆転"：本文のA→BがB→Aに逆転している
-  "範囲の拡大"：一部→すべて／限定→一般化
-  "誇張・断定化"：could/may/suggests → has proven/will/inevitably に変質
-  "主語のすり替え"：本文の主体Aの行為・主張を、本文に登場する別の主体Bのものとして提示している
-  "本文に根拠なし"：本文に一切記述がない（originalTextは空文字）`;
+- 不正解の場合: incorrectReason = { technique:"ラベル名", originalText:"本文引用", explanation:"具体的な誤りの説明" }
+  technique は次の5種から1つ選ぶ（固定。新しい呼称を作らない）：
+  "語句流用・内容ズレ"：本文語句を流用しつつ内容がズレている（対比の逆側の採用、別段落内容の混入を含む）
+  "因果逆転"：本文のA→BがB→Aに逆転している
+  "主語すり替え"：本文の主体Aの行為・主張を、本文に登場する別の主体Bのものとして提示している
+  "極端化"：could/may/suggests → has proven/will/inevitably に変質、または絶対語の使用
+  "本文に根拠なし"：本文に一切記述がない（originalTextは空文字。本文と語彙的接点のない完全な捏造は使わない）`;
 
   return `英検1級の読解問題について、各選択肢のアノテーションと詳細解説を生成してください。
 形式：${isFillInBlank ? '穴埋め（fill-in-blank）' : '内容一致（content）'}
@@ -757,9 +800,9 @@ ${readingExplanationRules}
   "reading": [
     {
       "A": { "translation": "正解の自然な日本語訳", "pos": "", "collocation": "" },
-      "B": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "技法2: 英国限定を全先進国に拡大" },
-      "C": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "技法1: 因果関係が逆" },
-      "D": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "技法3: 可能性を断定化" }
+      "B": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "${isFillInBlank ? '部分的整合: 英国限定を全先進国に拡大' : '語句流用・内容ズレ: 英国限定を全先進国に拡大'}" },
+      "C": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "${isFillInBlank ? '方向性の逆転: 因果関係が逆' : '因果逆転: 因果関係が逆'}" },
+      "D": { "translation": "誤答の訳", "pos": "", "collocation": "", "incorrectReason": "${isFillInBlank ? '部分的整合: 可能性を断定化' : '極端化: 可能性を断定化'}" }
     }
   ],
   "readingChoiceExplanations": [
@@ -784,7 +827,7 @@ ${readingExplanationRules}
           "choiceTranslation": "自然な日本語訳",
           "isCorrect": false,
           "incorrectReason": {
-            "technique": "範囲の拡大",
+            "technique": "${isFillInBlank ? '部分的整合' : '語句流用・内容ズレ'}",
             "originalText": "本文の該当箇所",
             "explanation": "本文では〜に限定して述べているが、この選択肢では〜全体に拡大している"
           }
@@ -795,9 +838,9 @@ ${readingExplanationRules}
           "choiceTranslation": "自然な日本語訳",
           "isCorrect": false,
           "incorrectReason": {
-            "technique": "因果関係の逆転",
+            "technique": "${isFillInBlank ? '方向性の逆転' : '因果逆転'}",
             "originalText": "本文の該当箇所",
-            "explanation": "本文ではA→Bという順序だが、この選択肢ではB→Aと逆になっている"
+            "explanation": "本文では(1)→(2)という順序だが、この選択肢では逆になっている"
           }
         },
         {
@@ -806,7 +849,7 @@ ${readingExplanationRules}
           "choiceTranslation": "自然な日本語訳",
           "isCorrect": false,
           "incorrectReason": {
-            "technique": "誇張・断定化",
+            "technique": "${isFillInBlank ? '部分的整合' : '極端化'}",
             "originalText": "本文の該当箇所",
             "explanation": "本文ではcould/mayと可能性で述べているが、この選択肢では断定している"
           }
@@ -904,6 +947,32 @@ export async function generateAnnotations(questions: GeneratedQuestions): Promis
 
     console.log('[Annotations] vocab words:', Object.keys(vocabResult.vocabAnnotations).length, 'reading:', reading?.length, 'readingExplanations:', readingResult.readingChoiceExplanations?.length);
 
+    // ===== v5.2 A-3/D-12: 誤答分類ラベルのホワイトリスト照合・CJK簡体字混入チェック（警告のみ） =====
+    const vocabLabelWarnings = checkVocabLabelWhitelist(vocabResult.vocabAnnotations);
+    if (vocabLabelWarnings.length > 0) {
+      console.warn('[VocabAnnotations] label whitelist issues (continuing anyway):', vocabLabelWarnings);
+    }
+    if (questions.readingFormat === 'content') {
+      const readingLabelWarnings = checkReadingContentLabelWhitelist(readingResult.readingChoiceExplanations);
+      if (readingLabelWarnings.length > 0) {
+        console.warn('[ReadingAnnotations] label whitelist issues (continuing anyway):', readingLabelWarnings);
+      }
+    }
+    const annotationCjkWarnings = [
+      ...Object.entries(vocabResult.vocabAnnotations).flatMap(([word, ann]) =>
+        checkCjkSimplifiedContamination(`語彙アノテーション「${word}」`, [ann.translation, ann.incorrectReason].filter(Boolean).join(' '))
+      ),
+      ...(readingResult.readingChoiceExplanations ?? []).flatMap(exp =>
+        exp.choices.flatMap(c => checkCjkSimplifiedContamination(
+          `読解(${exp.questionNumber})選択肢${c.choiceKey}`,
+          [c.choiceTranslation, c.correctReason?.paraphraseExplanation, c.incorrectReason?.explanation].filter(Boolean).join(' ')
+        ))
+      ),
+    ];
+    if (annotationCjkWarnings.length > 0) {
+      console.warn('[Annotations] CJK simplified char issues (continuing anyway):', annotationCjkWarnings);
+    }
+
     return {
       choiceAnnotations: {
         vocabAnnotations: vocabResult.vocabAnnotations,
@@ -922,13 +991,35 @@ export async function generateAnnotations(questions: GeneratedQuestions): Promis
 const CHOICE_KEYS = ['A', 'B', 'C', 'D'] as const;
 type ChoiceKey = typeof CHOICE_KEYS[number];
 
-// シャッフル後の記号に合わせて、モデル生成済みの explanation 内の記号参照
-// （例:「【B: reprimand】」「正解B」「Bは〜」）を書き換える。
-// 「技法A/技法B」（穴埋め形式の誤答技法ラベル。選択肢記号とは無関係）は対象から除外する。
-// FIFA/FEMA等の固有名詞末尾の大文字を誤って書き換えないよう、直前がラテン文字の場合も除外する。
+// v5.2 D-13: UI（app/quiz）は選択肢を1〜4の数字で表示するため、解説文中の選択肢参照も
+// A/B/C/Dではなく数字(1〜4)に統一する（choicesオブジェクト自体のキーはA/B/C/Dのまま変更しない。
+// あくまで解説プローズ中の参照表記の話）。
+const KEY_TO_NUM: Record<ChoiceKey, string> = { A: '1', B: '2', C: '3', D: '4' };
+const NUM_TO_KEY: Record<string, ChoiceKey> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
+
+// シャッフル後の記号に合わせて、モデル生成済みの explanation 内の選択肢参照
+// （例:「【2: reprimand】」「正解2」「2は〜」）を書き換える。数字は西暦・個数等の
+// 一般的な数値と誤マッチしないよう、前後に他の数字が隣接しない1〜4の単独数字のみを対象にする。
+// 旧仕様（A/B/C/D参照）がモデル出力に残っていた場合の安全網として、レター参照パターンも
+// 引き続き処理する（「技法A/技法B」等の穴埋め形式ラベルは対象から除外。FIFA/FEMA等の
+// 固有名詞末尾の大文字を誤って書き換えないよう、直前がラテン文字の場合も除外する）。
 function remapChoiceLetters(text: string, oldToNew: Record<ChoiceKey, ChoiceKey>): string {
-  const pattern = /(【\s*)([ABCD])(\s*[:：】])|(正解\s*)([ABCD])(?![A-Za-z])|(?<!技法)(?<![A-Za-z])([ABCD])(?=は|が|と|を|の|に対応)/g;
-  return text.replace(pattern, (match, p1, l1, p3, p4, l2, l3) => {
+  const oldToNewNum: Record<string, string> = {};
+  (Object.keys(oldToNew) as ChoiceKey[]).forEach(k => {
+    oldToNewNum[KEY_TO_NUM[k]] = KEY_TO_NUM[oldToNew[k]];
+  });
+
+  const numPattern = /(【\s*)([1-4])(\s*[:：】])|(正解\s*)([1-4])(?!\d)|(?<!\d)([1-4])(?!\d)(?=は|が|と|を|の|に対応)/g;
+  const letterPattern = /(【\s*)([ABCD])(\s*[:：])|(正解\s*)([ABCD])(?![A-Za-z])|(?<!技法)(?<![A-Za-z])([ABCD])(?=は|が|と|を|の|に対応)/g;
+
+  const afterNum = text.replace(numPattern, (match, p1, n1, p3, p4, n2, n3) => {
+    if (n1) return `${p1}${oldToNewNum[n1]}${p3}`;
+    if (n2) return `${p4}${oldToNewNum[n2]}`;
+    if (n3) return oldToNewNum[n3];
+    return match;
+  });
+
+  return afterNum.replace(letterPattern, (match, p1, l1, p3, p4, l2, l3) => {
     if (l1) return `${p1}${oldToNew[l1 as ChoiceKey]}${p3}`;
     if (l2) return `${p4}${oldToNew[l2 as ChoiceKey]}`;
     if (l3) return oldToNew[l3 as ChoiceKey];
@@ -937,21 +1028,30 @@ function remapChoiceLetters(text: string, oldToNew: Record<ChoiceKey, ChoiceKey>
 }
 
 // 安全網: remapChoiceLetters適用後も、正規表現の見落とし等で記号がズレている場合があるので
-// 【X: word/snippet】タグの内容が実際の choices[X] と一致しているかを検証し、
-// 不一致があれば警告ログに記録する（処理は止めない・リトライにも乗せない）。
+// 【N: word/snippet】（数字参照。旧仕様の【X: ...】レター参照も念のため確認）タグの内容が
+// 実際の choices[X] と一致しているかを検証し、不一致があれば警告ログに記録する
+// （処理は止めない・リトライにも乗せない）。
 function verifyChoiceLabelConsistency(explanation: string, choices: { A: string; B: string; C: string; D: string }): void {
-  const tagPattern = /【([ABCD]):\s*([^\n】]+?)】/g;
-  let m;
-  while ((m = tagPattern.exec(explanation)) !== null) {
-    const letter = m[1] as ChoiceKey;
-    const actual = choices[letter].trim().toLowerCase();
+  const checkTag = (key: ChoiceKey, rawTag: string, snippetRaw: string) => {
+    const actual = choices[key].trim().toLowerCase();
     // タグの内容は「…」で中略した要約のことがあるため、先頭の断片（最初の「...」より前）だけで照合する
-    const leadFragment = m[2].split(/\.{3,}|…/)[0].trim().toLowerCase();
-    const snippet = leadFragment.length >= 6 ? leadFragment : m[2].trim().toLowerCase();
+    const leadFragment = snippetRaw.split(/\.{3,}|…/)[0].trim().toLowerCase();
+    const snippet = leadFragment.length >= 6 ? leadFragment : snippetRaw.trim().toLowerCase();
     const consistent = snippet.length === 0 || actual.startsWith(snippet) || actual.includes(snippet) || snippet.includes(actual);
     if (!consistent) {
-      console.warn(`[ChoiceLabel] 記号ズレの疑い: 【${letter}: ${m[2]}】 が実際の選択肢${letter}="${choices[letter].slice(0, 60)}"と一致しない`);
+      console.warn(`[ChoiceLabel] 記号ズレの疑い: 【${rawTag}: ${snippetRaw}】 が実際の選択肢${key}="${choices[key].slice(0, 60)}"と一致しない`);
     }
+  };
+
+  const numTagPattern = /【([1-4]):\s*([^\n】]+?)】/g;
+  let m: RegExpExecArray | null;
+  while ((m = numTagPattern.exec(explanation)) !== null) {
+    checkTag(NUM_TO_KEY[m[1]], m[1], m[2]);
+  }
+
+  const letterTagPattern = /【([ABCD]):\s*([^\n】]+?)】/g;
+  while ((m = letterTagPattern.exec(explanation)) !== null) {
+    checkTag(m[1] as ChoiceKey, m[1], m[2]);
   }
 }
 
@@ -977,6 +1077,55 @@ function shuffleChoices<T extends { choices: { A: string; B: string; C: string; 
   const explanation = remapChoiceLetters(q.explanation, oldToNew);
   verifyChoiceLabelConsistency(explanation, newChoices);
   return { ...q, choices: newChoices, answer: newAnswer, explanation };
+}
+
+// v5.2 A-2: 正解位置の分散。語彙5問を通じて同一の正解記号(A/B/C/D)が3回以上にならないよう、
+// 先に「正解を置く記号」を4種1巡ずつのランダム順で割り当ててから（5問目だけ2巡目の先頭が重複するが、
+// 1巡＝各記号ちょうど1回のため、どの記号も最大2回までしか正解にならないことが構造的に保証される）、
+// 各設問はその記号に正解が来るよう誤答3つだけをシャッフルする。
+function assignBalancedTargetLetters(count: number): ChoiceKey[] {
+  const targets: ChoiceKey[] = [];
+  while (targets.length < count) {
+    const cycle = [...CHOICE_KEYS];
+    for (let i = cycle.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cycle[i], cycle[j]] = [cycle[j], cycle[i]];
+    }
+    targets.push(...cycle);
+  }
+  return targets.slice(0, count);
+}
+
+function shuffleChoicesWithTarget<T extends { choices: { A: string; B: string; C: string; D: string }; answer: string; explanation: string }>(
+  q: T,
+  targetLetter: ChoiceKey
+): T {
+  const correctOldKey = q.answer as ChoiceKey;
+  const wrongOldKeys = CHOICE_KEYS.filter(k => k !== correctOldKey);
+  const remainingNewKeys = CHOICE_KEYS.filter(k => k !== targetLetter);
+
+  // 誤答3つをランダムに残りの3記号へ割り当てる（Fisher-Yates）
+  for (let i = remainingNewKeys.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [remainingNewKeys[i], remainingNewKeys[j]] = [remainingNewKeys[j], remainingNewKeys[i]];
+  }
+
+  const oldToNew = {} as Record<ChoiceKey, ChoiceKey>;
+  oldToNew[correctOldKey] = targetLetter;
+  wrongOldKeys.forEach((oldKey, i) => { oldToNew[oldKey] = remainingNewKeys[i]; });
+
+  const newChoices = {} as { A: string; B: string; C: string; D: string };
+  CHOICE_KEYS.forEach(oldKey => { newChoices[oldToNew[oldKey]] = q.choices[oldKey]; });
+
+  const newAnswer = targetLetter;
+  const explanation = remapChoiceLetters(q.explanation, oldToNew);
+  verifyChoiceLabelConsistency(explanation, newChoices);
+  return { ...q, choices: newChoices, answer: newAnswer, explanation };
+}
+
+function shuffleVocabQuestionsBalanced(vocabQuestions: VocabQuestion[]): VocabQuestion[] {
+  const targets = assignBalancedTargetLetters(vocabQuestions.length);
+  return vocabQuestions.map((q, i) => shuffleChoicesWithTarget(q, targets[i]));
 }
 
 // ===== コードバリデーション（機械チェック） =====
@@ -1165,6 +1314,115 @@ function checkAbsoluteWords(questions: ReadingQuestion[]): ValidationResult {
     }
   });
   return { valid: errors.length === 0, errors };
+}
+
+// ===== v5.2 A-3: 本文語数チェック（警告のみ・リトライには乗せない） =====
+function checkPassageWordCount(passage: string, format: ReadingFormat): ValidationResult {
+  const wordCount = passage.trim().split(/\s+/).filter(Boolean).length;
+  const [min, max] = format === 'content' ? [550, 650] : [450, 550];
+  if (wordCount < min || wordCount > max) {
+    return { valid: false, errors: [`読解: 本文語数${wordCount}語（想定${min}〜${max}語の範囲外）`] };
+  }
+  return { valid: true, errors: [] };
+}
+
+// ===== v5.2 A-3: 中国語簡体字混入チェック（警告のみ・リトライには乗せない） =====
+// 日本語の解説文に混入しやすい、日本語では通常使わない簡体字（讠/钅/纟系の偏や頻出単漢字）を
+// 検出するためのベストエフォートなブロックリスト。網羅的ではないが、実績のある「维」等を含め
+// 週次レビューで見つかった文字を追記していく運用とする。
+const SIMPLIFIED_ONLY_CHARS = new Set([
+  '维', '经', '现', '实', '际', '应', '难', '义', '认', '识', '让', '还', '这', '时', '间',
+  '问', '题', '该', '处', '与', '华', '会', '学', '国', '图', '书', '电', '车', '马', '门',
+  '爱', '写', '话', '语', '设', '访', '评', '诉', '词', '译', '试', '诗', '误', '说', '请',
+  '读', '课', '谁', '调', '谈', '谎', '谢', '计', '议', '讨', '训', '证', '钟', '钢', '铁',
+  '铅', '银', '错', '锁', '链', '纪', '约', '级', '给', '组', '红', '练', '细', '终', '绝',
+  '统', '继', '续', '绍', '绿', '缓', '缺', '网', '见', '对', '发', '来', '为', '从', '当',
+  '万', '与', '产', '严', '举', '丧', '业', '长', '飞', '击', '归', '欢', '权', '汉', '汇',
+  '决', '兴', '农', '动', '劳', '势', '医', '压', '厂', '历', '厉', '双', '变', '叶', '号',
+]);
+
+function checkCjkSimplifiedContamination(label: string, text: string): string[] {
+  const found = [...new Set([...text].filter(ch => SIMPLIFIED_ONLY_CHARS.has(ch)))];
+  return found.length > 0 ? [`${label}: 中国語簡体字の混入疑い「${found.join('')}」`] : [];
+}
+
+// ===== v5.2 A-3: 空所直前の冠詞(a/an)による選択肢の文法的排除チェック（警告のみ） =====
+function startsWithVowelSound(word: string): boolean {
+  return /^[aeiou]/i.test(word.trim());
+}
+
+function checkArticleAgreement(sentence: string, blankMarker: string | RegExp, choiceGroups: string[][]): string[] {
+  const warnings: string[] = [];
+  const markers = typeof blankMarker === 'string' ? [blankMarker] : (sentence.match(blankMarker) ?? []);
+  markers.forEach((marker, i) => {
+    const idx = sentence.indexOf(marker);
+    if (idx === -1) return;
+    const before = sentence.slice(0, idx).trim();
+    const lastWordMatch = before.match(/([A-Za-z]+)\s*$/);
+    if (!lastWordMatch) return;
+    const article = lastWordMatch[1].toLowerCase();
+    if (article !== 'a' && article !== 'an') return;
+
+    const choices = choiceGroups[i] ?? [];
+    choices.forEach(choice => {
+      const firstWord = choice.trim().split(/\s+/)[0] ?? '';
+      const isVowel = startsWithVowelSound(firstWord);
+      if (article === 'an' && !isVowel) {
+        warnings.push(`空所直前が"an"だが選択肢「${choice}」は子音始まりで文法的に排除可能`);
+      } else if (article === 'a' && isVowel) {
+        warnings.push(`空所直前が"a"だが選択肢「${choice}」は母音始まりで文法的に排除可能`);
+      }
+    });
+  });
+  return warnings;
+}
+
+function checkVocabArticleAgreement(questions: VocabQuestion[]): ValidationResult {
+  const errors: string[] = [];
+  questions.forEach((q, i) => {
+    const warnings = checkArticleAgreement(q.sentence, '____', [Object.values(q.choices)]);
+    warnings.forEach(w => errors.push(`語彙(${i + 1}): ${w}`));
+  });
+  return { valid: errors.length === 0, errors };
+}
+
+function checkFillInBlankArticleAgreement(passage: string, questions: ReadingQuestion[]): ValidationResult {
+  const errors: string[] = [];
+  const choiceGroups = questions.map(q => Object.values(q.choices));
+  const warnings = checkArticleAgreement(passage, /\(\s*[1-3]\s*\)/g, choiceGroups);
+  warnings.forEach(w => errors.push(`読解: ${w}`));
+  return { valid: errors.length === 0, errors };
+}
+
+// ===== v5.2 D-12: 誤答分類ラベルのホワイトリスト照合（警告のみ） =====
+const VOCAB_LABEL_WHITELIST = ['意味近接・焦点ズレ', '文脈と不整合'];
+const READING_CONTENT_LABEL_WHITELIST = ['語句流用・内容ズレ', '因果逆転', '主語すり替え', '極端化', '本文に根拠なし'];
+
+function checkVocabLabelWhitelist(vocabAnnotations: Record<string, ChoiceAnnotation>): string[] {
+  const errors: string[] = [];
+  Object.entries(vocabAnnotations).forEach(([word, ann]) => {
+    if (!ann.incorrectReason) return;
+    const matches = VOCAB_LABEL_WHITELIST.some(label => ann.incorrectReason!.startsWith(label));
+    if (!matches) {
+      errors.push(`語彙アノテーション「${word}」: incorrectReasonのラベルがホワイトリスト外（"${ann.incorrectReason}"）`);
+    }
+  });
+  return errors;
+}
+
+function checkReadingContentLabelWhitelist(explanations: ReadingQuestionExplanation[] | undefined): string[] {
+  if (!explanations) return [];
+  const errors: string[] = [];
+  explanations.forEach(exp => {
+    exp.choices.forEach(c => {
+      const technique = c.incorrectReason?.technique;
+      if (!technique) return;
+      if (!READING_CONTENT_LABEL_WHITELIST.includes(technique)) {
+        errors.push(`読解(${exp.questionNumber})選択肢${c.choiceKey}: techniqueラベルがホワイトリスト外（"${technique}"）`);
+      }
+    });
+  });
+  return errors;
 }
 
 // ===== JSON parser helper =====
@@ -1385,7 +1643,8 @@ async function retryVocabQuestion(
   group: VocabWordGroup,
   questionNumber: number,
   allowedWords: Set<string>,
-  initialErrors: string[]
+  initialErrors: string[],
+  excludedWords?: Set<string>
 ): Promise<VocabQuestion> {
   let lastErrors = initialErrors;
   let lastCandidate: VocabQuestion | null = null;
@@ -1393,7 +1652,7 @@ async function retryVocabQuestion(
   for (let attempt = 1; attempt <= 2; attempt++) {
     const retryStart = Date.now();
     try {
-      const regenerated = await generateVocabOnly([group], lastErrors);
+      const regenerated = await generateVocabOnly([group], lastErrors, excludedWords);
       console.log(`[Timing] vocab question ${questionNumber} retry ${attempt}/2: ${Date.now() - retryStart}ms`);
       const candidate: VocabQuestion = { ...regenerated[0], number: questionNumber };
       const errors = validateOneVocabQuestion(candidate, questionNumber, group, allowedWords);
@@ -1418,17 +1677,23 @@ async function retryVocabQuestion(
 export async function generateQuestions(
   article: Article,
   format: ReadingFormat,
-  attempt = 0
+  attempt = 0,
+  recentlyUsedWords?: Set<string>
 ): Promise<GeneratedQuestions> {
   const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
-  const wordSet = sampleWordBank(jstDay, attempt);
+  // v5.2 A-1: 呼び出し元(route.ts)が集めた直近30日分の出題済み語 + 初期シードを合わせて除外集合とする
+  const excludedWords = new Set<string>([
+    ...USED_WORDS_SEED.map(w => w.toLowerCase()),
+    ...(recentlyUsedWords ? [...recentlyUsedWords].map(w => w.toLowerCase()) : []),
+  ]);
+  const wordSet = sampleWordBank(jstDay, attempt, excludedWords);
   const trimmedArticle = { ...article, content: article.content.slice(0, 2000) };
 
   // ===== Step 1: 語彙・読解を並列で独立生成（v5.1: 記事に依存しない語彙は別呼び出しにして
   // タイムアウトリスクを下げつつ、互いに独立なので並列実行でレイテンシも短縮する） =====
   const genStart = Date.now();
   const [vocabDraft, readingDraft] = await Promise.all([
-    generateVocabOnly(wordSet.groups).then(r => { console.log(`[Timing] vocab initial: ${Date.now() - genStart}ms`); return r; }),
+    generateVocabOnly(wordSet.groups, undefined, excludedWords).then(r => { console.log(`[Timing] vocab initial: ${Date.now() - genStart}ms`); return r; }),
     generateReadingOnly(trimmedArticle, format).then(r => { console.log(`[Timing] reading: ${Date.now() - genStart}ms`); return r; }),
   ]);
 
@@ -1442,7 +1707,7 @@ export async function generateQuestions(
 
     console.warn(`[Vocab] question ${num} validation issues, retrying this question only:`, errors);
     try {
-      return await retryVocabQuestion(group, num, allowedWords, errors);
+      return await retryVocabQuestion(group, num, allowedWords, errors, excludedWords);
     } catch (e) {
       console.warn(`[Vocab] question ${num}: retries exhausted with no valid candidate, keeping original draft:`, e);
       return q;
@@ -1493,6 +1758,29 @@ export async function generateQuestions(
     }
   }
 
+  // ===== v5.2 Step 3.5: 追加の警告のみバリデーション（両形式・リトライには乗せない） =====
+  const wordCountValidation = checkPassageWordCount(finalReading.readingPassage, format);
+  if (!wordCountValidation.valid) {
+    console.warn('[Reading] word count issues (continuing anyway):', wordCountValidation.errors);
+  }
+  if (format === 'fill-in-blank') {
+    const fibArticleValidation = checkFillInBlankArticleAgreement(finalReading.readingPassage, finalReading.readingQuestions);
+    if (!fibArticleValidation.valid) {
+      console.warn('[Reading] article agreement issues (continuing anyway):', fibArticleValidation.errors);
+    }
+  }
+  const vocabArticleValidation = checkVocabArticleAgreement(vocabQuestions);
+  if (!vocabArticleValidation.valid) {
+    console.warn('[Vocab] article agreement issues (continuing anyway):', vocabArticleValidation.errors);
+  }
+  const cjkWarnings = [
+    ...vocabQuestions.flatMap((q, i) => checkCjkSimplifiedContamination(`語彙(${i + 1})解説`, q.explanation)),
+    ...finalReading.readingQuestions.flatMap((q, i) => checkCjkSimplifiedContamination(`読解(${i + 1})解説`, q.explanation)),
+  ];
+  if (cjkWarnings.length > 0) {
+    console.warn('[Reading/Vocab] CJK simplified char issues (continuing anyway):', cjkWarnings);
+  }
+
   // ===== Step 4: 選択肢シャッフル =====
   return applyChoiceShuffle({
     article,
@@ -1508,7 +1796,7 @@ export async function generateQuestions(
 function applyChoiceShuffle(q: GeneratedQuestions): GeneratedQuestions {
   return {
     ...q,
-    vocabQuestions: q.vocabQuestions.map(shuffleChoices),
+    vocabQuestions: shuffleVocabQuestionsBalanced(q.vocabQuestions),
     readingQuestions: q.readingQuestions.map(shuffleChoices),
   };
 }
