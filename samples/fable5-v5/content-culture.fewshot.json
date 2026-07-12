@@ -2,7 +2,7 @@
   "vocabQuestions": [
     {
       "number": 1,
-      "sentence": "Following the disputed election, thousands of citizens held a candlelight ____ outside the presidential palace, silently demanding transparency throughout the night.",
+      "sentence": "When the trapped miners' fate remained unknown after midnight, relatives refused to leave and instead kept a ____, watching in silence outside the shaft until rescuers emerged near dawn.",
       "blank": "vigil",
       "choices": {
         "A": "vigil",
@@ -11,7 +11,7 @@
         "D": "strain"
       },
       "answer": "A",
-      "explanation": "【正解】'held a candlelight ____ outside the presidential palace ... throughout the night'より、夜通し静かに座り込み抗議・祈念を続ける集会を表すvigilが最適。candlelight vigilは抗議・追悼の定番コロケーションであり、「寝ずに見守り続ける」というvigil固有のニュアンスが'silently demanding transparency throughout the night'と合致する。【B: quandary】意味近接・焦点ズレ─選挙後の混乱下の心理として文脈に馴染みそうだが、「板挟み・困惑」という内的状態であり、屋外でheldする集会行為を表さない。【C: gorge】文脈と不整合─「渓谷」を意味する地形語であり、抗議行動の文脈に合わない。【D: strain】意味近接・焦点ズレ─選挙後の「緊張・重圧」として一見入りそうだが、hold a strainという共起は成立せず、市民が主体的に催す行為を表せない。【紛らわしいペア】vigil vs strain：vigilは「夜通し見守る行為そのもの」、strainは「状況にかかる緊張状態」であり、動詞heldの目的語になり得るのはvigilである。"
+      "explanation": "【正解】'relatives refused to leave and instead kept a ____, watching in silence outside the shaft until rescuers emerged near dawn'より、事の帰趨が分かるまで夜通し見守り続ける集団的な行為を表すvigilが最適。焦れずに沈黙のうちに待ち続けるという描写が、vigil固有の「寝ずの見守り」というニュアンスと合致する。【B: quandary】意味近接・焦点ズレ─緊迫した状況での心理として文脈に馴染みそうだが、「板挟み・困惑」という個人の内的状態であり、keepの目的語となる集団的な見守り行為を表さない。【C: gorge】文脈と不整合─「峡谷」を意味する地形語であり、待機行動の文脈に合わない。【D: strain】意味近接・焦点ズレ─救出を待つ「緊張・重圧」として一見入りそうだが、strainは心身にかかる負荷そのものを指す語であり、keptの目的語として「見守り続ける行為」を表せない。【紛らわしいペア】vigil vs strain：vigilは「見守り続ける行為そのもの」、strainは「かかる緊張状態」であり、keptの目的語になり得るのはvigilである。"
     },
     {
       "number": 2,

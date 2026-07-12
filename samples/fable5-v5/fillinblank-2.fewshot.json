@@ -28,7 +28,7 @@
     },
     {
       "number": 3,
-      "sentence": "The central bank governor's reassuring remarks helped ____ investors' lingering fears that the economy was sliding toward a prolonged recession.",
+      "sentence": "Despite months of falling share prices, the central bank governor's calm remarks at last began to ____ the persistent fears among investors that a recession was unavoidable.",
       "blank": "dispel",
       "choices": {
         "A": "dispel",
@@ -37,7 +37,7 @@
         "D": "condone"
       },
       "answer": "A",
-      "explanation": "【正解】\"reassuring remarks helped ____ investors' lingering fears\"より、安心させる発言によって不安や疑念を積極的に払いのけるというdispel固有のニュアンスが文脈と合致。dispel fears/doubtsは典型的なコロケーションである。【D: condone】文脈と不整合─「容認する・大目に見る」の意で、不安を取り除くという文脈に合わない。【B: efface】意味近接・焦点ズレ─「消す」という方向性は近いが、記憶や痕跡を目立たなくする語であり、発言が人々の恐怖を追い払うという能動的な働きかけを表さない。【C: mock】意味近接・焦点ズレ─恐怖を「あざ笑う」ことは可能だが、reassuring（安心させる）という手がかりと態度の方向性が矛盾する。【紛らわしいペア】dispel vs efface：dispelは「不安・疑念を追い散らす」、effaceは「記憶・痕跡をかき消す」対象の違いがある。"
+      "explanation": "【正解】\"the central bank governor's calm remarks at last began to ____ the persistent fears among investors that a recession was unavoidable\"より、株価下落が続いていた状況で冷静な発言が投資家の不安を打ち消し始めたという因果関係から、積極的に不安を払いのけるというdispel固有のニュアンスが導ける。【D: condone】文脈と不整合─「容認する・大目に見る」の意で、不安を取り除くという文脈に合わない。【B: efface】意味近接・焦点ズレ─「消す」という方向性は近いが、記憶や痕跡を目立たなくする語であり、発言が人々の恐怖を追い払うという能動的な働きかけを表さない。【C: mock】意味近接・焦点ズレ─恐怖を「あざ笑う」ことは可能だが、calm（冷静な）という手がかりと態度の方向性が矛盾する。【紛らわしいペア】dispel vs efface：dispelは「不安・疑念を追い散らす」、effaceは「記憶・痕跡をかき消す」対象の違いがある。"
     },
     {
       "number": 4,
