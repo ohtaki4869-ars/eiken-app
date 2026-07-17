@@ -299,6 +299,7 @@ The word assignment for each question (correct word + its 3 wrong choices) is FI
   ■ 選択肢は数字(1〜4)で言及すること（A/B/C/Dのアルファベットは使わない。UI上の選択肢表示が1〜4の数字のため）
     各不正解をその番号と単語テキストで明示する。例：【2: curtail】文脈と不整合「〜」
     番号順（1→2→3→4）に記述すること
+    **この数字ルールは解説文（explanationフィールド）内の言及方法にのみ適用される。JSON構造上の"choices"オブジェクトのキーは、この規則と無関係に必ず"A"/"B"/"C"/"D"の4文字を使うこと（"1"/"2"/"3"/"4"をキーにしてはならない）。**
   ■ 解説文中で正解語を記述する際は問題文の表記と完全に一致させること（タイポ禁止）
   ■ 正解語の固有ニュアンスを1文で示す（訳語の羅列ではなく文脈での機能を優先）
     例：「事前に手を打つことで問題を未然に防ぐというobviate固有のニュアンスが文脈と合致」
@@ -323,7 +324,7 @@ V3. 誤答3語それぞれについて「なぜ誤りか」と「なぜ選びた
 - [ ] 誤答3択のうち最低2択が「意味近接・焦点ズレ」である
 - [ ] 「文脈と不整合」の誤答は1語以内である
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON in this exact format. Output the JSON object itself only — no preamble/lead-in text, no trailing commentary, and no markdown code fences (do not wrap the output in \`\`\` or \`\`\`json):
 {
   "vocabQuestions": [
     {
@@ -376,7 +377,10 @@ async function generateVocabOnly(
 
   const stream = client.messages.stream({
     model: GENERATION_MODEL,
-    max_tokens: 12000,
+    // v5.2実測ではvocabQuestions 5問の通常出力は2,000〜2,400トークン程度だが、
+    // 本番で12,000ちょうどまで到達しstop_reason:'max_tokens'で打ち切られJSONが
+    // 未完成のまま返る事例が発生したため、暴走出力への余裕を持たせて16,000に引き上げ
+    max_tokens: 16000,
     system: [
       { type: 'text', text: buildVocabStaticInstructions(), cache_control: { type: 'ephemeral' } },
     ],
@@ -385,14 +389,39 @@ async function generateVocabOnly(
   const response = await stream.finalMessage();
   const text = extractText(response);
   console.log('[Vocab] stop_reason:', response.stop_reason, 'output_tokens:', response.usage?.output_tokens);
+  if (response.stop_reason === 'max_tokens') {
+    console.error(`[Vocab] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
+  }
   try {
     const parsed = parseJson(text) as { vocabQuestions: VocabQuestion[] };
-    return parsed.vocabQuestions;
+    return parsed.vocabQuestions.map((q, i) => normalizeVocabChoiceKeys(q, `語彙(${i + 1})`));
   } catch (e) {
-    console.error('[Vocab] JSON parse error:', e);
-    console.error('[Vocab] Claude response:', text.slice(0, 500));
+    console.error('[Vocab] JSON parse/validation error:', e);
+    console.error('[Vocab] Claude response (full, length=' + text.length + '):', text);
     throw new Error('Failed to parse JSON from Claude response (vocab)');
   }
+}
+
+// v5.2の解説文体ルール（選択肢を数字1〜4で参照する）につられて、choicesオブジェクト自体のキーも
+// "A"/"B"/"C"/"D" ではなく "1"/"2"/"3"/"4" で返してくることがある。値自体は正しい4択のままなので、
+// 型定義（choices: {A,B,C,D}）を前提に書かれている下流処理（シャッフル・ラベル整合性検証等）が
+// choices.D 等をundefinedとして扱いクラッシュする前に、ここでA/B/C/D表記へ正規化する。
+function normalizeVocabChoiceKeys(q: VocabQuestion, label: string): VocabQuestion {
+  const rawChoices = q.choices as unknown as Record<string, string>;
+  if (CHOICE_KEYS.every(k => typeof rawChoices[k] === 'string')) {
+    return q;
+  }
+
+  const NUM_KEYS = ['1', '2', '3', '4'] as const;
+  if (NUM_KEYS.every(k => typeof rawChoices[k] === 'string')) {
+    const newChoices = {} as { A: string; B: string; C: string; D: string };
+    CHOICE_KEYS.forEach(letterKey => { newChoices[letterKey] = rawChoices[KEY_TO_NUM[letterKey]]; });
+    const newAnswer = NUM_TO_KEY[q.answer] ?? q.answer;
+    console.warn(`[Vocab] ${label}: choicesが数字キー(1-4)で返されたためA-D表記に正規化した`, Object.keys(rawChoices));
+    return { ...q, choices: newChoices, answer: newAnswer };
+  }
+
+  throw new Error(`${label}: choicesのキーが不正（期待: A/B/C/D、実際: [${Object.keys(rawChoices).join(', ')}]）`);
 }
 
 // ===== 読解生成（記事に基づく。語彙とは完全に独立した呼び出し） =====
@@ -599,7 +628,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
 Create an authentic EIKEN Grade 1 style reading passage and comprehension questions based on the news article that will be provided in a separate context block below.
 ${readingInstructions}
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON in this exact format. Output the JSON object itself only — no preamble/lead-in text, no trailing commentary, and no markdown code fences (do not wrap the output in \`\`\` or \`\`\`json):
 {
   ${readingJsonExample}
 }`;
@@ -634,6 +663,9 @@ async function generateReadingOnly(
   const response = await stream.finalMessage();
   const text = extractText(response);
   console.log('[Reading] stop_reason:', response.stop_reason, 'output_tokens:', response.usage?.output_tokens);
+  if (response.stop_reason === 'max_tokens') {
+    console.error(`[Reading] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
+  }
   try {
     return parseJson(text) as {
       readingPassage: string;
@@ -642,7 +674,7 @@ async function generateReadingOnly(
     };
   } catch (e) {
     console.error('[Reading] JSON parse error:', e);
-    console.error('[Reading] Claude response:', text.slice(0, 500));
+    console.error('[Reading] Claude response (full, length=' + text.length + '):', text);
     throw new Error('Failed to parse JSON from Claude response (reading)');
   }
 }
@@ -1426,14 +1458,19 @@ function checkReadingContentLabelWhitelist(explanations: ReadingQuestionExplanat
 }
 
 // ===== JSON parser helper =====
+// Claudeのレスポンスに```json コードフェンスや前置き文が混入することがあるため、
+// 先頭のコードフェンスを除去したうえで先頭`{`〜末尾`}`を抽出してからパースする。
+// vocab/reading/annotations等、全てのJSON生成呼び出しで共通利用する。
 function parseJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const candidate = fenceMatch ? fenceMatch[1] : text;
+    const start = candidate.indexOf('{');
+    const end = candidate.lastIndexOf('}');
     if (start === -1 || end === -1) throw new Error('No JSON object found');
-    return JSON.parse(text.slice(start, end + 1));
+    return JSON.parse(candidate.slice(start, end + 1));
   }
 }
 
