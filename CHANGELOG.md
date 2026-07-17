@@ -29,6 +29,7 @@
 - 語彙・読解のJSON解析失敗時、従来はレスポンス先頭500字のみログ出力していたが、原因調査のため全文をログ出力するよう変更
 - 語彙生成の`max_tokens`（12,000）は当初「確認の結果既に十分」として変更しなかったが、後日本番（Vercel）ログで`stop_reason: max_tokens, output_tokens: 12000`により出力が未完成のまま打ち切られ`No JSON object found`で失敗した実例を確認したため、16,000に引き上げ。通常のvocab生成は2,000〜2,400トークン程度で完了するため、これは暴走出力への安全マージンの拡大。あわせて語彙・読解の両方に`stop_reason === 'max_tokens'`の明示チェックを追加し、打ち切りが原因の失敗を「No JSON object found」等の紛らわしいメッセージではなくログ上で即座に切り分けられるようにした
 - **実際にログで再現・特定した別の実行時エラー（"Cannot read properties of undefined (reading 'trim')"）に対応**: `choices`オブジェクトのキーがJSON構文としては正しいのに`"A"/"B"/"C"/"D"`ではなく`"1"/"2"/"3"/"4"`（数字文字列）で返ってくることがあった。解説文中の選択肢参照を数字(1〜4)にする上記v5.2ルールに引きずられ、`choices`自体のキーも数字にしてしまう挙動と見られる。値は4択とも正しいため`JSON.parse`は成功し、選択肢数チェック（4個か）も通過するが、`choices.D`等の参照がundefinedになり、選択肢シャッフル時の`verifyChoiceLabelConsistency`でクラッシュしていた。`normalizeVocabChoiceKeys`（`lib/claude.ts`、`generateVocabOnly`内でパース直後に適用）を追加し、数字キーで返ってきた場合は`answer`も含めてA/B/C/D表記に正規化する。プロンプト側にも「この数字ルールは解説文にのみ適用され、choicesオブジェクトのキーは必ずA/B/C/Dを使う」という明示的な注記を追記した
+- **explanationフィールドの長さ上限をプロンプトに明記（暴走出力対策）**: max_tokens到達で打ち切られた事例（上記）は解説文が異常に長くなったことが一因と見て、`buildVocabStaticInstructions`に「【正解】1〜2文・各不正解1文・紛らわしいペア1文以内、全体400字以内」、`buildReadingOnlyStaticInstructions`（内容一致）に「【正解】2文以内・各誤答1文以内、全体450字以内」を明記し、両方のSELF-CHECKリストにも対応項目を追加。あわせて`checkExplanationLength`（警告のみ、リトライには乗せない）を追加し、上限超過が実際に発生していないか`generateQuestions`内でログ監視できるようにした
 
 **申し送り事項**:
 1. チェック項目「文法破綻ゼロ」「冠詞・前置詞による選択肢排除ゼロ」「出題済み語との重複ゼロ」が翌週ゼロにならない場合、生成と検証を別LLM呼び出しに分離する（検証はHaiku等の軽量モデルで可）

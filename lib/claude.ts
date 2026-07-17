@@ -304,6 +304,7 @@ The word assignment for each question (correct word + its 3 wrong choices) is FI
   ■ 正解語の固有ニュアンスを1文で示す（訳語の羅列ではなく文脈での機能を優先）
     例：「事前に手を打つことで問題を未然に防ぐというobviate固有のニュアンスが文脈と合致」
   ■ 正解と最も混同しやすい選択肢との違いを1文で必ず言及すること
+  ■ **長さの上限（暴走出力防止のため厳守）**：【正解】は1〜2文、不正解4つはそれぞれ1文のみ（2文以上に展開しない）、【紛らわしいペア】も1文以内。explanationフィールド全体で日本語400字以内に収めること。同じ内容を言い換えて繰り返さない。
 
   【正解】問題文の該当箇所を引用し、正解語固有のニュアンスで説明。
   【不正解各選択肢】番号と単語を明示しラベルを示す（ラベルは次の2種のみ。新しい呼称を作らない）：
@@ -323,6 +324,7 @@ V3. 誤答3語それぞれについて「なぜ誤りか」と「なぜ選びた
 - [ ] 問題文に ____ が1箇所だけある
 - [ ] 誤答3択のうち最低2択が「意味近接・焦点ズレ」である
 - [ ] 「文脈と不整合」の誤答は1語以内である
+- [ ] explanationが400字以内で、各項目（正解・不正解4つ・紛らわしいペア）が指定の文数を超えていない
 
 Return ONLY valid JSON in this exact format. Output the JSON object itself only — no preamble/lead-in text, no trailing commentary, and no markdown code fences (do not wrap the output in \`\`\` or \`\`\`json):
 {
@@ -533,6 +535,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
      例：「本文はvigilant oversightという自発的改善を述べており、government controlsという外部強制の必然性までは主張していない」
    ■「主語すり替え」を使った誤答の場合は、本文中の本来の主体と誤答が差し替えた主体を両方明示する
      例：「本文で指摘しているのはcriticsであり、authorではない」
+   ■ **長さの上限（暴走出力防止のため厳守）**：【正解】は本文引用込みで2文以内、各誤答の説明は1文のみ（2文以上に展開しない）。explanationフィールド全体で日本語450字以内に収めること。同じ内容を言い換えて繰り返さない。
 
    【正解】本文の該当箇所を必ず引用：「本文に'～'とあり、これをparaphraseすると正解の'～'に対応する」。推論問題の場合は「本文の'A'と'B'から推論できる」と複数箇所を示す。
    【各誤答】番号とラベルを明示（ラベルは上記5種のみ。新しい呼称を作らない）：
@@ -542,7 +545,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
      主語すり替え→「本文で～したのは(1)であり、選択肢の(2)ではない」
      本文に根拠なし→「この内容は本文中に記述がない」（使用時のみ、1パッセージにつき2択まで）
 
-   **SELF-CHECK（内容一致・11項目）:**
+   **SELF-CHECK（内容一致・12項目）:**
    - [ ] 問題数が4問である
    - [ ] 正解がparaphrase（語の言い換え＋構文変換の両方）されている
    - [ ] 4問それぞれが互いに異なる段落を根拠としている（同じ段落・実質同じ論点を2問が根拠にしていない）
@@ -554,6 +557,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
    - [ ] 絶対語（every/all/never/always/certainly等）を含む選択肢が1問につき1つ以内である
    - [ ] 全選択肢が35語を超えていない（20-33語が目安、35語は絶対に超えない上限）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
+   - [ ] 各設問のexplanationが450字以内で、正解2文以内・各誤答1文以内に収まっている
 ${CONTENT_FEWSHOT_BLOCK}`;
 
   const readingInstructions = format === 'fill-in-blank'
@@ -1378,6 +1382,12 @@ function checkCjkSimplifiedContamination(label: string, text: string): string[] 
   return found.length > 0 ? [`${label}: 中国語簡体字の混入疑い「${found.join('')}」`] : [];
 }
 
+// explanation暴走（max_tokens到達によるJSON打ち切り）の再発監視用。プロンプト側の文字数上限
+// 指示が実際に守られているかを警告ログで可視化する（リトライには乗せない）。
+function checkExplanationLength(label: string, text: string, maxChars: number): string[] {
+  return text.length > maxChars ? [`${label}: 解説が${text.length}字（上限${maxChars}字を超過）`] : [];
+}
+
 // ===== v5.2 A-3: 空所直前の冠詞(a/an)による選択肢の文法的排除チェック（警告のみ） =====
 function startsWithVowelSound(word: string): boolean {
   return /^[aeiou]/i.test(word.trim());
@@ -1816,6 +1826,13 @@ export async function generateQuestions(
   ];
   if (cjkWarnings.length > 0) {
     console.warn('[Reading/Vocab] CJK simplified char issues (continuing anyway):', cjkWarnings);
+  }
+  const explanationLengthWarnings = [
+    ...vocabQuestions.flatMap((q, i) => checkExplanationLength(`語彙(${i + 1})解説`, q.explanation, 400)),
+    ...finalReading.readingQuestions.flatMap((q, i) => checkExplanationLength(`読解(${i + 1})解説`, q.explanation, 450)),
+  ];
+  if (explanationLengthWarnings.length > 0) {
+    console.warn('[Reading/Vocab] explanation length issues (continuing anyway):', explanationLengthWarnings);
   }
 
   // ===== Step 4: 選択肢シャッフル =====
