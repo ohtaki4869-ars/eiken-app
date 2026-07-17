@@ -15,6 +15,20 @@ function extractText(response: Anthropic.Messages.Message): string {
   return textBlock?.text ?? '';
 }
 
+// コスト内訳の可視化用。cache_creation/cache_readはプロンプトキャッシング対象の
+// system最初のブロック（生成ルール・few-shot見本）分で、通常のinput_tokensとは別課金レートのため分けてログする。
+function logUsage(label: string, model: string, response: Anthropic.Messages.Message): void {
+  const u = response.usage;
+  console.log(
+    `[${label}] model:`, model,
+    'stop_reason:', response.stop_reason,
+    'input_tokens:', u?.input_tokens,
+    'output_tokens:', u?.output_tokens,
+    'cache_creation_input_tokens:', u?.cache_creation_input_tokens,
+    'cache_read_input_tokens:', u?.cache_read_input_tokens
+  );
+}
+
 // ===== モデル設定（環境変数で切り替え可能。デフォルトは haiku） =====
 const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
 const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-haiku-4-5';
@@ -390,7 +404,7 @@ async function generateVocabOnly(
   });
   const response = await stream.finalMessage();
   const text = extractText(response);
-  console.log('[Vocab] stop_reason:', response.stop_reason, 'output_tokens:', response.usage?.output_tokens);
+  logUsage('Vocab', GENERATION_MODEL, response);
   if (response.stop_reason === 'max_tokens') {
     console.error(`[Vocab] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
   }
@@ -666,7 +680,7 @@ async function generateReadingOnly(
   });
   const response = await stream.finalMessage();
   const text = extractText(response);
-  console.log('[Reading] stop_reason:', response.stop_reason, 'output_tokens:', response.usage?.output_tokens);
+  logUsage('Reading', GENERATION_MODEL, response);
   if (response.stop_reason === 'max_tokens') {
     console.error(`[Reading] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
   }
