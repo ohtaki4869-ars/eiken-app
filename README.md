@@ -56,6 +56,7 @@
    語彙は5問を通じて正解記号（A/B/C/D）が3回以上偏らないよう位置をあらかじめ均等割り当てしてからシャッフルし（`shuffleChoicesWithTarget` / `assignBalancedTargetLetters`、v5.2）、読解は従来通りランダムシャッフルする。解説文中の選択肢参照は数字(1〜4)で書かれる前提で、シャッフル後の番号に書き換える（`remapChoiceLetters`。UI表示（1〜4の数字）に合わせてv5.2でA/B/C/D参照から変更。旧レター参照が残っていた場合の安全網も維持）。
 6. **注釈（解説）生成は語彙・読解でコンテキストを分離**
    `generateVocabAnnotations` と `generateReadingAnnotations` を独立した呼び出しに分割し、`generateAnnotations` が並列実行・結合する。バリデーション違反時は該当アノテーションのみ再生成する。問題本体とは別に `/api/annotations?date=...` で遅延生成される。
+   **アノテーションキャッシュの鮮度検証（v5.3バグ修正）**: `annotations:{date}` キャッシュは対応する `questions:{date}` の `generatedAt` を保持し（`questionsGeneratedAt`）、読み出し時に現在の `questions.generatedAt` と一致する場合のみ使う。`questions:{date}` が同日中に再生成された場合（`forceRefresh` や、未キャッシュ状態への同時アクセスによる競合生成）でも、次回アクセスで自動的に古いアノテーションを検知して再生成するため、本文と選択肢/解説の記事が食い違う不整合を構造的に防ぐ。
 7. **JSONパースの堅牢化（v5.2）**
    `parseJson`（`lib/claude.ts`）は語彙・読解・アノテーション全ての生成呼び出しで共通利用する。まず素の`JSON.parse`を試み、失敗時は```json ... ```/``` ... ```コードフェンスを検出してその中身を対象にし、さらに先頭`{`〜末尾`}`を抽出してから再パースする。各プロンプトにも「JSONオブジェクトのみを返す（前置き・コードフェンス禁止）」という指示を明記している。パース失敗時はレスポンス全文をログ出力する（`console.error`、原因調査用）。
    また、`choices`オブジェクトのキーが（解説文中の数字参照ルールに引きずられて）`"A"/"B"/"C"/"D"`ではなく`"1"/"2"/"3"/"4"`で返る場合があるため、`generateVocabOnly`のパース直後に`normalizeVocabChoiceKeys`でA/B/C/D表記へ正規化してから返す（answerも合わせて変換）。

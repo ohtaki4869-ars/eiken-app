@@ -8,6 +8,10 @@ interface AnnotationData {
   choiceAnnotations: ChoiceAnnotations;
   confusingPairs: ConfusingPair[];
   readingChoiceExplanations?: ReadingQuestionExplanation[];
+  // questions:{date} の generatedAt をそのまま保持する。/api/generate が同日中に再実行され
+  // questions:{date} が別記事で上書きされた場合（forceRefresh、または同時アクセスによる
+  // 競合生成）でも、ここが一致しなければ古いannotationsキャッシュを無効と判定できる。
+  questionsGeneratedAt: string;
 }
 
 async function getKV() {
@@ -50,19 +54,24 @@ export async function GET(request: Request) {
   const dateKey = searchParams.get('date');
   if (!dateKey) return NextResponse.json({ error: 'date required' }, { status: 400 });
 
-  // キャッシュ確認
-  const cached = await loadAnnotations(dateKey);
-  if (cached) return NextResponse.json(cached);
-
-  // 問題を取得してアノテーション生成
+  // 問題を先に取得する（キャッシュの新鮮さをgeneratedAtで判定するため）
   const questions = await loadQuestions(dateKey);
   if (!questions) return NextResponse.json({ error: 'questions not found' }, { status: 404 });
+
+  // キャッシュ確認: questions.generatedAtと一致する場合のみ使う。
+  // /api/generateが同日中に再実行され questions:{date} が別記事に置き換わっていた場合
+  // （forceRefresh、または同時アクセスによる競合生成）、不一致を検知して再生成する。
+  const cached = await loadAnnotations(dateKey);
+  if (cached && cached.questionsGeneratedAt === questions.generatedAt) {
+    return NextResponse.json(cached);
+  }
 
   try {
     const result = await generateAnnotations(questions as GeneratedQuestions);
     if (!result) return NextResponse.json({ error: 'annotation generation failed' }, { status: 500 });
-    await saveAnnotations(dateKey, result);
-    return NextResponse.json(result);
+    const dataToSave: AnnotationData = { ...result, questionsGeneratedAt: (questions as GeneratedQuestions).generatedAt };
+    await saveAnnotations(dateKey, dataToSave);
+    return NextResponse.json(dataToSave);
   } catch (e) {
     console.error('[annotations] Error:', String(e));
     return NextResponse.json({ error: String(e) }, { status: 500 });
