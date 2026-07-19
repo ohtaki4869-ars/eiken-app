@@ -2,6 +2,19 @@
 
 このプロジェクトの問題生成ルール・パイプラインの変遷を、各バージョンで解決した課題ベースで記録する。バージョン番号は `lib/claude.ts` 内のコメント・コミットメッセージに基づく。日付はコミット日（JST基準の目安）。
 
+## v5.3 (2026-07-19)
+
+**課題**: 読解パッセージの元記事取得（`lib/rss.ts`）が、曜日ごとのジャンル固有RSSフィード（各2件）→ BBC News/World固定フォールバックの2段階のみで、ジャンル固有フィードとBBC固定フィードの両方が同時に不調な場合、記事取得自体が失敗し生成が止まるリスクがあった。フィード数も各ジャンル2件と少なく、単一フィードの一時的な不調で早々にBBC固定へ落ちてジャンルの一貫性が崩れやすかった。
+
+- **各ジャンルのフィードを2件→3件に増強**（`lib/rss.ts` の `GENRE_FEEDS`）: 月=Al Jazeera、火=Scientific American（https版を追加）、水=Guardian Business、金=NPR Health、土=Guardian Culture、日=Guardian Technologyを追加。木（環境・気候）は当初指示のGuardian Environmentが既存2件目と完全同一URLだったため、ユーザー判断でYale Environment 360（https://e360.yale.edu/feed）に差し替え（Reutersは無料RSS廃止により実質死んでいる可能性が高いため除外）
+- **記事取得を3段階フォールバックに再構成**: ①Step A（ジャンル固有フィード3件を順に試行）→ ②Step B（Step A全滅時のみ、AI生成記事にフォールバック）→ ③Step C（Step Bも失敗した場合のみ、BBC News/World固定フォールバック）。共通のフィード試行ロジックは`tryFeeds`に切り出し、Step AとCで共有
+- **Step B: AI生成記事フォールバックを新規実装**（`generateArticleWithAI`、`lib/claude.ts`）: `GENERATION_MODEL`環境変数ではなく`claude-sonnet-5`に固定（低頻度経路のため品質優先）。`samples/fable5-v5/`の読解few-shotの文体を参考に550〜650語の記事を生成し、v5.2で導入したV1〜V3自己検証パターン（事実捏造チェック）を記事生成プロンプトにも適用した。`Article`型を介した`rss.ts`⇄`claude.ts`の相互参照は、`claude.ts`側を`import type`にすることで実行時循環importを回避
+- **取得元のログ記録**: `console.log('[ArticleSource] step=A/B/C ...')`で毎回の取得元（Step A/B/Cのどれで、どのフィード/AI生成だったか）を記録。週次レビュー（`docs/weekly-review-checklist.md`）でStep B/Cの発生頻度を追跡できるようにした
+- **テスト・デバッグ用のexport追加**: `tryGenreFeedsOnly(genreIndex)`（Step A単体実行）、`debugFetchFeed(url)`（フィード単体の疎通確認）。新規追加7フィードの疎通確認用に`scripts/check-feeds.ts`を新規作成
+
+**申し送り事項**:
+1. Step B（AI生成記事）はSonnet 5固定のため、Step Aが頻繁に落ちるようだと想定よりコストが嵩む。週次レビューで`[ArticleSource] step=B`の頻度を確認し、多い場合はフィードURLの健全性（リダイレクト・廃止等）を先に疑うこと
+
 ## v5.2 (2026-07-13)
 
 **課題**: v5.1適用後、7/7〜7/12の6日間の生成物を評価した結果、語彙の出題済み語重複・正解位置の偏り・CEFR水準未達・固定コロケーションでの即答・読解の誤答技法の分類ブレ・簡体字混入等、複数の品質問題が判明した。

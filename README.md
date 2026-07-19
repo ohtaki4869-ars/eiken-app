@@ -39,6 +39,7 @@
 
 - **生成モデル**（語彙・読解本文の生成）: 環境変数 `GENERATION_MODEL`（本番では `claude-sonnet-5` を設定。コード側デフォルトは `claude-haiku-4-5`）
 - **注釈モデル**（解説・アノテーション生成）: 環境変数 `ANNOTATION_MODEL`（本番では Haiku 4.5 を設定。コード側デフォルトは `claude-haiku-4-5`）
+- **記事取得AI生成フォールバックモデル**（v5.3）: `claude-sonnet-5` に固定（環境変数では切替不可）。RSS全滅時のみ発火する低頻度経路のため、コストより品質を優先
 
 ### 生成パイプライン（v5.2）
 
@@ -60,6 +61,23 @@
    また、`choices`オブジェクトのキーが（解説文中の数字参照ルールに引きずられて）`"A"/"B"/"C"/"D"`ではなく`"1"/"2"/"3"/"4"`で返る場合があるため、`generateVocabOnly`のパース直後に`normalizeVocabChoiceKeys`でA/B/C/D表記へ正規化してから返す（answerも合わせて変換）。
 8. **explanationの長さ上限（暴走出力・生成時間の長期化対策）**
    語彙・読解（内容一致）の各解説文にプロンプト上の文字数上限（語彙400字/読解450字、正解・各誤答も文数を指定）を明記し、SELF-CHECKリストにも追加した。`checkExplanationLength`（`lib/claude.ts`）が上限超過を警告ログとして検知する（リトライには乗せない、監視目的）。
+
+### 記事取得の3段階フォールバック（v5.3、`lib/rss.ts`）
+
+読解パッセージの元記事は、以下の優先順位で取得する。
+
+1. **Step A: ジャンル固有のリアルタイムRSS**（`tryFeeds`） — 曜日ごとに割り当てられたジャンルのフィード3件（`GENRE_FEEDS`）を順に試し、最初に本文が抽出できたものを採用する。
+2. **Step B: AI生成記事**（`generateArticleWithAI`、`lib/claude.ts`） — Step Aの3件が全滅した場合のみ実行。`GENERATION_MODEL`（環境変数で切替可能）ではなく **Claude Sonnet 5に固定**し、`samples/fable5-v5/`の読解few-shotの文体を参考にした550〜650語のオリジナル記事を生成する。v5.2の語彙・読解生成で導入したV1〜V3自己検証ステップ（本文中の統計・固有名詞・具体的事実の捏造がないかの自己チェック）を記事生成にも適用している。発生頻度が低い経路のため、コストよりも品質・事実捏造の少なさを優先してモデルを固定している。
+3. **Step C: BBC News/World固定フォールバック**（`tryFeeds`） — Step Bも失敗した場合（Claude APIエラー等）のみ実行。
+
+どのStepで記事を取得できたかは`console.log('[ArticleSource] step=...')`で毎回記録する（週次レビューでStep B/Cの発生頻度を追跡できるようにする目的。[docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md)参照）。
+
+`lib/rss.ts`は`Article`型を通じて`lib/claude.ts`と相互参照する（`claude.ts`はStep B実装のため`rss.ts`の`Article`型を、`rss.ts`はStep B呼び出しのため`claude.ts`の`generateArticleWithAI`を参照）。実行時の循環importを避けるため、`claude.ts`側は`import type { Article }`と型のみのimportにしている（`Article`はinterfaceでランタイム値を持たないため、type importにすればコンパイル時に消去され、`rss.ts`→`claude.ts`の一方向のみが実行時に残る）。
+
+テスト用に以下をexportしている（`genreIndexOverride`で特定ジャンルを強制指定して個別検証できる）:
+- `tryGenreFeedsOnly(genreIndex)` — Step Aのみを単体実行（フォールバックしない）
+- `debugFetchFeed(url)` — フィードURL単体の疎通確認（`scripts/check-feeds.ts`で全フィード一括確認に使用）
+- `generateArticleWithAI(genre, dayIndex)`（`lib/claude.ts`） — Step Bのみを単体実行
 
 ### プロンプトキャッシング
 
@@ -115,7 +133,7 @@
 
 ## ルールバージョン
 
-現在の生成ルールは **v5.2**（出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定。旧: v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
+現在の生成ルール（語彙・読解の出題ロジック）は **v5.2**（出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定。旧: v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.3**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
 
 ## ローカル開発
 

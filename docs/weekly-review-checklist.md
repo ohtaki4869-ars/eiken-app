@@ -23,3 +23,18 @@
 3. 項目1〜3（文法破綻・冠詞排除・出題済み重複）が翌週ゼロにならない場合は、
    CHANGELOG.md の v5.2 申し送り事項に従い、生成と検証を別LLM呼び出しに分離する
    （検証はHaiku等の軽量モデルで可）ことを検討する。
+
+## 記事取得元（Step A/B/C）の確認（v5.3）
+
+`lib/rss.ts` の記事取得は ①ジャンル固有RSS(Step A) → ②AI生成(Step B) → ③BBC固定(Step C)
+の3段階フォールバックになっている。直近7日分のログで `[ArticleSource] step=...` を確認し、
+Step B・Cの発生頻度を追う。
+
+| # | チェック項目 | 基準 |
+|---|---|---|
+| 11 | Step A（ジャンル固有RSS）で取得できた日数 | 7日中7日が目標。Step B/Cが増えている場合はフィードURLの健全性（廃止・リダイレクト等）を疑う |
+| 12 | Step B（AI生成）発生時、事実捏造（架空の統計・機関名等）がないか本文を目視確認 | Step B発生日は毎回確認 |
+
+新規追加フィード（Al Jazeera / Scientific American(https) / Guardian Business / Yale Environment 360 /
+NPR Health / Guardian Culture / Guardian Technology）の疎通確認は `npx tsx scripts/check-feeds.ts` で
+一括実行できる。

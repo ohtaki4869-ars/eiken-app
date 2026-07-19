@@ -1,5 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { Article } from './rss';
+// rss.tsがgenerateArticleWithAI（本ファイル）を呼ぶため、型のみのimportにして
+// 実行時の循環依存を避ける（Articleはinterfaceでランタイム値を持たないため、
+// type importにすればコンパイル時に消去されrss.ts→claude.tsの一方向のみが実行時に残る）
+import type { Article } from './rss';
 import { WORD_BANK, WordEntry, CEFR_BELOW_C1_BLOCKLIST } from './wordbank';
 import contentFewshotExample from '../samples/fable5-v5/content-culture.fewshot.json';
 import fillInBlankFewshotExample from '../samples/fable5-v5/fillinblank-2.fewshot.json';
@@ -32,6 +35,81 @@ function logUsage(label: string, model: string, response: Anthropic.Messages.Mes
 // ===== モデル設定（環境変数で切り替え可能。デフォルトは haiku） =====
 const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
 const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-haiku-4-5';
+
+// ===== 記事取得 Step B: RSS全滅時のAI生成フォールバック（lib/rss.tsから呼ばれる） =====
+// GENERATION_MODEL（環境変数で切替可能）ではなく Claude Sonnet 5 に固定する。
+// このフォールバックはジャンル固有フィード3件が全滅した稀なケースのみ発火するため、
+// コストよりも品質（事実捏造の少なさ・文体の安定）を優先する。
+const ARTICLE_FALLBACK_MODEL = 'claude-sonnet-5';
+
+function buildArticleFallbackPrompt(genre: string): string {
+  // 文体サンプル: 読解生成用few-shotのreadingPassage冒頭を流用（記事本文そのものではなく
+  // 客観的・報道的な文体の参考として渡す）
+  const styleSample = contentFewshotExample.readingPassage.slice(0, 600);
+
+  return `You are an expert news writer creating original English-language news articles for EIKEN Grade 1 (英検1級) reading material sourcing.
+
+## 背景
+本日のジャンル「${genre}」のRSSフィードが全て取得に失敗した（フィード停止・ネットワークエラー等）。
+実在のニュースの代わりに、その日のジャンルに沿った、実際の報道記事と見分けがつかない品質の
+オリジナル英語ニュース記事を1本作成する。
+
+## 文体サンプル（実際の報道記事ベースの読解パッセージ冒頭。この客観的・報道的な文体に合わせること）
+"""
+${styleSample}
+"""
+
+## 生成後SELF-CHECK（v5.2のV1〜V3方式を記事生成にも適用。出力前に必ず全て確認する）
+V1. 記事内の主張・数値・固有名詞（統計値・組織名・人名・地名・研究機関名・年号等）を一つずつ書き出し、
+    実在の事実と矛盾しないか、検証不可能な具体的数値・固有名詞を捏造していないか確認する。
+    NG例:「オックスフォード大学の2024年調査によると回答者の37%が」のような、実在確認できない
+    具体的な統計・機関名の創作。
+V2. 記事が実在の特定人物・組織を、事実と異なる具体的行動・発言をしたかのように描写していないか確認する。
+    実在の個人・組織を虚偽の文脈で名指ししてはならない。
+V3. 曖昧な一般論（"researchers have found", "experts suggest", "recent data indicates"等）に留め、
+    検証不可能な固有の統計・引用・機関名を作り出さない。具体性が必要な場合は、一般的に知られた
+    組織・現象の範囲に留める。
+
+## 出力要件
+- 語数目安: 550〜650語
+- ジャンル: ${genre}
+- 客観的な報道文体（BBC/Reuters/Guardian等の実際のニュース記事と同等）
+- タイトルも生成する（英語、報道記事らしい見出し）
+
+Return ONLY valid JSON in this exact format. Output the JSON object itself only — no preamble/lead-in text, no trailing commentary, and no markdown code fences (do not wrap the output in \`\`\` or \`\`\`json):
+{
+  "title": "...",
+  "content": "..."
+}`;
+}
+
+// lib/rss.ts の fetchNewsArticle() Step B から呼ばれる。ジャンル固有フィード(Step A)が
+// 全滅した場合のみ実行される代替記事生成。失敗時はエラーをthrowし、呼び出し元でStep C
+// （BBC固定フォールバック）に処理を委ねる。
+export async function generateArticleWithAI(genre: string, dayIndex: number): Promise<Article> {
+  const response = await client.messages.create({
+    model: ARTICLE_FALLBACK_MODEL,
+    max_tokens: 4000,
+    system: [{ type: 'text', text: buildArticleFallbackPrompt(genre) }],
+    messages: [{ role: 'user', content: `ジャンル「${genre}」（曜日インデックス${dayIndex}）の代替記事を1本生成してください。` }],
+  });
+  const text = extractText(response);
+  logUsage('ArticleFallback', ARTICLE_FALLBACK_MODEL, response);
+  try {
+    const parsed = parseJson(text) as { title: string; content: string };
+    return {
+      title: parsed.title,
+      content: parsed.content,
+      source: 'AI-generated',
+      link: '',
+      genre,
+    };
+  } catch (e) {
+    console.error('[ArticleFallback] JSON parse error:', e);
+    console.error('[ArticleFallback] Claude response (full, length=' + text.length + '):', text);
+    throw new Error('Failed to parse JSON from Claude response (article fallback)');
+  }
+}
 
 const VOCAB_THEMES = ['政治', '科学', '経済', '文化', '社会'];
 
