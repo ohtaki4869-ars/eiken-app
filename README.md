@@ -63,7 +63,7 @@
 8. **explanationの長さ上限（暴走出力・生成時間の長期化対策）**
    語彙・読解（内容一致）の各解説文にプロンプト上の文字数上限（語彙400字/読解450字、正解・各誤答も文数を指定）を明記し、SELF-CHECKリストにも追加した。`checkExplanationLength`（`lib/claude.ts`）が上限超過を警告ログとして検知する（リトライには乗せない、監視目的）。
 
-### 記事取得の3段階フォールバック（v5.3、`lib/rss.ts`）
+### 記事取得の3段階フォールバック（v5.4、`lib/rss.ts`）
 
 読解パッセージの元記事は、以下の優先順位で取得する。
 
@@ -72,6 +72,8 @@
 3. **Step C: BBC News/World固定フォールバック**（`tryFeeds`） — Step Bも失敗した場合（Claude APIエラー等）のみ実行。
 
 どのStepで記事を取得できたかは`console.log('[ArticleSource] step=...')`で毎回記録する（週次レビューでStep B/Cの発生頻度を追跡できるようにする目的。[docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md)参照）。
+
+**v5.4: フィード重複の解消**。週次レビューで、火曜「サイエンス・テクノロジー」のBBC Scienceと木曜「環境・気候」のBBC Environmentが完全同一URL、火曜のScientific American 2・3件目がhttp/https違いのみの同一URL、土曜「文化・社会」と日曜「教育・テクノロジー」の両方でTIMEが使われジャンル純度を下げていた（8/1にエネルギー地政学記事の混入実例あり）ことが判明。それぞれNPR Science・Guardian Science・Ars Technicaに差し替えて解消した（詳細は[CHANGELOG.md](./CHANGELOG.md)参照）。
 
 `lib/rss.ts`は`Article`型を通じて`lib/claude.ts`と相互参照する（`claude.ts`はStep B実装のため`rss.ts`の`Article`型を、`rss.ts`はStep B呼び出しのため`claude.ts`の`generateArticleWithAI`を参照）。実行時の循環importを避けるため、`claude.ts`側は`import type { Article }`と型のみのimportにしている（`Article`はinterfaceでランタイム値を持たないため、type importにすればコンパイル時に消去され、`rss.ts`→`claude.ts`の一方向のみが実行時に残る）。
 
@@ -134,7 +136,7 @@
 
 ## ルールバージョン
 
-現在の生成ルール（語彙・読解の出題ロジック）は **v5.2**（出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定。旧: v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.3**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
+現在の生成ルール（語彙・読解の出題ロジック）は **v5.2**（出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定。旧: v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
 
 ## ローカル開発
 

@@ -18,9 +18,11 @@ export const GENRE_FEEDS = [
   {
     genre: 'サイエンス・テクノロジー',
     feeds: [
-      { name: 'BBC Science', url: 'http://feeds.bbci.co.uk/news/science_and_environment/rss.xml' },
+      // v5.4: BBC Scienceは木曜「環境・気候」のBBC Environmentと完全同一URLで重複していたため、NPR Scienceに差し替え
+      { name: 'NPR Science', url: 'https://feeds.npr.org/1007/rss.xml' },
       { name: 'Scientific American', url: 'http://rss.sciam.com/ScientificAmerican-Global' },
-      { name: 'Scientific American', url: 'https://rss.sciam.com/ScientificAmerican-Global' },
+      // v5.4: 3件目のScientific American(https版)が2件目とhttp/https違いのみの同一URLで重複していたため、Guardian Scienceに差し替え
+      { name: 'Guardian Science', url: 'https://www.theguardian.com/science/rss' },
     ],
   },
   {
@@ -62,7 +64,8 @@ export const GENRE_FEEDS = [
     genre: '教育・テクノロジー',
     feeds: [
       { name: 'BBC Technology', url: 'http://feeds.bbci.co.uk/news/technology/rss.xml' },
-      { name: 'TIME', url: 'https://time.com/feed/' },
+      // v5.4: TIMEが土曜「文化・社会」と重複し日曜のジャンル純度を下げていた（8/1にエネルギー地政学記事混入の実例あり）ため、Ars Technicaに差し替え
+      { name: 'Ars Technica', url: 'http://feeds.arstechnica.com/arstechnica/index' },
       { name: 'Guardian Technology', url: 'https://www.theguardian.com/technology/rss' },
     ],
   },

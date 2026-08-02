@@ -2,6 +2,15 @@
 
 このプロジェクトの問題生成ルール・パイプラインの変遷を、各バージョンで解決した課題ベースで記録する。バージョン番号は `lib/claude.ts` 内のコメント・コミットメッセージに基づく。日付はコミット日（JST基準の目安）。
 
+## v5.4 (2026-08-02)
+
+**課題**: 週次レビューで`GENRE_FEEDS`（`lib/rss.ts`）に3件のフィード重複が判明した。①火曜「サイエンス・テクノロジー」のBBC Scienceと木曜「環境・気候」のBBC Environmentが完全同一URL（`http://feeds.bbci.co.uk/news/science_and_environment/rss.xml`）、②火曜のScientific American 2件目・3件目がhttp/https違いのみの同一URL、③TIME（`https://time.com/feed/`）が土曜「文化・社会」と日曜「教育・テクノロジー」の両方で使われ、日曜のジャンル純度を下げていた（8/1にエネルギー地政学記事が混入した実例あり）。
+
+- **候補フィードの疎通確認**: `debugFetchFeed`を使った一時スクリプトでNPR Science・Guardian Science・Ars Technica（`arstechnica/index`）・Ars Technica（`arstechnica/technology-lab`）の4件を確認し、いずれも記事取得OKと判明
+- **「サイエンス・テクノロジー」（火曜）のフィード差し替え**（`lib/rss.ts`の`GENRE_FEEDS`）: BBC Science → NPR Science（木曜BBC Environmentとの重複解消）、Scientific American 3件目（https版） → Guardian Science（2件目とのhttp/https重複解消）
+- **「教育・テクノロジー」（日曜）のフィード差し替え**: TIME → Ars Technica（`arstechnica/index`）。土曜「文化・社会」のTIMEはそのまま維持
+- 環境・気候（木曜）・文化・社会（土曜）は変更なし
+
 ## v5.3 (2026-07-19)
 
 **課題**: 読解パッセージの元記事取得（`lib/rss.ts`）が、曜日ごとのジャンル固有RSSフィード（各2件）→ BBC News/World固定フォールバックの2段階のみで、ジャンル固有フィードとBBC固定フィードの両方が同時に不調な場合、記事取得自体が失敗し生成が止まるリスクがあった。フィード数も各ジャンル2件と少なく、単一フィードの一時的な不調で早々にBBC固定へ落ちてジャンルの一貫性が崩れやすかった。
