@@ -61,6 +61,27 @@ export default function SeidokuPage() {
   }
 
   const paragraphs = data?.readingPassage.split('\n').filter(p => p.trim()) ?? [];
+  const displayDateStr = date === 'today' ? new Date(Date.now() + 9 * 3600000).toISOString().split('T')[0] : date;
+  const displayDate = formatDate(displayDateStr);
+
+  const renderHeader = () => (
+    <div style={{ borderBottom: '3px solid #1a3a5c', marginBottom: '12px', paddingBottom: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1a3a5c' }}>精読ノート</div>
+          <div style={{ fontSize: '10px', color: '#2c6fad', marginTop: '2px' }}>EIKEN Grade 1 — Intensive Reading Practice</div>
+        </div>
+        <div style={{ fontSize: '10px', color: '#555', textAlign: 'right' }}>{displayDate}</div>
+      </div>
+    </div>
+  );
+
+  const renderFooter = () => (
+    <div style={{ marginTop: '16px', borderTop: '1px solid #ccc', paddingTop: '6px', fontSize: '8px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
+      <span>英検1級 毎日トレーニング　精読ノート</span>
+      <span>{displayDate}</span>
+    </div>
+  );
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen text-gray-500">読み込み中...</div>;
@@ -95,6 +116,7 @@ export default function SeidokuPage() {
         }
         .passage-line { line-height: 2.8em; }
         .write-line { border-bottom: 1px solid #ccc; margin-bottom: 0; padding-bottom: 0; height: 28px; }
+        .para-block { page-break-inside: avoid; break-inside: avoid; }
       `}</style>
 
       {/* 操作バー（画面のみ） */}
@@ -131,61 +153,88 @@ export default function SeidokuPage() {
       {/* 画面表示時の余白 */}
       <div className="no-print h-16" />
 
-      {/* ===== PAGE 1: パッセージ ===== */}
+      {/* ===== PAGE: Step1 本文＋段落要約（段落ごとに融合） ===== */}
       <div className="page">
-        {/* ヘッダー */}
-        <div style={{ borderBottom: '3px solid #1a3a5c', marginBottom: '12px', paddingBottom: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a3a5c' }}>精読ノート</div>
-              <div style={{ fontSize: '11px', color: '#2c6fad', marginTop: '2px' }}>EIKEN Grade 1 — Intensive Reading Practice</div>
-            </div>
-            <div style={{ fontSize: '10px', color: '#555', textAlign: 'right' }}>
-              {formatDate(date === 'today' ? new Date(Date.now() + 9*3600000).toISOString().split('T')[0] : date)}
-            </div>
-          </div>
+        {renderHeader()}
+
+        <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
+          Step 1　本文＋段落要約
+        </div>
+        <div style={{ fontSize: '9px', color: '#555', marginBottom: '12px' }}>
+          下線・メモを書き込みながら読み、各段落の直後の枠に要約を書き込もう
         </div>
 
-        {/* 記入欄 */}
-        <div style={{ fontSize: '10px', color: '#555', marginBottom: '8px', display: 'flex', gap: '32px' }}>
-          <span>所要時間：＿＿＿分</span>
-          <span>理解度：☆ ☆ ☆ ☆ ☆</span>
-          <span>出典：{data.article.source}</span>
-        </div>
-
-        {/* パッセージ見出し */}
-        <div style={{ background: '#e8f0f7', padding: '5px 10px', borderLeft: '4px solid #2c6fad', marginBottom: '12px', fontSize: '11px', fontWeight: 'bold', color: '#1a3a5c' }}>
-          ■ Passage　（下線・メモを書き込もう）
-        </div>
-
-        {/* 段落 */}
+        {/* 段落（本文＋直後に固定高さの要約欄） */}
         {paragraphs.map((para, i) => (
-          <div key={i} style={{ marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+          <div key={i} className="para-block" style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <div style={{
+                minWidth: '22px', height: '22px', background: '#2c6fad', color: 'white',
+                borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '10px', fontWeight: 'bold', marginTop: '2px', flexShrink: 0
+              }}>¶{i + 1}</div>
+              <p style={{ fontSize: '11.5px', lineHeight: '2.6em', margin: 0, flex: 1, borderBottom: '0.5px solid #eee' }}>
+                {para}
+              </p>
+            </div>
+            {/* 段落要約欄（固定高さ・枠線付き・罫線入り） */}
             <div style={{
-              minWidth: '22px', height: '22px', background: '#2c6fad', color: 'white',
-              borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', fontWeight: 'bold', marginTop: '2px', flexShrink: 0
-            }}>¶{i + 1}</div>
-            <p style={{ fontSize: '11.5px', lineHeight: '2.6em', margin: 0, flex: 1, borderBottom: '0.5px solid #eee' }}>
-              {para}
-            </p>
+              marginLeft: '32px', marginTop: '4px',
+              border: '1px solid #2c6fad', borderRadius: '3px', background: '#f7fafc',
+              padding: '4px 8px 2px',
+            }}>
+              <span style={{ display: 'block', fontSize: '8px', color: '#2c6fad', fontWeight: 'bold', marginBottom: '2px' }}>
+                ¶{i + 1} 要約 →
+              </span>
+              {[0, 1, 2].map(j => (
+                <div key={j} style={{ borderBottom: '1px solid #b9d0e3', height: '30px' }} />
+              ))}
+            </div>
           </div>
         ))}
+
+        {renderFooter()}
       </div>
 
-      {/* ===== PAGE 2: ワークシート ===== */}
+      {/* ===== PAGE: Step2 論理の流れ ===== */}
       <div className="page" style={{ marginTop: '0' }}>
+        {renderHeader()}
 
-        {/* ヘッダー */}
-        <div style={{ borderBottom: '3px solid #1a3a5c', marginBottom: '16px', paddingBottom: '8px' }}>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1a3a5c' }}>精読ワークシート</div>
-          <div style={{ fontSize: '10px', color: '#2c6fad', marginTop: '2px' }}>EIKEN Grade 1 — Intensive Reading Worksheet</div>
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+            Step 2　論理の流れ
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0' }}>
+            {Array.from({ length: Math.min(4, paragraphs.length) }).map((_, i, arr) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                <div style={{
+                  border: '2px solid #2c6fad', borderRadius: '4px',
+                  width: '100%', minHeight: '50mm',
+                  background: 'white', position: 'relative',
+                }}>
+                  <span style={{ position: 'absolute', top: '6px', left: '8px', fontSize: '9px', color: '#aab', fontWeight: 'bold' }}>¶{i + 1}</span>
+                </div>
+                {i < arr.length - 1 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '2px 0' }}>
+                    <div style={{ width: '2px', height: '6px', background: '#2c6fad' }} />
+                    <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '8px solid #2c6fad' }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Step 2: 語彙チェック（全選択肢・手書き記入欄） */}
+        {renderFooter()}
+      </div>
+
+      {/* ===== PAGE: Step3 語彙チェック ===== */}
+      <div className="page" style={{ marginTop: '0' }}>
+        {renderHeader()}
+
         <div style={{ marginBottom: '20px' }}>
           <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
-            Step 2　語彙チェック
+            Step 3　語彙チェック
           </div>
           <div style={{ fontSize: '9px', color: '#555', marginBottom: '6px' }}>
             知らなかった単語に ✓ を入れ、意味・コロケーションを手書きで記入しよう
@@ -229,51 +278,22 @@ export default function SeidokuPage() {
           </table>
         </div>
 
-        {/* Step 3: 段落要約（3行スペース） */}
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
-            Step 3　段落ごとの1行要約
-          </div>
-          <div style={{ fontSize: '9px', color: '#555', marginBottom: '8px' }}>
-            各段落のポイントを日本語で1〜2行にまとめよう
-          </div>
-          {paragraphs.map((_, i) => (
-            <div key={i} style={{ marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2c6fad', minWidth: '24px' }}>¶{i + 1}</span>
-                <span style={{ fontSize: '10px', color: '#888' }}>→</span>
-              </div>
-              {[0, 1, 2].map(j => (
-                <div key={j} style={{ borderBottom: '1px solid #aaa', height: '26px', marginBottom: '2px', marginLeft: '32px' }} />
-              ))}
-            </div>
-          ))}
-        </div>
+        {renderFooter()}
+      </div>
 
-        {/* Step 4: 論理の流れ（縦並びボックス） */}
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
-            Step 4　論理の流れ
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0' }}>
-            {Array.from({ length: Math.min(4, paragraphs.length) }).map((_, i, arr) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                <div style={{
-                  border: '2px solid #2c6fad', borderRadius: '4px',
-                  width: '100%', minHeight: '50mm',
-                  background: 'white', position: 'relative',
-                }}>
-                  <span style={{ position: 'absolute', top: '6px', left: '8px', fontSize: '9px', color: '#aab', fontWeight: 'bold' }}>¶{i + 1}</span>
-                </div>
-                {i < arr.length - 1 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '2px 0' }}>
-                    <div style={{ width: '2px', height: '6px', background: '#2c6fad' }} />
-                    <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '8px solid #2c6fad' }} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      {/* ===== PAGE: 記録欄 ===== */}
+      <div className="page" style={{ marginTop: '0' }}>
+        {renderHeader()}
+
+        <div style={{ background: '#2c6fad', color: 'white', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+          記録欄
+        </div>
+        <div style={{ fontSize: '11px', color: '#555', marginBottom: '10px', display: 'flex', gap: '32px' }}>
+          <span>所要時間：＿＿＿分</span>
+          <span>理解度：☆ ☆ ☆ ☆ ☆</span>
+        </div>
+        <div style={{ fontSize: '11px', color: '#555', marginBottom: '24px' }}>
+          出典：{data.article.source}
         </div>
 
         {/* メモ欄 */}
@@ -286,11 +306,7 @@ export default function SeidokuPage() {
           ))}
         </div>
 
-        {/* フッター */}
-        <div style={{ marginTop: '16px', borderTop: '1px solid #ccc', paddingTop: '6px', fontSize: '8px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
-          <span>英検1級 毎日トレーニング　精読ノート</span>
-          <span>{formatDate(date === 'today' ? new Date(Date.now() + 9*3600000).toISOString().split('T')[0] : date)}</span>
-        </div>
+        {renderFooter()}
       </div>
 
       {/* ===== PAGE 3: 選択肢精読 ===== */}
