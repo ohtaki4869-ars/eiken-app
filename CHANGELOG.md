@@ -2,6 +2,20 @@
 
 このプロジェクトの問題生成ルール・パイプラインの変遷を、各バージョンで解決した課題ベースで記録する。バージョン番号は `lib/claude.ts` 内のコメント・コミットメッセージに基づく。日付はコミット日（JST基準の目安）。
 
+## v5.5 (2026-08-10)
+
+**課題**: 読解（内容一致形式）の誤答が、本文と無関係な内容の創作・絶対表現の多用・不正解部分を長さで隠す等により見分けやすくなる/不自然になるケースがあった。誤答の質は既存のJapanese固定5ラベル（語句流用・内容ズレ/因果逆転/主語すり替え/極端化/本文に根拠なし）による指示のみでプロンプト側に委ねられており、機械的に検知・リトライできる項目が少なかった。正解選択肢のパラフレーズも語の言い換えに留まりがちだった。
+
+- **`ReadingChoiceDraft`型を新規追加**（`lib/claude.ts`）: 読解の各選択肢に `text` / `isCorrect` に加え、`distractorType`（誤答のみ。`SCOPE_SHIFT`/`AGENT_SWAP`/`CAUSAL_REVERSAL`/`TIMELINE_SHIFT`/`MODALITY_SHIFT`/`HALF_TRUE_COMPOSITE`/`PURPOSE_RESULT_CONFUSION`の7種）、`sourceSpan`（根拠にした本文箇所。正解・誤答とも必須）、`falseElement`（誤答の誤っている最小部分）を持たせた。`ReadingQuestion`に`choiceDrafts?: ReadingChoiceDraft[]`として追加（追加のLLM呼び出しは発生させず、既存の読解生成呼び出し内で出力させる）
+- **読解生成プロンプトを強化**（`buildReadingOnlyStaticInstructions`の内容一致形式）: 誤答は本文と無関係な内容を新規に創作しない、各誤答は本文情報を最低1つ正しく含み誤りは原則1箇所に限定する、長さで不正解部分を隠さず主体・範囲・因果・時制・確実性・目的と結果等の精密な差で不正解にする、絶対表現（always/never/every/entirely/completely/solely/regardless of等）は本文に同等の強さの主張がない限り使わない、3つの誤答は可能な限り異なる`distractorType`にする、という指示を追加。正解選択肢についても、本文と同じ語句の連続使用を避け主語・述語構造を変え上位概念へ言い換える（ただし本文から論理的に導けない抽象化はしない）指示を追加
+- **誤答精度の機械チェックを新規追加し、既存のリトライ機構に接続**（`lib/claude.ts`。内容一致形式のみ）:
+  - `checkWrongChoiceAbsoluteWords`: 誤答3つ中2つ以上に絶対表現を含む場合はエラー
+  - `checkChoiceDraftSourceSpans`: 誤答の`sourceSpan`が欠落・空の場合はエラー
+  - `checkDistractorTypeDiversity`: 誤答3つの`distractorType`がすべて同一の場合はエラー
+  - `checkCorrectChoiceCopiesPassage`: 正解選択肢が本文と5-gram（連続5語）以上一致する場合はエラー（簡易文字列一致検査）
+  - 上記いずれかでエラーが出た場合、既存の35語超過エスカレーション（`countOverMaxWordChoices >= 3`）と統合し、読解セット全体を1回だけ再生成する（`generateReadingOnly`にエラー内容を渡す既存の仕組みをそのまま再利用）。再生成後もエラー総数が改善しなければ元の生成結果を採用する
+- **`choiceDrafts`は最終出力から除去**（`stripChoiceDrafts`）: 選択肢シャッフル後は生成順のメタデータが記号（A/B/C/D）と対応しなくなるため、バリデーション完了後・シャッフル前に取り除いてから保存する
+
 ## v5.4 (2026-08-02)
 
 **課題**: 週次レビューで`GENRE_FEEDS`（`lib/rss.ts`）に3件のフィード重複が判明した。①火曜「サイエンス・テクノロジー」のBBC Scienceと木曜「環境・気候」のBBC Environmentが完全同一URL（`http://feeds.bbci.co.uk/news/science_and_environment/rss.xml`）、②火曜のScientific American 2件目・3件目がhttp/https違いのみの同一URL、③TIME（`https://time.com/feed/`）が土曜「文化・社会」と日曜「教育・テクノロジー」の両方で使われ、日曜のジャンル純度を下げていた（8/1にエネルギー地政学記事が混入した実例あり）。

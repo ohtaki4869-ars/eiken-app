@@ -26,7 +26,7 @@
 | 今日の問題 | `/` | 語彙穴埋め5問＋読解問題（内容一致 or 空所補充）を表示。解答・解説はデフォルト非表示で、ボタンで開閉できる |
 | 問題履歴 | `/history` | 過去30日分の生成済み問題一覧 |
 | 過去問再表示 | `/quiz/[date]` | 指定日の問題を表示 |
-| 精読ノート（PDF） | `/seidoku/[date]`、`/api/pdf/seidoku` | 読解パッセージの構文・語彙を解説する精読ノートをHTML表示／PDF出力（`pdfkit`使用） |
+| 精読ノート | `/seidoku/[date]` | 読解パッセージを段落ごとに区切り、Step1（本文＋段落要約）→Step2（論理の流れ）→Step3（語彙チェック）→記録欄の順で表示。本文直後に段落ごとの罫線付き要約欄を配置し、本文と要約の往復を減らすレイアウト。ブラウザ印刷（`window.print()`）でPDF保存する。`/api/pdf/seidoku`は`pdfkit`によるサーバー生成PDFだが、現在UIからリンクされていない未使用エンドポイント |
 | 単語フラッシュカード | `/flashcards` | 前日出題分の語彙を翌日に復習できるカード形式ページ |
 | 読み上げ（TTS） | `/api/tts` | Google Cloud TTSでパッセージ・例文を音声化（話者4種） |
 | リスニング問題 | `/listening`、`/listening/daily` | リスニング過去問ページと、日次自動生成のリスニング問題 |
@@ -50,8 +50,8 @@
    候補プールからは `CEFR_BELOW_C1_BLOCKLIST`（CEFR B2以下と判明した語）と、直近30日分の出題済み語（`app/api/generate/route.ts` の `getRecentlyUsedWords` がKV/`.cache`から収集し `USED_WORDS_SEED` と統合）を除外する（v5.2）。
 3. **語彙は設問単位でバリデーション＋個別リトライ**
    5問全体を作り直すのではなく、違反した設問のみ最大2回リトライする（`retryVocabQuestion`）。
-4. **読解選択肢の語数チェック**（内容一致形式のみ）
-   選択肢が35語を超える数が1セットで3件以上ある場合のみ、読解を1回だけ再生成する。
+4. **読解選択肢の語数・誤答精度チェック**（内容一致形式のみ、v5.5で拡張）
+   選択肢が35語を超える数が1セットで3件以上ある場合、または誤答精度チェック（絶対表現の集中・sourceSpan欠落・distractorType単調・正解の本文丸写し）でエラーが検出された場合のみ、読解を1回だけ再生成する（エラー内容を次回生成プロンプトに含める）。再生成後もエラー総数が改善しない場合は元の生成結果を採用する。
 5. **選択肢シャッフル**
    語彙は5問を通じて正解記号（A/B/C/D）が3回以上偏らないよう位置をあらかじめ均等割り当てしてからシャッフルし（`shuffleChoicesWithTarget` / `assignBalancedTargetLetters`、v5.2）、読解は従来通りランダムシャッフルする。解説文中の選択肢参照は数字(1〜4)で書かれる前提で、シャッフル後の番号に書き換える（`remapChoiceLetters`。UI表示（1〜4の数字）に合わせてv5.2でA/B/C/D参照から変更。旧レター参照が残っていた場合の安全網も維持）。
 6. **注釈（解説）生成は語彙・読解でコンテキストを分離**
@@ -62,6 +62,8 @@
    また、`choices`オブジェクトのキーが（解説文中の数字参照ルールに引きずられて）`"A"/"B"/"C"/"D"`ではなく`"1"/"2"/"3"/"4"`で返る場合があるため、`generateVocabOnly`のパース直後に`normalizeVocabChoiceKeys`でA/B/C/D表記へ正規化してから返す（answerも合わせて変換）。
 8. **explanationの長さ上限（暴走出力・生成時間の長期化対策）**
    語彙・読解（内容一致）の各解説文にプロンプト上の文字数上限（語彙400字/読解450字、正解・各誤答も文数を指定）を明記し、SELF-CHECKリストにも追加した。`checkExplanationLength`（`lib/claude.ts`）が上限超過を警告ログとして検知する（リトライには乗せない、監視目的）。
+9. **誤答メタデータ（`choiceDrafts`）による精度チェック**（内容一致形式のみ、v5.5）
+   読解生成の同一呼び出しで、各選択肢に本文根拠（`sourceSpan`）と、誤答には誤りの分類（`distractorType`: `SCOPE_SHIFT`/`AGENT_SWAP`/`CAUSAL_REVERSAL`/`TIMELINE_SHIFT`/`MODALITY_SHIFT`/`HALF_TRUE_COMPOSITE`/`PURPOSE_RESULT_CONFUSION`）と誤りの最小部分（`falseElement`）を出力させる（`ReadingChoiceDraft`型、追加のLLM呼び出しなし）。このメタデータはバリデーション専用で、シャッフル後に記号と対応しなくなるため最終保存データからは取り除く（`stripChoiceDrafts`）。
 
 ### 記事取得の3段階フォールバック（v5.4、`lib/rss.ts`）
 
@@ -126,17 +128,21 @@
 - 誤答分類ラベルのホワイトリスト照合（語彙2種／読解内容一致5種。警告のみ）（`checkVocabLabelWhitelist` / `checkReadingContentLabelWhitelist`、v5.2）
 - 選択肢シャッフル後の番号（1〜4）と解説文中の参照の同期チェック（`verifyChoiceLabelConsistency`）
 - 解説と設問のマッピング整合性チェック（`validateExplanationMapping`）
+- 読解: 誤答3つ中2つ以上に絶対表現（always/never/every/entirely/completely/solely/regardless of等）を含んでいないか（内容一致形式のみ。**リトライ対象**）（`checkWrongChoiceAbsoluteWords`、v5.5）
+- 読解: 誤答の`sourceSpan`（根拠にした本文箇所）が欠落・空でないか（内容一致形式のみ。**リトライ対象**）（`checkChoiceDraftSourceSpans`、v5.5）
+- 読解: 誤答3つの`distractorType`がすべて同一になっていないか（内容一致形式のみ。**リトライ対象**）（`checkDistractorTypeDiversity`、v5.5）
+- 読解: 正解選択肢が本文と5語以上の連続語句を共有していないか（簡易文字列一致検査。内容一致形式のみ。**リトライ対象**）（`checkCorrectChoiceCopiesPassage`、v5.5）
 
 **プロンプト側（意味的チェック）**
 - 誤答の作り方（ラベルの配分、本文由来の要素の使い方）
 - パッセージの論説構成の質、パラフレーズの抽象度
 - 語彙アノテーションの紛らわしい類義語ペア（confusingPairs）の妥当性
 
-機械的チェックのうち一部（語数バランス、正解最長、極端語、v5.2で追加した本文語数・簡体字混入・冠詞排除・ラベルホワイトリスト）は警告ログのみでリトライには乗せず、設問単位の重大な違反（空所欠落・語プール逸脱等）のみが個別リトライの対象になる。
+機械的チェックのうち一部（語数バランス、正解最長、極端語、v5.2で追加した本文語数・簡体字混入・冠詞排除・ラベルホワイトリスト）は警告ログのみでリトライには乗せず、設問単位の重大な違反（空所欠落・語プール逸脱等。語彙は個別リトライ）や、v5.5で追加した誤答精度チェック（読解は35語超過チェックと合算し、読解セット全体を1回だけ再生成）がリトライ対象になる。
 
 ## ルールバージョン
 
-現在の生成ルール（語彙・読解の出題ロジック）は **v5.2**（出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定。旧: v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
+現在の生成ルール（語彙・読解の出題ロジック）は **v5.5**（読解の誤答生成に`ReadingChoiceDraft`型（`distractorType`/`sourceSpan`/`falseElement`）を導入し、誤答の精度（絶対表現の集中・本文根拠の欠落・型の単調さ・正解の本文丸写し）を機械チェックしてリトライ対象に追加。正解選択肢のパラフレーズ指示も強化。旧: v5.2 出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定、v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
 
 ## ローカル開発
 
@@ -170,7 +176,7 @@ app/
   api/
     generate/                  問題生成（語彙+読解）
     annotations/                解説・アノテーション生成
-    pdf/seidoku/                 精読ノートPDF出力
+    pdf/seidoku/                 精読ノートPDF出力（pdfkit、現在未使用）
     tts/                        音声合成
     flashcards/, history/, quiz/[date]/, listening/daily/  各機能のデータ取得API
 lib/

@@ -266,12 +266,32 @@ export interface VocabQuestion {
   explanation: string;
 }
 
+// v5.5: 誤答の精密さを機械チェックするための選択肢メタデータ（内容一致形式のみ生成対象）
+export type ReadingDistractorType =
+  | 'SCOPE_SHIFT'               // 範囲のずれ（some→allなど）
+  | 'AGENT_SWAP'                // 主体の入れ替え
+  | 'CAUSAL_REVERSAL'           // 因果関係のずれ・逆転
+  | 'TIMELINE_SHIFT'            // 時系列のずれ
+  | 'MODALITY_SHIFT'            // 確実性のずれ（may→willなど）
+  | 'HALF_TRUE_COMPOSITE'       // 半分正しい合成
+  | 'PURPOSE_RESULT_CONFUSION'; // 目的と結果の混同
+
+export interface ReadingChoiceDraft {
+  text: string;
+  isCorrect: boolean;
+  distractorType?: ReadingDistractorType;
+  sourceSpan: string;   // 根拠にした本文箇所（正解・誤答とも必須）
+  falseElement?: string; // 誤答の場合、誤っている最小部分
+}
+
 export interface ReadingQuestion {
   number: number;
   question: string;
   choices: { A: string; B: string; C: string; D: string };
   answer: string;
   explanation: string;
+  // v5.5: A/B/C/D生成順のメタデータ。バリデーション専用で、シャッフル前に取り除かれ最終出力には残らない
+  choiceDrafts?: ReadingChoiceDraft[];
 }
 
 export interface ChoiceAnnotation {
@@ -590,6 +610,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
    - **True paraphrase = word substitution AND syntactic restructuring BOTH**:
      ❌ NG: "the conditions focus on territorial integrity" → "the conditions address territorial integrity"（語の置換のみ）
      ✅ OK: "the conditions focus on territorial integrity" → "preserving national borders forms the basis of the proposed framework"
+   - 正解選択肢は本文と同じ語句の連続使用を避け、主語・述語の構造を変え、可能であれば具体例を上位概念へまとめて言い換えること。ただし抽象化しすぎて本文から論理的に導けない表現にはしないこと。
 
    **CRITICAL RULES FOR WRONG CHOICES（v5.2）:**
    Choose exactly one type per wrong choice from the 5 fixed types below. **Never use the same type twice for the 3 wrong choices within a single question** (you may reuse a type across different questions in the passage). Do not invent new type names — these 5 are the fixed label set:
@@ -619,6 +640,24 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
 
    **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
 
+   **Additional precision rules for wrong choices（v5.5）:**
+   - 誤答は本文と無関係な内容を新しく作ってはならない。
+   - 各誤答は本文中の情報を少なくとも1つ正しく含み、誤りは原則として1か所だけに限定する。
+   - 誤答を長くして不正解部分を隠すのではなく、主体・範囲・因果・時制・確実性・目的と結果などの精密な違いによって不正解にする。
+   - always, never, every, entirely, completely, solely, regardless of など見ただけで除外しやすい絶対表現は、本文自体に同じ強さの主張がある場合を除き使用しない。
+   - 3つの誤答は可能な限り異なるdistractorTypeにする（同一パターンの繰り返しを避ける）。
+
+   **choiceDrafts（各設問に必須。choicesとは別に、choiceDraftsという配列をA/B/C/Dの順で4要素出力する）:**
+   各選択肢について、根拠にした本文箇所をsourceSpanに入れる。誤答では誤っている最小部分をfalseElementに入れる。誤答には以下7種から最も近いdistractorTypeを1つ選んで付与する（正解にはdistractorTypeを付けない）：
+   - "SCOPE_SHIFT": 範囲のずれ（some→allなど）
+   - "AGENT_SWAP": 主体の入れ替え
+   - "CAUSAL_REVERSAL": 因果関係のずれ・逆転
+   - "TIMELINE_SHIFT": 時系列のずれ
+   - "MODALITY_SHIFT": 確実性のずれ（may→willなど）
+   - "HALF_TRUE_COMPOSITE": 半分正しい合成
+   - "PURPOSE_RESULT_CONFUSION": 目的と結果の混同
+   形式: { "text": "選択肢の英文", "isCorrect": true/false, "distractorType": "誤答のみ", "sourceSpan": "本文引用", "falseElement": "誤答のみ・誤りの最小部分" }
+
    **Explanation format for each reading question:**
    【解説文体ルール（必須）】
    ■ 断定形で書く。「〜とも読める」「ただし〜」等の留保表現は禁止。
@@ -637,7 +676,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
      主語すり替え→「本文で～したのは(1)であり、選択肢の(2)ではない」
      本文に根拠なし→「この内容は本文中に記述がない」（使用時のみ、1パッセージにつき2択まで）
 
-   **SELF-CHECK（内容一致・12項目）:**
+   **SELF-CHECK（内容一致・14項目）:**
    - [ ] 問題数が4問である
    - [ ] 正解がparaphrase（語の言い換え＋構文変換の両方）されている
    - [ ] 4問それぞれが互いに異なる段落を根拠としている（同じ段落・実質同じ論点を2問が根拠にしていない）
@@ -650,6 +689,8 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
    - [ ] 全選択肢が35語を超えていない（20-33語が目安、35語は絶対に超えない上限）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
    - [ ] 各設問のexplanationが450字以内で、正解2文以内・各誤答1文以内に収まっている
+   - [ ] choiceDraftsをA/B/C/Dの順で4要素出力し、全選択肢にsourceSpan、誤答にはfalseElementとdistractorTypeを設定している
+   - [ ] 同一設問内で誤答3つのdistractorTypeが（可能な限り）すべて異なっている
 ${CONTENT_FEWSHOT_BLOCK}`;
 
   const readingInstructions = format === 'fill-in-blank'
@@ -710,6 +751,12 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         "C": "The studies demonstrated that decision paralysis occurred only among individuals who lacked prior experience with the type of choice they were confronted with in the experiment.",
         "D": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions."
       },
+      "choiceDrafts": [
+        { "text": "Individuals who selected from a larger pool of options reported lower levels of satisfaction with their final decision than those who chose from a more restricted set of alternatives.", "isCorrect": true, "sourceSpan": "individuals who had access to more choices tend to report lower levels of satisfaction" },
+        { "text": "Researchers found that people with access to more choices made objectively better decisions, even though they spent considerably more time deliberating before reaching a conclusion.", "isCorrect": false, "distractorType": "HALF_TRUE_COMPOSITE", "sourceSpan": "individuals who had access to more choices tend to report lower levels of satisfaction", "falseElement": "made objectively better decisions" },
+        { "text": "The studies demonstrated that decision paralysis occurred only among individuals who lacked prior experience with the type of choice they were confronted with in the experiment.", "isCorrect": false, "distractorType": "CAUSAL_REVERSAL", "sourceSpan": "decision paralysis became more common as the number of options increased", "falseElement": "occurred only among individuals who lacked prior experience" },
+        { "text": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions.", "isCorrect": false, "distractorType": "MODALITY_SHIFT", "sourceSpan": "some participants may eventually adapt by filtering out irrelevant alternatives", "falseElement": "leading to outcomes that were comparable" }
+      ],
       "answer": "A",
       "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」をparaphraseした(1)が正解。(2)語句流用・内容ズレ─選択肢数が多いほど決定の「質」が上がると本文の限定的な記述を拡大解釈している。(3)因果逆転─Decision paralysisの原因と結果を入れ替え、経験不足が原因であるかのように描いている。(4)極端化─筆者が示唆する「適応の可能性」を「同等の結果に達する」と過度に強めている。"
     }
@@ -1444,6 +1491,88 @@ function checkAbsoluteWords(questions: ReadingQuestion[]): ValidationResult {
   return { valid: errors.length === 0, errors };
 }
 
+// ===== v5.5: 誤答の精密さチェック（内容一致形式のみ。設問単位リトライ対象） =====
+
+// 除去法の手がかりになりやすい絶対表現（v5.5指示文の列挙に準拠。既存のABSOLUTE_WORDSより狭い集合）
+const STRICT_ABSOLUTE_WORDS = /\b(always|never|every|entirely|completely|solely)\b|\bregardless of\b/i;
+
+// 誤答3つのうち2つ以上に絶対表現が含まれていないか（正解は対象外）
+function checkWrongChoiceAbsoluteWords(questions: ReadingQuestion[]): ValidationResult {
+  const errors: string[] = [];
+  questions.forEach((q, i) => {
+    const num = i + 1;
+    const wrongKeys = CHOICE_KEYS.filter(k => k !== q.answer);
+    const hits = wrongKeys.filter(k => STRICT_ABSOLUTE_WORDS.test(q.choices[k])).length;
+    if (hits >= 2) {
+      errors.push(`読解(${num}): 誤答3つ中${hits}つに絶対表現（always/never/every/entirely/completely/solely/regardless of等）を含む（2つ以上は不可）`);
+    }
+  });
+  return { valid: errors.length === 0, errors };
+}
+
+// 誤答のsourceSpanが欠落・空でないか（choiceDraftsを出力した設問のみ対象。未出力の設問はチェック対象外）
+function checkChoiceDraftSourceSpans(questions: ReadingQuestion[]): ValidationResult {
+  const errors: string[] = [];
+  questions.forEach((q, i) => {
+    const num = i + 1;
+    if (!q.choiceDrafts || q.choiceDrafts.length !== 4) return;
+    q.choiceDrafts.forEach((d, j) => {
+      if (!d.isCorrect && (!d.sourceSpan || d.sourceSpan.trim() === '')) {
+        errors.push(`読解(${num})選択肢${CHOICE_KEYS[j]}: 誤答のsourceSpanが欠落または空`);
+      }
+    });
+  });
+  return { valid: errors.length === 0, errors };
+}
+
+// 誤答3つのdistractorTypeがすべて同一になっていないか（choiceDraftsを出力した設問のみ対象）
+function checkDistractorTypeDiversity(questions: ReadingQuestion[]): ValidationResult {
+  const errors: string[] = [];
+  questions.forEach((q, i) => {
+    const num = i + 1;
+    if (!q.choiceDrafts || q.choiceDrafts.length !== 4) return;
+    const wrongTypes = q.choiceDrafts.filter(d => !d.isCorrect).map(d => d.distractorType).filter((t): t is ReadingDistractorType => !!t);
+    if (wrongTypes.length === 3 && new Set(wrongTypes).size === 1) {
+      errors.push(`読解(${num}): 誤答3つのdistractorTypeがすべて同一（${wrongTypes[0]}）`);
+    }
+  });
+  return { valid: errors.length === 0, errors };
+}
+
+// 本文と正解選択肢が5語以上の連続語句を共有していないか（簡易文字列一致検査）
+function getWordNgrams(text: string, n: number): Set<string> {
+  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+  const grams = new Set<string>();
+  for (let i = 0; i + n <= words.length; i++) {
+    grams.add(words.slice(i, i + n).join(' '));
+  }
+  return grams;
+}
+
+// choiceDraftsはバリデーション専用のため、最終出力から取り除く（シャッフル後は記号と対応しなくなる）
+function stripChoiceDrafts(q: ReadingQuestion): ReadingQuestion {
+  if (!q.choiceDrafts) return q;
+  const clone = { ...q };
+  delete clone.choiceDrafts;
+  return clone;
+}
+
+function checkCorrectChoiceCopiesPassage(passage: string, questions: ReadingQuestion[]): ValidationResult {
+  const errors: string[] = [];
+  const passageGrams = getWordNgrams(passage, 5);
+  questions.forEach((q, i) => {
+    const num = i + 1;
+    const answerText = q.choices[q.answer as ChoiceKey];
+    if (!answerText) return;
+    const choiceGrams = getWordNgrams(answerText, 5);
+    const overlap = [...choiceGrams].find(g => passageGrams.has(g));
+    if (overlap) {
+      errors.push(`読解(${num}): 正解選択肢が本文と5語以上連続一致（"${overlap}"）`);
+    }
+  });
+  return { valid: errors.length === 0, errors };
+}
+
 // ===== v5.2 A-3: 本文語数チェック（警告のみ・リトライには乗せない） =====
 function checkPassageWordCount(passage: string, format: ReadingFormat): ValidationResult {
   const wordCount = passage.trim().split(/\s+/).filter(Boolean).length;
@@ -1859,24 +1988,41 @@ export async function generateQuestions(
     console.warn('[Vocab] post-retry validation issues (continuing anyway):', finalVocabValidation.errors);
   }
 
-  // ===== Step 3: 読解選択肢の語数・長さ癖・極端語チェック（内容一致形式のみ） =====
-  // 35語超過が1セット3件以上の場合のみ、読解を1回だけ再生成する（v5.1.3）。それ未満は警告のみ。
+  // ===== Step 3: 読解選択肢の語数・長さ癖・極端語・誤答精度チェック（内容一致形式のみ） =====
+  // 35語超過が1セット3件以上、または誤答精度チェック（v5.5）でエラーがある場合のみ、読解を1回だけ再生成する。
+  // それ未満・それ以外は警告のみ。
   let finalReading = readingDraft;
   if (format === 'content') {
+    const collectHardErrors = (q: typeof finalReading) => [
+      ...checkWrongChoiceAbsoluteWords(q.readingQuestions).errors,
+      ...checkChoiceDraftSourceSpans(q.readingQuestions).errors,
+      ...checkDistractorTypeDiversity(q.readingQuestions).errors,
+      ...checkCorrectChoiceCopiesPassage(q.readingPassage, q.readingQuestions).errors,
+    ];
+
     const overLengthCount = countOverMaxWordChoices(finalReading.readingQuestions);
-    if (overLengthCount >= 3) {
-      console.warn(`[Reading] 35語超過が${overLengthCount}件（3件以上のため読解を再生成）`);
+    const distractorErrors = collectHardErrors(finalReading);
+
+    if (overLengthCount >= 3 || distractorErrors.length > 0) {
+      const retryReasons = [
+        ...(overLengthCount >= 3
+          ? [`前回の生成では選択肢が35語の上限を${overLengthCount}件超過した。全選択肢を20-33語に収め、35語を絶対に超えないこと。長くなる場合は従属節を削って短くする。`]
+          : []),
+        ...distractorErrors,
+      ];
+      console.warn('[Reading] リトライ対象のエラーを検出（読解を再生成）:', retryReasons);
       const retryStart = Date.now();
       try {
-        const retried = await generateReadingOnly(trimmedArticle, format, [
-          `前回の生成では選択肢が35語の上限を${overLengthCount}件超過した。全選択肢を20-33語に収め、35語を絶対に超えないこと。長くなる場合は従属節を削って短くする。`,
-        ]);
+        const retried = await generateReadingOnly(trimmedArticle, format, retryReasons);
         console.log(`[Timing] reading retry: ${Date.now() - retryStart}ms`);
         const retryOverLengthCount = countOverMaxWordChoices(retried.readingQuestions);
-        if (retryOverLengthCount < overLengthCount) {
+        const retryDistractorErrors = collectHardErrors(retried);
+        const beforeTotal = overLengthCount + distractorErrors.length;
+        const afterTotal = retryOverLengthCount + retryDistractorErrors.length;
+        if (afterTotal < beforeTotal) {
           finalReading = retried;
         } else {
-          console.warn(`[Reading] retry did not improve (${retryOverLengthCount} vs ${overLengthCount} before), keeping original draft`);
+          console.warn(`[Reading] retry did not improve (${afterTotal} vs ${beforeTotal} before), keeping original draft`);
         }
       } catch (e) {
         console.warn('[Reading] retry failed, keeping original draft:', e);
@@ -1895,6 +2041,12 @@ export async function generateQuestions(
     if (!absoluteWordsValidation.valid) {
       console.warn('[Reading] absolute-word issues (continuing anyway):', absoluteWordsValidation.errors);
     }
+
+    // choiceDraftsはバリデーション専用。シャッフル後は記号と対応しなくなるため最終出力には含めない
+    finalReading = {
+      ...finalReading,
+      readingQuestions: finalReading.readingQuestions.map(stripChoiceDrafts),
+    };
   }
 
   // ===== v5.2 Step 3.5: 追加の警告のみバリデーション（両形式・リトライには乗せない） =====
