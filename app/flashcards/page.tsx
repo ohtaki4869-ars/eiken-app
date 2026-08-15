@@ -74,7 +74,7 @@ export default function FlashcardsPage() {
           <h1 className="text-xl font-bold text-gray-800">単語フラッシュカード</h1>
           <p className="text-sm text-gray-500">{today}　前日の復習</p>
         </div>
-        <Link href="/" className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
+        <Link href="/reading" className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
           今日の問題へ
         </Link>
       </div>
@@ -88,7 +88,7 @@ export default function FlashcardsPage() {
           <div className="text-center py-20">
             <p className="text-gray-600 text-lg mb-2">本日の復習カードはありません</p>
             <p className="text-gray-400 text-sm mb-6">前日の問題が生成されると翌日に復習カードが表示されます</p>
-            <Link href="/" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <Link href="/reading" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
               今日の問題を解く
             </Link>
           </div>
@@ -197,7 +197,7 @@ export default function FlashcardsPage() {
                 最初からやり直す
               </button>
               <Link
-                href="/"
+                href="/reading"
                 className="py-3 rounded-xl bg-gray-600 text-white font-bold hover:bg-gray-700 text-center"
               >
                 今日の問題へ

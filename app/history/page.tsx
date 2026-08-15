@@ -40,7 +40,7 @@ export default function HistoryPage() {
           <h1 className="text-xl font-bold text-gray-800">英検1級 毎日トレーニング</h1>
           <p className="text-sm text-gray-500">過去の問題</p>
         </div>
-        <Link href="/" className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
+        <Link href="/reading" className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
           今日の問題へ
         </Link>
       </div>
