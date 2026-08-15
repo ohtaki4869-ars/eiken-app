@@ -1,67 +1,22 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
 import { getJSTDateKey, loadQuestions } from '@/app/api/generate/route';
 import { GeneratedQuestions, VocabQuestion } from '@/lib/claude';
+import { createPdfDoc, COLORS, PAGE_W as W, PAGE_H as H, MARGIN_L as ML, MARGIN_T as MT, CONTENT_W as CW } from '@/lib/pdfKit';
 
 // Node.js ランタイムを明示（pdfkit は Edge Runtime 非対応）
 export const runtime = 'nodejs';
 
-// pdfkit は CommonJS モジュールなので動的 import
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PDFDocument = require('pdfkit');
-
-const FONT_PATH = path.join(process.cwd(), 'public/fonts/NotoSansJP-Regular.otf');
-
 /** PDF バッファを生成して返す */
 async function buildPDF(data: GeneratedQuestions): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: false });
-    const chunks: Buffer[] = [];
-    doc.on('data', (c: Buffer) => chunks.push(c));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+  const { doc, jf, hline, box, getBuffer } = createPdfDoc();
+  // ─── カラー定義 ───
+  const { NAVY, BLUE, LGRAY, GRAY, DGRAY } = COLORS;
 
-    const fontPath = FONT_PATH;
-    const hasFont = fs.existsSync(fontPath);
-    if (hasFont) {
-      doc.registerFont('JP', fontPath);
-    }
-    const jf = (size: number) => {
-      if (hasFont) doc.font('JP').fontSize(size);
-      else doc.font('Helvetica').fontSize(size);
-      return doc;
-    };
-
-    const W = 595.28; // A4 width pt
-    const H = 841.89; // A4 height pt
-    const ML = 36, MR = 36, MT = 36;
-    const CW = W - ML - MR; // content width
-
-    // ─── カラー定義 ───
-    const NAVY   = '#1a3a5c';
-    const BLUE   = '#2c6fad';
-    const LGRAY  = '#f0f4f8';
-    const GRAY   = '#cccccc';
-    const DGRAY  = '#555555';
-
-    // ─── ヘルパー ───
-    function hline(y: number, color = GRAY, width = 0.5) {
-      doc.moveTo(ML, y).lineTo(W - MR, y).strokeColor(color).lineWidth(width).stroke();
-    }
-    function box(x: number, y: number, w: number, h: number, fill: string) {
-      doc.rect(x, y, w, h).fillColor(fill).fill();
-    }
-    function writeLine(text: string, x: number, y: number, size: number,
-                       color = '#000000', opts: Record<string, unknown> = {}) {
-      jf(size).fillColor(color).text(text, x, y, { lineBreak: false, ...opts });
-    }
-
-    // ────────────────────────────────────────────
-    //  PAGE 1 : パッセージ
-    // ────────────────────────────────────────────
-    doc.addPage();
-    let y = MT;
+  // ────────────────────────────────────────────
+  //  PAGE 1 : パッセージ
+  // ────────────────────────────────────────────
+  doc.addPage();
+  let y = MT;
 
     // ── タイトルバー ──
     box(0, 0, W, 52, NAVY);
@@ -231,10 +186,10 @@ async function buildPDF(data: GeneratedQuestions): Promise<Buffer> {
 
     // ── フッター ──
     jf(7).fillColor(DGRAY).text('英検1級 毎日トレーニング　精読ワークシート — Page 2', ML, H - 24, { lineBreak: false });
-    jf(7).fillColor(DGRAY).text(`生成日: ${getJSTDateKey()}`, W - 120, H - 24, { lineBreak: false });
+  jf(7).fillColor(DGRAY).text(`生成日: ${getJSTDateKey()}`, W - 120, H - 24, { lineBreak: false });
 
-    doc.end();
-  });
+  doc.end();
+  return getBuffer();
 }
 
 export async function GET(request: Request) {

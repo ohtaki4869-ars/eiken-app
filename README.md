@@ -21,19 +21,34 @@
 
 ## 主な機能
 
+アプリ起動後のトップ画面（`/`）でリーディング／ライティングを選択する構成になっている。リスニング機能は使用実績がなかったため削除した（git履歴からは復元可能）。
+
+### リーディング
+
 | 機能 | パス | 概要 |
 |---|---|---|
-| 今日の問題 | `/` | 語彙穴埋め5問＋読解問題（内容一致 or 空所補充）を表示。解答・解説はデフォルト非表示で、ボタンで開閉できる |
+| 今日の問題 | `/reading` | 語彙穴埋め5問＋読解問題（内容一致 or 空所補充）を表示。解答・解説はデフォルト非表示で、ボタンで開閉できる |
 | 問題履歴 | `/history` | 過去30日分の生成済み問題一覧 |
 | 過去問再表示 | `/quiz/[date]` | 指定日の問題を表示 |
 | 精読ノート | `/seidoku/[date]` | 読解パッセージを段落ごとに区切り、Step1（本文＋段落要約）→Step2（論理の流れ）→Step3（語彙チェック）→記録欄の順で表示。本文直後に段落ごとの罫線付き要約欄を配置し、本文と要約の往復を減らすレイアウト。ブラウザ印刷（`window.print()`）でPDF保存する。`/api/pdf/seidoku`は`pdfkit`によるサーバー生成PDFだが、現在UIからリンクされていない未使用エンドポイント |
 | 単語フラッシュカード | `/flashcards` | 前日出題分の語彙を翌日に復習できるカード形式ページ |
 | 読み上げ（TTS） | `/api/tts` | Google Cloud TTSでパッセージ・例文を音声化（話者4種） |
-| リスニング問題 | `/listening`、`/listening/daily` | リスニング過去問ページと、日次自動生成のリスニング問題 |
+
+### ライティング
+
+英検1級ライティング（大問4/5相当）対策。アプリが担当するのは**お題生成とPDF化まで**で、手書き解答の添削・採点はアプリの範囲外（別スキル`writing-correction-review`やChatGPT等、チャットベースのAIに手書き写真を貼って評価してもらう運用）。3機能とも生成はオンデマンド（ページを開いてボタンを押した時点で生成。cronによる自動生成はしていない）。
+
+| 機能 | パス | 頻度の目安 | 概要 |
+|---|---|---|---|
+| 週次エッセイ | `/writing/essay` | 週1回 | 意見論述問題（大問5形式）のTOPIC文（"Agree or disagree: ~" / "Should ~?"）を生成。論拠は提示しない。200〜240語 |
+| 毎日の表現トレーニング | `/writing/daily` | 毎日 | 論説文頻出構文・1級語彙のストック（`lib/writingExpressions.ts`）からローテーション選定した表現を使った短文作文の指示を生成 |
+| 隔週要約 | `/writing/summary` | 隔週 | 3段落・300語程度のオリジナル英文パッセージを生成。要約は90〜110語 |
+
+いずれもPDFは`app/api/pdf/writing/route.ts`（`pdfkit`によるサーバー生成、`?type=essay\|daily\|summary&date=...`）で出力し、GoodNotesに読み込んでApple Pencilで手書き解答する運用を想定している。
 
 ## アーキテクチャ
 
-問題生成のコアロジックは `lib/claude.ts` に実装されている。
+読解・語彙問題生成のコアロジックは `lib/claude.ts` に、ライティング機能の生成ロジックは `lib/writingGenerate.ts` に実装されている（互いに独立したサイブリングファイル。`lib/claude.ts`はライティング追加にあたり変更していない）。
 
 ### 生成モデル
 
@@ -97,7 +112,8 @@
 - **Vercel Fluid Compute**: 有効（Vercelプロジェクト設定）
 - **maxDuration**: `300`秒（`/api/generate`、`/api/annotations`。Fluid Compute前提の設定）
 - **max_tokens**: 生成系呼び出しは用途ごとに異なる（読解生成 32,000 / 語彙生成 16,000 / 読解アノテーション 20,000 / 語彙アノテーション 8,000。詳細は `lib/claude.ts` 内の各Anthropic API呼び出しを参照）。語彙・読解の両方で`stop_reason === 'max_tokens'`（出力打ち切り）を検知した場合は明示的にエラーログを出す
-- **Cron**: `vercel.json` で毎日 `23:00 UTC`（JST 08:00）に `/api/generate?refresh=true` を叩き、当日分の問題を事前生成
+- **Cron**: `vercel.json` で毎日 `23:00 UTC`（JST 08:00）に `/api/generate?refresh=true` を叩き、当日分の問題を事前生成（ライティング3機能はオンデマンド生成のみで、cronは設定していない）
+- **`serverExternalPackages: ['pdfkit']`**（`next.config.ts`）: pdfkitは標準14フォントのAFMメトリクスを`fs.readFileSync(__dirname + '/data/...')`で実行時に読み込むが、Turbopackにバンドル・トレースされると`__dirname`が仮想パスに書き換えられ`ENOENT`になるため、ネイティブ`require`のまま解決させて回避している（`lib/pdfKit.ts`を使う`/api/pdf/seidoku`・`/api/pdf/writing`の両方に必要）
 
 ## 環境変数
 
@@ -167,23 +183,33 @@ npm run start   # ビルド済みアプリの起動
 
 ```
 app/
-  page.tsx                     今日の問題ページ
+  page.tsx                     トップ画面（リーディング/ライティング選択）
+  reading/                     今日の問題ページ（旧 app/page.tsx）
   history/                     問題履歴
   quiz/[date]/                 過去問再表示
   seidoku/[date]/               精読ノート
   flashcards/                  単語フラッシュカード
-  listening/, listening/daily/ リスニング問題
+  writing/                     ライティング サブメニュー
+  writing/essay/                週次エッセイ
+  writing/daily/                 毎日の表現トレーニング
+  writing/summary/               隔週要約
   api/
     generate/                  問題生成（語彙+読解）
     annotations/                解説・アノテーション生成
     pdf/seidoku/                 精読ノートPDF出力（pdfkit、現在未使用）
+    pdf/writing/                 ライティング3機能のPDF出力（pdfkit、共通レイアウト）
     tts/                        音声合成
-    flashcards/, history/, quiz/[date]/, listening/daily/  各機能のデータ取得API
+    writing/essay/, writing/daily/, writing/summary/  ライティング3機能のお題生成API（オンデマンド）
+    writing/_storage.ts          ライティングのKV/.cache永続化・出題履歴による重複回避ヘルパー
+    flashcards/, history/, quiz/[date]/  各機能のデータ取得API
 lib/
-  claude.ts                    生成・バリデーション・アノテーションのコアロジック
+  claude.ts                    リーディング（語彙+読解）の生成・バリデーション・アノテーションのコアロジック
   wordbank.ts                  英検1級単熟語データ（品詞タグ付き）
   rss.ts                       ニュース記事取得（曜日別ジャンルローテーション）
-  listeningGenerate.ts, listeningTypes.ts, listeningData.ts  リスニング問題関連
+  writingGenerate.ts            ライティング3機能の生成ロジック（lib/claude.tsとは独立）
+  writingTypes.ts               ライティングの型定義・テーマカテゴリ
+  writingExpressions.ts          毎日の表現トレーニング用の構文/語彙ストック
+  pdfKit.ts                     pdfkitの共通ヘルパー（フォント登録・罫線・A4定数等。seidoku/writing両PDFで共用）
 samples/
   fable5-v5/                   few-shot見本データ
   regression-v5_1/              モデル切替時の回帰確認用サンプル

@@ -1,6 +1,22 @@
 # CHANGELOG
 
-このプロジェクトの問題生成ルール・パイプラインの変遷を、各バージョンで解決した課題ベースで記録する。バージョン番号は `lib/claude.ts` 内のコメント・コミットメッセージに基づく。日付はコミット日（JST基準の目安）。
+このプロジェクトの問題生成ルール・パイプラインの変遷を、各バージョンで解決した課題ベースで記録する。バージョン番号は `lib/claude.ts` 内のコメント・コミットメッセージに基づく。日付はコミット日（JST基準の目安）。リーディングの生成ルール（`lib/claude.ts`）に関わらないアプリ全体の機能追加・UI再構成は「vX.X」ではなく見出しに直接内容を記す。
+
+## アプリ機能追加: ライティング機能の追加 + UI再構成・リスニング機能削除 (2026-08-15)
+
+**背景**: リーディング専用アプリだったeiken-appに、英検1級ライティング（大問4/5相当）対策として「週次エッセイ」「毎日の表現トレーニング」「隔週要約」の3機能を追加した。アプリが担当するのは各機能のお題生成とPDF化までで、手書き解答の添削・採点は範囲外（別スキル `writing-correction-review` またはChatGPT等での運用を想定）。あわせてトップ画面をリーディング/ライティングの選択式に再構成し、使用実績のなかったリスニング機能を削除した。
+
+- **トップ画面の再構成**: `/` を新規のリーディング/ライティング選択画面にし、従来の `/`（今日の問題ページ）の内容はそのまま `/reading` に移設。`/history`・`/flashcards` 等から `/` への内部リンクは `/reading` に張り替えた
+- **リスニング機能の削除**: `app/listening/`、`app/api/listening/`、`lib/listening{Data,Generate,Types}.ts`、`public/listening/*.mp3` を削除（git履歴に残るため復元は可能）。`app/api/tts/route.ts`・`components/SpeechPlayer.tsx` はリーディング側の例文・パッセージ読み上げでも使われているため維持
+- **ライティング3機能を追加**（`/writing`、`/writing/essay`、`/writing/daily`、`/writing/summary`）: 生成は既存のリスニング機能と同じオンデマンド方式（ページを開いてボタンを押した時点で生成、cronは追加していない）
+  - 週次エッセイ: 英検1級大問5相当。TOPIC文（"Agree or disagree: ~" / "Should ~?"形式）のみ生成し、賛否の論拠は提示しない。200〜240語（[英検公式2024年度リニューアルサイト](https://www.eiken.or.jp/eiken/2024renewal/)で確認済み）
+  - 毎日の表現トレーニング: 論説文頻出構文（譲歩・因果・対比・言い換え）と1級語彙のストック36項目（`lib/writingExpressions.ts`）からコード側でローテーション選定し、LLMには短文作文指示のみ生成させる
+  - 隔週要約: 3段落・300語程度のオリジナル英文パッセージを生成。要約は90〜110語（同公式サイトで確認済み）
+  - 生成ロジックは新規 `lib/writingGenerate.ts`（`lib/listeningGenerate.ts`と同じ「独立サイブリングファイル」方針、`lib/claude.ts`には手を加えていない）。テーマ・表現の出題履歴による重複回避は `app/api/writing/_storage.ts` に実装し、`app/api/generate/route.ts`の`getRecentlyUsedWords`と同型のロジック（直近N件の履歴から除外Setを構成）を踏襲
+- **PDF生成をpdfkitで共通化**: `app/api/pdf/seidoku/route.ts`にあった低レベルヘルパー（フォント登録・`hline`/`box`/`writeLine`・A4定数・バッファ収集）を`lib/pdfKit.ts`に抽出し、seidoku routeと新規`app/api/pdf/writing/route.ts`（`?type=essay|daily|summary&date=...`）の両方から利用する。3機能共通の「タイトルバー＋指示ブロック＋罫線ページ」レイアウトヘルパーを1つ実装し、機能ごとの差分（本文の有無・語数表示・罫線行数）のみパラメータ化した
+- **pdfkit + Turbopackの互換性バグを2件修正**（新規PDF実装中に発見）:
+  1. pdfkitは標準14フォントのAFMメトリクスを`fs.readFileSync(__dirname + '/data/...')`で実行時に読み込むが、Turbopackにバンドル・トレースされると`__dirname`が仮想パスに書き換えられ`ENOENT`になる。`next.config.ts`の`serverExternalPackages`に`pdfkit`を追加し、ネイティブ`require`のまま解決させることで回避した（`lib/pdfKit.ts`を使う`seidoku`route側にも効果があり、動作確認で初めて`/api/pdf/seidoku`のPDF生成成功を確認できた）
+  2. `doc.heightOfString()`と実際の`doc.text()`で異なるオプション（`lineGap`）を渡すと、高さ計算が実際の描画より小さく見積もられ段落が重なって表示される。新規`app/api/pdf/writing/route.ts`ではオプションオブジェクトを共通化して両方に渡すよう実装した。同じパターンが`app/api/pdf/seidoku/route.ts`の既存コードにも残っているが、リーディング機能のロジック変更は今回のスコープ外のため未修正（要フォローアップ）
 
 ## v5.5 (2026-08-10)
 
