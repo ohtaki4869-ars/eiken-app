@@ -4,6 +4,23 @@ import { generateQuestions, getTodayFormat, GeneratedQuestions } from '@/lib/cla
 
 export const maxDuration = 300;
 
+// v5.6: maxDuration到達によるVercelのプラットフォームタイムアウトは非JSON応答を返すため、
+// クライアント側のres.json()がSyntaxErrorで失敗する（"問題の取得に失敗しました"の原因）。
+// maxDurationより前にソフトタイムアウトさせ、必ずこのルート自身がJSONで応答できるようにする。
+const SOFT_TIMEOUT_MS = 270_000;
+
+class GenerationTimeoutError extends Error {}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      const timer = setTimeout(() => reject(new GenerationTimeoutError(`Generation exceeded soft timeout of ${ms}ms`)), ms);
+      timer.unref?.();
+    }),
+  ]);
+}
+
 export function getJSTDateKey(date?: Date): string {
   const now = date || new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -150,7 +167,10 @@ export async function GET(request: Request) {
     const article = await fetchNewsArticle();
     const attempt = forceRefresh ? await getAndIncrementRefreshAttempt(todayKey) : 0;
     const recentlyUsedWords = await getRecentlyUsedWords();
-    const questions = await generateQuestions(article, format, attempt, recentlyUsedWords);
+    const questions = await withTimeout(
+      generateQuestions(article, format, attempt, recentlyUsedWords),
+      SOFT_TIMEOUT_MS
+    );
     await saveQuestions(todayKey, questions);
     return NextResponse.json(questions);
   } catch (e) {

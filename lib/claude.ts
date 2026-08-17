@@ -35,6 +35,8 @@ function logUsage(label: string, model: string, response: Anthropic.Messages.Mes
 // ===== モデル設定（環境変数で切り替え可能。デフォルトは haiku） =====
 const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
 const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-haiku-4-5';
+// v5.6: 読解リトライを許可する経過時間の上限（route.ts のソフトタイムアウトと合わせて調整）
+const READING_RETRY_TIME_BUDGET_MS = 150_000;
 
 // ===== 記事取得 Step B: RSS全滅時のAI生成フォールバック（lib/rss.tsから呼ばれる） =====
 // GENERATION_MODEL（環境変数で切替可能）ではなく Claude Sonnet 5 に固定する。
@@ -2003,7 +2005,21 @@ export async function generateQuestions(
     const overLengthCount = countOverMaxWordChoices(finalReading.readingQuestions);
     const distractorErrors = collectHardErrors(finalReading);
 
-    if (overLengthCount >= 3 || distractorErrors.length > 0) {
+    // v5.6: 読解の初回生成が長引くケース（実測262秒経験あり）で無条件にリトライすると
+    // route.ts側のmaxDuration(300秒)を超え、Vercelのプラットフォームタイムアウト（非JSON応答）
+    // を招いてクライアントでJSON.parse失敗になる。残り時間が足りない場合はリトライしない。
+    // ただしこれらのエラーは「壊れた問題」を意味する（例: 正解選択肢が本文と5語以上連続一致）ため、
+    // 下書きのまま配信すると質の低い問題がそのままユーザーに届いてしまう。配信は諦めてエラーを
+    // 投げ、route.ts側のcatchでキャッシュへのフォールバック（なければJSONエラー応答）に任せる。
+    const elapsedSinceGenStart = Date.now() - genStart;
+    if ((overLengthCount >= 3 || distractorErrors.length > 0) && elapsedSinceGenStart >= READING_RETRY_TIME_BUDGET_MS) {
+      const reasons = [
+        ...(overLengthCount >= 3 ? [`選択肢が35語の上限を${overLengthCount}件超過`] : []),
+        ...distractorErrors,
+      ];
+      console.error(`[Reading] リトライ対象のエラーがあるが、経過時間(${elapsedSinceGenStart}ms)が予算(${READING_RETRY_TIME_BUDGET_MS}ms)を超えているためリトライを断念。壊れた問題を配信しないよう生成を失敗させる:`, reasons);
+      throw new Error(`Reading generation has unresolved quality errors and exceeded the retry time budget: ${reasons.join(' / ')}`);
+    } else if (overLengthCount >= 3 || distractorErrors.length > 0) {
       const retryReasons = [
         ...(overLengthCount >= 3
           ? [`前回の生成では選択肢が35語の上限を${overLengthCount}件超過した。全選択肢を20-33語に収め、35語を絶対に超えないこと。長くなる場合は従属節を削って短くする。`]

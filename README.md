@@ -67,6 +67,7 @@
    5問全体を作り直すのではなく、違反した設問のみ最大2回リトライする（`retryVocabQuestion`）。
 4. **読解選択肢の語数・誤答精度チェック**（内容一致形式のみ、v5.5で拡張）
    選択肢が35語を超える数が1セットで3件以上ある場合、または誤答精度チェック（絶対表現の集中・sourceSpan欠落・distractorType単調・正解の本文丸写し）でエラーが検出された場合のみ、読解を1回だけ再生成する（エラー内容を次回生成プロンプトに含める）。再生成後もエラー総数が改善しない場合は元の生成結果を採用する。
+   **時間予算チェック（v5.6）**: 読解生成が異常に長引くケース（実測262秒経験あり）で無条件にリトライすると`/api/generate`の`maxDuration`（300秒）を超過し、Vercelのプラットフォームタイムアウト（非JSON応答）でクライアント側`res.json()`が失敗する。生成開始からの経過時間が`READING_RETRY_TIME_BUDGET_MS`（150秒）を超えている場合はリトライを断念するが、この場合の下書きは誤答精度チェック等のエラーが検出済み＝壊れた問題である可能性が高いため、配信はせず`throw`して生成そのものを失敗させる（`route.ts`側でキャッシュへのフォールバック、なければJSONエラー応答）。**既知の未解決リスク**: リトライを実施したがエラー総数が改善しなかった場合（`afterTotal >= beforeTotal`）は、時間予算とは無関係にこの旧来パス（v5.5から存在）で元の下書きがそのまま採用される。同種の「壊れた問題を配信し得る」リスクが残っている。
 5. **選択肢シャッフル**
    語彙は5問を通じて正解記号（A/B/C/D）が3回以上偏らないよう位置をあらかじめ均等割り当てしてからシャッフルし（`shuffleChoicesWithTarget` / `assignBalancedTargetLetters`、v5.2）、読解は従来通りランダムシャッフルする。解説文中の選択肢参照は数字(1〜4)で書かれる前提で、シャッフル後の番号に書き換える（`remapChoiceLetters`。UI表示（1〜4の数字）に合わせてv5.2でA/B/C/D参照から変更。旧レター参照が残っていた場合の安全網も維持）。
 6. **注釈（解説）生成は語彙・読解でコンテキストを分離**
@@ -111,6 +112,7 @@
 
 - **Vercel Fluid Compute**: 有効（Vercelプロジェクト設定）
 - **maxDuration**: `300`秒（`/api/generate`、`/api/annotations`。Fluid Compute前提の設定）
+- **ソフトタイムアウト（v5.6）**: `/api/generate`の`maxDuration`（300秒）にVercelのプラットフォームタイムアウトで到達すると応答本文がJSONでなくなり、クライアントの`res.json()`が`SyntaxError`で失敗する（本番で発生・`npx vercel logs`で特定）。`app/api/generate/route.ts`は`generateQuestions`を`SOFT_TIMEOUT_MS`（270秒）で`withTimeout`ラップし、必ずルート自身が先にJSONで応答（キャッシュへのフォールバック、またはJSON形式のエラー）できるようにしている
 - **max_tokens**: 生成系呼び出しは用途ごとに異なる（読解生成 32,000 / 語彙生成 16,000 / 読解アノテーション 20,000 / 語彙アノテーション 8,000。詳細は `lib/claude.ts` 内の各Anthropic API呼び出しを参照）。語彙・読解の両方で`stop_reason === 'max_tokens'`（出力打ち切り）を検知した場合は明示的にエラーログを出す
 - **Cron**: `vercel.json` で毎日 `23:00 UTC`（JST 08:00）に `/api/generate?refresh=true` を叩き、当日分の問題を事前生成（ライティング3機能はオンデマンド生成のみで、cronは設定していない）
 - **`serverExternalPackages: ['pdfkit']`**（`next.config.ts`）: pdfkitは標準14フォントのAFMメトリクスを`fs.readFileSync(__dirname + '/data/...')`で実行時に読み込むが、Turbopackにバンドル・トレースされると`__dirname`が仮想パスに書き換えられ`ENOENT`になるため、ネイティブ`require`のまま解決させて回避している（`lib/pdfKit.ts`を使う`/api/pdf/seidoku`・`/api/pdf/writing`の両方に必要）
