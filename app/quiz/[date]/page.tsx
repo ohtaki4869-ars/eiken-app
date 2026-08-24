@@ -276,8 +276,11 @@ export default function QuizPage() {
                 </span>
               </h2>
               <p className="text-sm text-gray-600 mb-4">
-                {isFillInBlank ? '次の英文の(1)〜(4)に入れるのに最も適切なものを1、2、3、4の中から一つ選びなさい。' : '次の英文を読み、(1)〜(4)の質問に対して最も適切なものを1、2、3、4の中から一つ選びなさい。'}
+                {isFillInBlank ? '次の英文の(1)〜(3)に入れるのに最も適切なものを1、2、3、4の中から一つ選びなさい。' : '次の英文を読み、(1)〜(4)の質問に対して最も適切なものを1、2、3、4の中から一つ選びなさい。'}
               </p>
+              {data.title && (
+                <p className="text-center text-lg font-bold text-gray-900 mb-4">{data.title}</p>
+              )}
               <div className="bg-white border border-gray-200 rounded p-6 mb-4 leading-relaxed text-sm">
                 {data.readingPassage.split('\n').map((para, i) => (
                   <p key={i} className={para.trim() ? 'mb-4' : ''}>{isFillInBlank ? renderPassageWithBlanks(para) : para}</p>
@@ -364,6 +367,9 @@ export default function QuizPage() {
                 <h2 className="text-lg font-bold border-b-2 border-gray-800 pb-2 mb-6">第2部　長文読解問題　解説</h2>
                 <div className="mb-8">
                   <h3 className="font-bold mb-3">【本文・日本語訳】</h3>
+                  {data.title && (
+                    <p className="text-center text-lg font-bold text-gray-900 mb-4">{data.title}</p>
+                  )}
                   <div className="text-sm">
                     {data.readingPassage.split('\n').filter((p) => p.trim()).map((para, i) => {
                       const jaParas = (data.readingPassageJa || '').split('\n').filter((p) => p.trim());

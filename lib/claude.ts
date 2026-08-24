@@ -154,7 +154,7 @@ const CONTENT_FEWSHOT_BLOCK = `
 - 語彙問題の単語・例文シナリオ（単語はWordBankから毎回指定されるものを使う。この見本のvigil/dispel等の単語・シチュエーションを再現しない）
 - 記事の話題（この見本はFIFA/スポーツ統治の話題だが、実際の記事内容に基づいて書くこと）
 
-見本(JSON。vocabQuestions/readingPassage/readingPassageJa/readingQuestionsの4フィールドのみが出力対象):
+見本(JSON。vocabQuestions/readingPassage/readingPassageJa/readingQuestionsの4フィールドのみが出力対象。titleはこの見本に含まれないが、別途メインの指示に従って必ず出力すること):
 ${JSON.stringify(contentFewshotExample, null, 2)}`;
 
 const FILL_IN_BLANK_FEWSHOT_BLOCK = `
@@ -168,7 +168,7 @@ const FILL_IN_BLANK_FEWSHOT_BLOCK = `
 - 語彙問題の単語・例文シナリオ（単語はWordBankから毎回指定されるものを使う。この見本の単語・シチュエーションを再現しない）
 - 記事の話題（この見本はNHS/医療政策の話題だが、実際の記事内容に基づいて書くこと）
 
-見本(JSON。vocabQuestions/readingPassage/readingPassageJa/readingQuestionsの4フィールドのみが出力対象):
+見本(JSON。vocabQuestions/readingPassage/readingPassageJa/readingQuestionsの4フィールドのみが出力対象。titleはこの見本に含まれないが、別途メインの指示に従って必ず出力すること):
 ${JSON.stringify(fillInBlankFewshotExample, null, 2)}`;
 
 // 語彙1問分の使用語を固定するグループ（v5.1.1: モデルに語の配分の自由を与えず、
@@ -364,6 +364,7 @@ export interface GeneratedQuestions {
   article: Article;
   readingFormat: ReadingFormat;
   vocabQuestions: VocabQuestion[];
+  title: string; // v5.7: 英検本番スタイルの英語タイトル（LLM生成。RSS記事の元タイトルとは別物）
   readingPassage: string;
   readingPassageJa: string;
   readingQuestions: ReadingQuestion[];
@@ -545,6 +546,11 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
 
   // ===== 穴埋め形式 (Part 2 style) =====
   const fillInBlankInstructions = `
+1. **Title** (英語タイトル - 本番EIKEN Grade 1の長文冒頭に付くタイトルを再現する):
+   - Write a short English title placed above the passage, in the real EIKEN Grade 1 style: a noun phrase or short phrase, NOT a full sentence (e.g., "The Rise of Synthetic Realism").
+   - Aim for 6 words or fewer.
+   - The title must indicate the passage's topic/theme, but must NOT reveal the answer to any blank or otherwise give away a specific conclusion the passage builds toward.
+
 2. **Reading Passage with 3 blanks** (長文穴埋め - EIKEN Grade 1 Part 2 style):
    - Write a 3-paragraph passage of approximately 500 words total (450-550 words is the acceptable range; 500 is the target)
    - Difficulty: EIKEN Grade 1 level academic English
@@ -585,6 +591,11 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
 
   // ===== 内容一致形式 (Part 3 style) =====
   const contentInstructions = `
+1. **Title** (英語タイトル - 本番EIKEN Grade 1の長文冒頭に付くタイトルを再現する):
+   - Write a short English title placed above the passage, in the real EIKEN Grade 1 style: a noun phrase or short phrase, NOT a full sentence (e.g., "The Rise of Synthetic Realism").
+   - Aim for 6 words or fewer.
+   - The title must indicate the passage's topic/theme, but must NOT reveal the answer to any comprehension question or otherwise give away a specific conclusion the passage builds toward.
+
 2. **Reading Passage** (長文 - EIKEN Grade 1 Part 3 style):
    - Write a 3-4 paragraph passage of 550-650 words (this is an intentional intermediate target short of the real exam's ~800 words; hit this range even if it means trimming supporting detail)
    - Difficulty: EIKEN Grade 1 level academic English
@@ -700,7 +711,8 @@ ${CONTENT_FEWSHOT_BLOCK}`;
     : contentInstructions;
 
   // ===== JSON examples =====
-  const fillInBlankJsonExample = `  "readingPassage": "For decades, scientists have been studying the mysterious phenomenon of deep-sea bioluminescence, the ability of marine organisms to produce light. Researchers initially believed this trait evolved primarily as a defense mechanism, but new findings suggest it may ( 1 ) as well. Studies of various species have revealed unexpected complexity in how and when they produce light.\\n\\nThe scientific community has made significant advances in understanding bioluminescence, yet many questions remain. One major challenge has been ( 2 ), as the deep ocean environment makes direct observation extremely difficult. Recent technological innovations, however, have enabled researchers to collect data that was previously impossible to obtain.\\n\\nThese discoveries have implications beyond pure science. Bioluminescent compounds are increasingly being used in medical research and diagnostics. The natural light-producing mechanisms found in marine life have proven ( 3 ), inspiring engineers and biochemists to develop new tools for detecting diseases at an early stage.",
+  const fillInBlankJsonExample = `  "title": "The Dual Purpose of Bioluminescence",
+  "readingPassage": "For decades, scientists have been studying the mysterious phenomenon of deep-sea bioluminescence, the ability of marine organisms to produce light. Researchers initially believed this trait evolved primarily as a defense mechanism, but new findings suggest it may ( 1 ) as well. Studies of various species have revealed unexpected complexity in how and when they produce light.\\n\\nThe scientific community has made significant advances in understanding bioluminescence, yet many questions remain. One major challenge has been ( 2 ), as the deep ocean environment makes direct observation extremely difficult. Recent technological innovations, however, have enabled researchers to collect data that was previously impossible to obtain.\\n\\nThese discoveries have implications beyond pure science. Bioluminescent compounds are increasingly being used in medical research and diagnostics. The natural light-producing mechanisms found in marine life have proven ( 3 ), inspiring engineers and biochemists to develop new tools for detecting diseases at an early stage.",
   "readingPassageJa": "数十年にわたり、科学者たちは深海生物の発光現象を研究してきた。研究者たちは当初、この特性は主に防御メカニズムとして進化したと考えていたが、新たな知見はそれが__(1)__でもあることを示唆している。さまざまな種の研究から、光を発する方法やタイミングにおける予想外の複雑さが明らかになった。\\n\\n科学界は生物発光の理解において大きな進歩を遂げたが、多くの疑問が残っている。主な課題の一つは__(2)__であり、深海環境が直接観察を非常に困難にしている。しかし最近の技術革新により、以前は不可能だったデータの収集が可能になった。\\n\\nこれらの発見は純粋な科学を超えた意義を持っている。発光化合物は医学研究や診断にますます活用されている。海洋生物に見られる自然の発光メカニズムは__(3)__ことが証明されており、エンジニアや生化学者が疾患を早期発見するための新しいツールを開発するヒントとなっている。",
   "readingQuestions": [
     {
@@ -741,7 +753,8 @@ ${CONTENT_FEWSHOT_BLOCK}`;
     }
   ]`;
 
-  const contentJsonExample = `  "readingPassage": "The passage text here (3-4 paragraphs, 550-650 words)...",
+  const contentJsonExample = `  "title": "The Paradox of Excessive Choice",
+  "readingPassage": "The passage text here (3-4 paragraphs, 550-650 words)...",
   "readingPassageJa": "日本語訳（段落ごと）...",
   "readingQuestions": [
     {
@@ -791,7 +804,7 @@ async function generateReadingOnly(
   article: Article,
   format: ReadingFormat,
   errors?: string[]
-): Promise<{ readingPassage: string; readingPassageJa: string; readingQuestions: ReadingQuestion[] }> {
+): Promise<{ title: string; readingPassage: string; readingPassageJa: string; readingQuestions: ReadingQuestion[] }> {
   let dynamicContext = buildReadingOnlyDynamicContext(article);
   if (errors && errors.length > 0) {
     dynamicContext += `\n\n## ⚠️ 前回の生成で以下のエラーが検出されました。必ず修正してください：\n${errors.map(e => `- ${e}`).join('\n')}`;
@@ -813,6 +826,7 @@ async function generateReadingOnly(
   }
   try {
     return parseJson(text) as {
+      title: string;
       readingPassage: string;
       readingPassageJa: string;
       readingQuestions: ReadingQuestion[];
@@ -1575,6 +1589,19 @@ function checkCorrectChoiceCopiesPassage(passage: string, questions: ReadingQues
   return { valid: errors.length === 0, errors };
 }
 
+// ===== v5.7: タイトルの機械チェック（空文字でない・10語以内）。両形式共通・リトライ対象 =====
+function checkTitleValid(title: string): ValidationResult {
+  const trimmed = (title ?? '').trim();
+  if (trimmed.length === 0) {
+    return { valid: false, errors: ['タイトルが空文字'] };
+  }
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 10) {
+    return { valid: false, errors: [`タイトルが${wordCount}語（上限10語を超過）: "${trimmed}"`] };
+  }
+  return { valid: true, errors: [] };
+}
+
 // ===== v5.2 A-3: 本文語数チェック（警告のみ・リトライには乗せない） =====
 function checkPassageWordCount(passage: string, format: ReadingFormat): ValidationResult {
   const wordCount = passage.trim().split(/\s+/).filter(Boolean).length;
@@ -1990,19 +2017,22 @@ export async function generateQuestions(
     console.warn('[Vocab] post-retry validation issues (continuing anyway):', finalVocabValidation.errors);
   }
 
-  // ===== Step 3: 読解選択肢の語数・長さ癖・極端語・誤答精度チェック（内容一致形式のみ） =====
-  // 35語超過が1セット3件以上、または誤答精度チェック（v5.5）でエラーがある場合のみ、読解を1回だけ再生成する。
+  // ===== Step 3: 読解選択肢の語数・長さ癖・極端語・誤答精度チェック（内容一致形式のみ）＋タイトルの機械チェック（両形式） =====
+  // 35語超過が1セット3件以上、誤答精度チェック（v5.5）、またはタイトルチェック（v5.7）でエラーがある場合のみ、読解を1回だけ再生成する。
   // それ未満・それ以外は警告のみ。
   let finalReading = readingDraft;
-  if (format === 'content') {
+  {
     const collectHardErrors = (q: typeof finalReading) => [
-      ...checkWrongChoiceAbsoluteWords(q.readingQuestions).errors,
-      ...checkChoiceDraftSourceSpans(q.readingQuestions).errors,
-      ...checkDistractorTypeDiversity(q.readingQuestions).errors,
-      ...checkCorrectChoiceCopiesPassage(q.readingPassage, q.readingQuestions).errors,
+      ...checkTitleValid(q.title).errors,
+      ...(format === 'content' ? [
+        ...checkWrongChoiceAbsoluteWords(q.readingQuestions).errors,
+        ...checkChoiceDraftSourceSpans(q.readingQuestions).errors,
+        ...checkDistractorTypeDiversity(q.readingQuestions).errors,
+        ...checkCorrectChoiceCopiesPassage(q.readingPassage, q.readingQuestions).errors,
+      ] : []),
     ];
 
-    const overLengthCount = countOverMaxWordChoices(finalReading.readingQuestions);
+    const overLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;
     const distractorErrors = collectHardErrors(finalReading);
 
     // v5.6: 読解の初回生成が長引くケース（実測262秒経験あり）で無条件にリトライすると
@@ -2031,7 +2061,7 @@ export async function generateQuestions(
       try {
         const retried = await generateReadingOnly(trimmedArticle, format, retryReasons);
         console.log(`[Timing] reading retry: ${Date.now() - retryStart}ms`);
-        const retryOverLengthCount = countOverMaxWordChoices(retried.readingQuestions);
+        const retryOverLengthCount = format === 'content' ? countOverMaxWordChoices(retried.readingQuestions) : 0;
         const retryDistractorErrors = collectHardErrors(retried);
         const beforeTotal = overLengthCount + distractorErrors.length;
         const afterTotal = retryOverLengthCount + retryDistractorErrors.length;
@@ -2045,24 +2075,26 @@ export async function generateQuestions(
       }
     }
 
-    const lengthValidation = validateChoiceLength(finalReading.readingQuestions);
-    if (!lengthValidation.valid) {
-      console.warn('[Reading] choice length issues (continuing anyway):', lengthValidation.errors);
-    }
-    const longestValidation = checkCorrectIsLongest(finalReading.readingQuestions);
-    if (!longestValidation.valid) {
-      console.warn('[Reading] correct-is-longest issues (continuing anyway):', longestValidation.errors);
-    }
-    const absoluteWordsValidation = checkAbsoluteWords(finalReading.readingQuestions);
-    if (!absoluteWordsValidation.valid) {
-      console.warn('[Reading] absolute-word issues (continuing anyway):', absoluteWordsValidation.errors);
-    }
+    if (format === 'content') {
+      const lengthValidation = validateChoiceLength(finalReading.readingQuestions);
+      if (!lengthValidation.valid) {
+        console.warn('[Reading] choice length issues (continuing anyway):', lengthValidation.errors);
+      }
+      const longestValidation = checkCorrectIsLongest(finalReading.readingQuestions);
+      if (!longestValidation.valid) {
+        console.warn('[Reading] correct-is-longest issues (continuing anyway):', longestValidation.errors);
+      }
+      const absoluteWordsValidation = checkAbsoluteWords(finalReading.readingQuestions);
+      if (!absoluteWordsValidation.valid) {
+        console.warn('[Reading] absolute-word issues (continuing anyway):', absoluteWordsValidation.errors);
+      }
 
-    // choiceDraftsはバリデーション専用。シャッフル後は記号と対応しなくなるため最終出力には含めない
-    finalReading = {
-      ...finalReading,
-      readingQuestions: finalReading.readingQuestions.map(stripChoiceDrafts),
-    };
+      // choiceDraftsはバリデーション専用。シャッフル後は記号と対応しなくなるため最終出力には含めない
+      finalReading = {
+        ...finalReading,
+        readingQuestions: finalReading.readingQuestions.map(stripChoiceDrafts),
+      };
+    }
   }
 
   // ===== v5.2 Step 3.5: 追加の警告のみバリデーション（両形式・リトライには乗せない） =====
@@ -2100,6 +2132,7 @@ export async function generateQuestions(
     article,
     readingFormat: format,
     vocabQuestions,
+    title: finalReading.title,
     readingPassage: finalReading.readingPassage,
     readingPassageJa: finalReading.readingPassageJa,
     readingQuestions: finalReading.readingQuestions,

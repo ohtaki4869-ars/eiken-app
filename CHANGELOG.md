@@ -2,6 +2,17 @@
 
 このプロジェクトの問題生成ルール・パイプラインの変遷を、各バージョンで解決した課題ベースで記録する。バージョン番号は `lib/claude.ts` 内のコメント・コミットメッセージに基づく。日付はコミット日（JST基準の目安）。リーディングの生成ルール（`lib/claude.ts`）に関わらないアプリ全体の機能追加・UI再構成は「vX.X」ではなく見出しに直接内容を記す。
 
+## v5.7 (2026-08-25)
+
+**課題**: 本番の英検1級では長文読解の直前に英語タイトルが記載されているが、eiken-appの読解問題にはこれが存在しなかった。8/14に一度この機能を実装する計画があったが、実際にはコードが書かれておらず未実装のまま放置されていた（調査時、ページ上部のRSS記事出典表示（`data.article.source`/`data.article.title`、`app/quiz/[date]/page.tsx`等の`no-print`領域）と混同されていたことが判明）。今回改めて実装した。
+
+- **読解生成プロンプトにタイトル生成指示を追加**（`lib/claude.ts`の`buildReadingOnlyStaticInstructions`、内容一致・空所補充の両フォーマット）: 本番EIKEN Grade 1スタイルの名詞句・短いフレーズ形式（例: "The Rise of Synthetic Realism"）、6語以内目安、本文の主題は示すが空所の答え・設問の結論を直接示唆しないことを明記。JSON出力例（`fillInBlankJsonExample`/`contentJsonExample`）にも`title`フィールドを追加した
+- **`title`を既存の読解生成コール内で同時出力**（追加のLLM呼び出しなし）: `generateReadingOnly`の戻り値型・パース対象に`title: string`を追加し、`GeneratedQuestions`型（`lib/claude.ts`）にも`title`フィールドを追加した
+- **few-shot見本の注記を修正**: `CONTENT_FEWSHOT_BLOCK`/`FILL_IN_BLANK_FEWSHOT_BLOCK`は「vocabQuestions/readingPassage/readingPassageJa/readingQuestionsの4フィールドのみが出力対象」という既存の注記があり、これをそのままにすると新設の`title`要求と矛盾してモデルが省略しかねなかったため、「titleはこの見本に含まれないが、別途メインの指示に従って必ず出力すること」を追記した
+- **タイトルの機械チェックを新規追加し、既存のリトライ機構に接続**（`checkTitleValid`、`lib/claude.ts`）: 空文字でないこと、10語以内であることを検証する。従来「読解選択肢の語数・誤答精度チェック→1回だけ再生成」というリトライ機構（v5.5）は内容一致形式専用（`if (format === 'content')`）だったが、タイトルチェックは両形式に必要なため、リトライのトリガー条件（`collectHardErrors`/`overLengthCount`）を両形式で評価しつつ、内容一致専用のチェック（誤答精度等）は`format === 'content'`のときのみ実行するよう分離した。これにより空所補充形式でも、タイトル違反時に限り読解が1回再生成されるようになった（既存の35語超過・誤答精度チェックは従来通り内容一致形式のみ）
+- **フロントエンドで本文直前にタイトルを表示**（`app/reading/page.tsx`、`app/quiz/[date]/page.tsx`）: 「第2部　長文読解問題」見出しの下・英文本文の上（問題表示・解答解説の両方、計4箇所）に`data.title`を表示。ページ上部のRSS記事出典表示（`text-sm text-gray-500`の小さいグレー文字）とは明確にスタイルを分け、中央揃え太字（`text-center text-lg font-bold`）で本番の見出しらしく見せている。専用のPDF生成ルートは読解問題には存在せず（`window.print()`でこの同じJSXがそのまま印刷される）、追加実装なしで問題用紙・解答解説PDFの両方に反映される
+- **後方互換性**: `title`フィールドが存在しない旧キャッシュデータ（v5.7以前に生成された`.cache/*.json`）に対しては`{data.title && (...)}`で表示をスキップする
+
 ## v5.6 (2026-08-17)
 
 **課題**: 本番で「問題の取得に失敗しました: SyntaxError: The string did not match the expected pattern」が発生（8/17、内容一致形式）。Vercelの本番ログ（`npx vercel logs`）で調査した結果、URL構築等のコード側バグではなく、`/api/generate`のサーバレス関数タイムアウトが原因と判明した：内容一致形式の読解生成が異常に長い出力（29,524トークン、262秒）を返した上、誤答精度チェック（v5.5）で検出したエラーに対して残り時間を考慮せず無条件に読解を再生成しようとし、`route.ts`の`maxDuration`（300秒）を超過。Vercelのプラットフォームタイムアウト応答は本文がJSONではないため、クライアントの`res.json()`が`SyntaxError`で失敗していた。

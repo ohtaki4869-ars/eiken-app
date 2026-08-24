@@ -378,9 +378,12 @@ export default function Home() {
               </h2>
               <p className="text-sm text-gray-600 mb-4">
                 {isFillInBlank
-                  ? '次の英文の(1)〜(4)に入れるのに最も適切なものを1、2、3、4の中から一つ選びなさい。'
+                  ? '次の英文の(1)〜(3)に入れるのに最も適切なものを1、2、3、4の中から一つ選びなさい。'
                   : '次の英文を読み、(1)〜(4)の質問に対して最も適切なものを1、2、3、4の中から一つ選びなさい。'}
               </p>
+              {data.title && (
+                <p className="text-center text-lg font-bold text-gray-900 mb-4">{data.title}</p>
+              )}
 
               {/* パッセージ */}
               <div className="bg-white border border-gray-200 rounded p-6 mb-4 leading-relaxed text-sm">
@@ -509,6 +512,9 @@ export default function Home() {
               {/* 本文＋日本語訳 */}
               <div className="mb-8">
                 <h3 className="font-bold mb-3">【本文・日本語訳】</h3>
+                {data.title && (
+                  <p className="text-center text-lg font-bold text-gray-900 mb-4">{data.title}</p>
+                )}
                 <div className="text-sm">
                   {data.readingPassage.split('\n').filter((p) => p.trim()).map((para, i) => {
                     const jaParas = (data.readingPassageJa || '').split('\n').filter((p) => p.trim());
