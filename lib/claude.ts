@@ -552,7 +552,7 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
    - The title must indicate the passage's topic/theme, but must NOT reveal the answer to any blank or otherwise give away a specific conclusion the passage builds toward.
 
 2. **Reading Passage with 3 blanks** (長文穴埋め - EIKEN Grade 1 Part 2 style):
-   - Write a 3-paragraph passage of approximately 500 words total (450-550 words is the acceptable range; 500 is the target)
+   - Write a 3-paragraph passage of 400-450 words total (this matches the real EIKEN Grade 1 Part 2 length). Aim for roughly 130-150 words per paragraph. 450 words is a HARD CEILING that must never be exceeded — count your words before finalizing and trim supporting detail rather than go over.
    - Difficulty: EIKEN Grade 1 level academic English
    - **Structure**: reconstruct the news source into an authentic academic argumentative essay — claim → supporting evidence → counterargument/qualification → synthesis (主張→根拠→反論・限定→総合). Do not just summarize the news article chronologically.
    - **No self-reference**: never refer to the passage's own author in the third person (e.g., "the author contends/argues/notes that..."). State claims directly as the passage's own prose, not as a description of what an external author is doing.
@@ -581,12 +581,13 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
      * 技法B「部分的整合」: uses correct keywords but the logic doesn't fit the paragraph's argument
    - **No obviously wrong choices**: every choice must feel plausible to someone who read the paragraph once.
 
-   **SELF-CHECK（穴埋め・5項目）:**
+   **SELF-CHECK（穴埋め・6項目）:**
    - [ ] 各段落に空欄が1つずつある（計3つ）
    - [ ] 選択肢の語数が±2語以内
    - [ ] 正解以外の選択肢も文法的に前後と接続可能
    - [ ] 誤答に「明らかな外れ」がない（本文と無関係な内容は禁止）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
+   - [ ] 本文全体が400〜450語に収まっている（450語を超えていない）
 ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
 
   // ===== 内容一致形式 (Part 3 style) =====
@@ -1602,10 +1603,11 @@ function checkTitleValid(title: string): ValidationResult {
   return { valid: true, errors: [] };
 }
 
-// ===== v5.2 A-3: 本文語数チェック（警告のみ・リトライには乗せない） =====
+// ===== v5.2 A-3: 本文語数チェック（内容一致=警告のみ・リトライには乗せない／空所補充=v5.8でリトライ対象化、collectHardErrors経由） =====
 function checkPassageWordCount(passage: string, format: ReadingFormat): ValidationResult {
   const wordCount = passage.trim().split(/\s+/).filter(Boolean).length;
-  const [min, max] = format === 'content' ? [550, 650] : [450, 550];
+  // 空所補充は本番EIKEN Grade 1 Part 2（400〜450語）に合わせ、バッファを持たせた380〜470語を許容範囲とする（v5.8）
+  const [min, max] = format === 'content' ? [550, 650] : [380, 470];
   if (wordCount < min || wordCount > max) {
     return { valid: false, errors: [`読解: 本文語数${wordCount}語（想定${min}〜${max}語の範囲外）`] };
   }
@@ -2030,6 +2032,8 @@ export async function generateQuestions(
         ...checkDistractorTypeDiversity(q.readingQuestions).errors,
         ...checkCorrectChoiceCopiesPassage(q.readingPassage, q.readingQuestions).errors,
       ] : []),
+      // v5.8: 空所補充は本文語数（380〜470語）をハードエラー化し、リトライ対象に含める
+      ...(format === 'fill-in-blank' ? checkPassageWordCount(q.readingPassage, format).errors : []),
     ];
 
     const overLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;
@@ -2097,7 +2101,8 @@ export async function generateQuestions(
     }
   }
 
-  // ===== v5.2 Step 3.5: 追加の警告のみバリデーション（両形式・リトライには乗せない） =====
+  // ===== Step 3.5: 追加の警告ログ（内容一致は警告のみでリトライ対象外。空所補充は上のcollectHardErrorsで
+  // 既にリトライ済みのため、ここではリトライ後もなお範囲外だった場合の最終確認ログとなる） =====
   const wordCountValidation = checkPassageWordCount(finalReading.readingPassage, format);
   if (!wordCountValidation.valid) {
     console.warn('[Reading] word count issues (continuing anyway):', wordCountValidation.errors);
