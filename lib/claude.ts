@@ -419,13 +419,18 @@ The word assignment for each question (correct word + its 3 wrong choices) is FI
   ■ 正解語の固有ニュアンスを1文で示す（訳語の羅列ではなく文脈での機能を優先）
     例：「事前に手を打つことで問題を未然に防ぐというobviate固有のニュアンスが文脈と合致」
   ■ 正解と最も混同しやすい選択肢との違いを1文で必ず言及すること
-  ■ **長さの上限（暴走出力防止のため厳守）**：【正解】は1〜2文、不正解4つはそれぞれ1文のみ（2文以上に展開しない）、【紛らわしいペア】も1文以内。explanationフィールド全体で日本語400字以内に収めること。同じ内容を言い換えて繰り返さない。
+  ■ **長さの上限（暴走出力防止のため厳守）**：【正解】は1〜2文、不正解4つはそれぞれ1文のみ（2文以上に展開しない）、【紛らわしいペア】も1文以内、【例文和訳】も1文以内。explanationフィールド全体で日本語550字以内に収めること。同じ内容を言い換えて繰り返さない。
 
   【正解】問題文の該当箇所を引用し、正解語固有のニュアンスで説明。
   【不正解各選択肢】番号と単語を明示しラベルを示す（ラベルは次の2種のみ。新しい呼称を作らない）：
     「意味近接・焦点ズレ」：意味が近いが文脈の焦点・ニュアンス・共起がズレる語
     「文脈と不整合」：意味が逆、または文脈と無関係で、そもそも文脈に合わない語
   【紛らわしいペア】正解と最も混同しやすい選択肢がある場合は「XvsY：違いの1文説明」を追記
+  【例文和訳】**explanationの最後に必ず置く（v5.9・省略禁止）**。空所に正解語を入れた状態の例文全体を、自然な日本語1文に訳す。
+    - 直訳調・逐語訳にしない。英文の語順や品詞をなぞらず、日本語の文章として読みやすい訳文にする
+    - 空所部分（正解語）も訳に溶け込ませる。「____」「（　）」等の記号を訳文に残さない
+    - 訳の中で選択肢番号を指す半角数字1〜4を単独で使わない（数を表す必要がある場合は「二つ」「三十」のように漢数字で書く）
+    - この項目より後ろには何も書かない（【例文和訳】がexplanation文字列の末尾になる）
 
 **生成後SELF-CHECK（出力前に必ず全て確認し、満たさない場合は問題文・選択肢を修正する）:**
 V1. 正解語を空所に入れた完全文を書き出し、文法的に成立するか確認する。成立しない場合は問題文を修正する。
@@ -439,7 +444,8 @@ V3. 誤答3語それぞれについて「なぜ誤りか」と「なぜ選びた
 - [ ] 問題文に ____ が1箇所だけある
 - [ ] 誤答3択のうち最低2択が「意味近接・焦点ズレ」である
 - [ ] 「文脈と不整合」の誤答は1語以内である
-- [ ] explanationが400字以内で、各項目（正解・不正解4つ・紛らわしいペア）が指定の文数を超えていない
+- [ ] explanationが550字以内で、各項目（正解・不正解4つ・紛らわしいペア・例文和訳）が指定の文数を超えていない
+- [ ] explanationの末尾が【例文和訳】であり、正解語を入れた例文全体が自然な日本語1文に訳されている
 
 Return ONLY valid JSON in this exact format. Output the JSON object itself only — no preamble/lead-in text, no trailing commentary, and no markdown code fences (do not wrap the output in \`\`\` or \`\`\`json):
 {
@@ -455,7 +461,7 @@ Return ONLY valid JSON in this exact format. Output the JSON object itself only 
         "D": "inducement"
       },
       "answer": "A",
-      "explanation": "【正解】文中の'regulations were intended to be a ____ to those who might otherwise violate'より、法律違反を未然に防ぐ「抑止力」を意味するdeterrentが最適。単なる制限でなく違反意図そのものを抑える語が必要。【2: reprimand】意味近接・焦点ズレ─事後的な「叱責・懲戒」であり、違反を未然に抑止するdeterrentとは機能が異なる。deterrent vs reprimand：deterrentは「未然防止」、reprimandは「事後対処」。【3: constraint】意味近接・焦点ズレ─「制約」そのものを指し、違反への抑止という心理的作用を持たない。【4: inducement】文脈と不整合─違反を促す「誘因」であり、意味が逆。"
+      "explanation": "【正解】文中の'regulations were intended to be a ____ to those who might otherwise violate'より、法律違反を未然に防ぐ「抑止力」を意味するdeterrentが最適。単なる制限でなく違反意図そのものを抑える語が必要。【2: reprimand】意味近接・焦点ズレ─事後的な「叱責・懲戒」であり、違反を未然に抑止するdeterrentとは機能が異なる。deterrent vs reprimand：deterrentは「未然防止」、reprimandは「事後対処」。【3: constraint】意味近接・焦点ズレ─「制約」そのものを指し、違反への抑止という心理的作用を持たない。【4: inducement】文脈と不整合─違反を促す「誘因」であり、意味が逆。【例文和訳】その厳格な規制は、放置すれば環境法を犯しかねない者たちに対する抑止力となるよう意図されたものだった。"
     }
   ]
 }`;
@@ -959,7 +965,8 @@ function buildReadingAnnotationStaticRules(isFillInBlank: boolean): string {
 穴埋め問題の各設問について、4択すべてに以下を生成する：
 - choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順。データ構造上のキーであり、explanation等のプローズ中で選択肢に言及する際は数字1〜4を使うこと）
 - choiceText: 問題の選択肢テキストと完全一致させること
-- choiceTranslation: 自然な日本語訳（フレーズなので文脈上の意味を補って訳す）
+- choiceTranslation: 自然な日本語訳（フレーズなので文脈上の意味を補って訳す）。**正解・不正解を問わず4択すべてに必ず出力する（v5.9・省略禁止。空文字・「同上」等での省略も不可）**
+  **訳文の品質基準（v5.9・厳守）**：英語の語順・品詞をそのままなぞった直訳にせず、日本語として自然に読めるフレーズにする（例：NG「認識された危険性にもかかわらず」→ OK「危険が認識されているにもかかわらず」）
 - isCorrect: 正解のみtrue（1問につき必ず1つだけ）
 - 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"空所前後の引用", paraphraseExplanation:"なぜこのフレーズが空所に合うかの説明" }
 - 不正解の場合: incorrectReason = { technique:"方向性の逆転" または "部分的整合", originalText:"関連する本文箇所", explanation:"なぜ空所に合わないかの説明" }
@@ -970,7 +977,16 @@ function buildReadingAnnotationStaticRules(isFillInBlank: boolean): string {
 読解問題の各設問について、4択すべてに以下を生成する：
 - choiceKey: "A"/"B"/"C"/"D"（必ず4つ、アルファベット順。データ構造上のキーであり、explanation等のプローズ中で選択肢に言及する際は数字1〜4を使うこと）
 - choiceText: 問題の選択肢テキストと完全一致させること
-- choiceTranslation: 自然な日本語訳（直訳禁止。主語・接続詞を補い、長ければ2文に分ける）
+- choiceTranslation: 自然な日本語訳（直訳禁止。主語・接続詞を補い、長ければ2文に分ける）。**正解・不正解を問わず4択すべてに必ず出力する（v5.9・省略禁止。空文字・「同上」等での省略も不可）**
+  **訳文の品質基準（v5.9・厳守）**：英語の語順・品詞をそのまま日本語に移した「英文和訳」ではなく、日本語として自然に読める文にする
+  - 英語の過去分詞・受動表現をカタカナ的な直訳語にしない
+    NG「大惨事的なシナリオ」「計測された開発」「認識された危険性にもかかわらず」
+    OK「壊滅的な事態」「速度を抑えた開発」「危険が認識されているにもかかわらず」
+  - 名詞を重ねた無生物主語の直訳を避け、日本語として主語を立て直す
+    NG「開発速度により、規制当局は〜を確立することが可能になった」
+    OK「開発が速すぎるため、規制当局は〜を確立できずにいる」（原文の意味は変えない）
+  - 1文が60字を超えたら読点だけで繋がず2文に分ける
+  - **出力前に4択すべてのchoiceTranslationを読み返し、「〜された〇〇」型の受動直訳（例「認識された危険性」）や、日本語として意味の通らない語の直訳が残っていないか確認し、残っていれば書き直す**
 - isCorrect: 正解のみtrue（1問につき必ず1つだけ）
 - 正解の場合: correctReason = { paragraphRef:"第N段落", originalText:"本文引用", paraphraseExplanation:"対応説明" }
 - 不正解の場合: incorrectReason = { technique:"ラベル名", originalText:"本文引用", explanation:"具体的な誤りの説明" }
@@ -986,6 +1002,9 @@ function buildReadingAnnotationStaticRules(isFillInBlank: boolean): string {
 
 ## ルール
 ${readingExplanationRules}
+
+【reading（選択肢ごとの短い注釈）ルール】
+■ A/B/C/Dの4キーすべてにtranslation（選択肢の日本語訳）を出力する。正解・不正解を問わず省略しない
 
 ## 出力形式（JSONのみ、コメント禁止）
 {
@@ -1195,7 +1214,17 @@ const NUM_TO_KEY: Record<string, ChoiceKey> = { '1': 'A', '2': 'B', '3': 'C', '4
 // 旧仕様（A/B/C/D参照）がモデル出力に残っていた場合の安全網として、レター参照パターンも
 // 引き続き処理する（「技法A/技法B」等の穴埋め形式ラベルは対象から除外。FIFA/FEMA等の
 // 固有名詞末尾の大文字を誤って書き換えないよう、直前がラテン文字の場合も除外する）。
+// v5.9: 語彙解説の末尾に付く【例文和訳】は日本語の訳文であり、選択肢参照ではない。
+// 訳文中にたまたま現れる半角数字（「3の」等）を numPattern が選択肢参照と誤認して
+// 書き換えてしまわないよう、和訳セクションは remap の対象から外す。
+const VOCAB_TRANSLATION_MARKER = '【例文和訳】';
+
 function remapChoiceLetters(text: string, oldToNew: Record<ChoiceKey, ChoiceKey>): string {
+  const markerIndex = text.indexOf(VOCAB_TRANSLATION_MARKER);
+  if (markerIndex !== -1) {
+    return remapChoiceLetters(text.slice(0, markerIndex), oldToNew) + text.slice(markerIndex);
+  }
+
   const oldToNewNum: Record<string, string> = {};
   (Object.keys(oldToNew) as ChoiceKey[]).forEach(k => {
     oldToNewNum[KEY_TO_NUM[k]] = KEY_TO_NUM[oldToNew[k]];
@@ -1223,7 +1252,10 @@ function remapChoiceLetters(text: string, oldToNew: Record<ChoiceKey, ChoiceKey>
 // 【N: word/snippet】（数字参照。旧仕様の【X: ...】レター参照も念のため確認）タグの内容が
 // 実際の choices[X] と一致しているかを検証し、不一致があれば警告ログに記録する
 // （処理は止めない・リトライにも乗せない）。
-function verifyChoiceLabelConsistency(explanation: string, choices: { A: string; B: string; C: string; D: string }): void {
+function verifyChoiceLabelConsistency(rawExplanation: string, choices: { A: string; B: string; C: string; D: string }): void {
+  // v5.9: 和訳セクションは選択肢タグを含まないため照合対象外にする
+  const markerIndex = rawExplanation.indexOf(VOCAB_TRANSLATION_MARKER);
+  const explanation = markerIndex === -1 ? rawExplanation : rawExplanation.slice(0, markerIndex);
   const checkTag = (key: ChoiceKey, rawTag: string, snippetRaw: string) => {
     const actual = choices[key].trim().toLowerCase();
     // タグの内容は「…」で中略した要約のことがあるため、先頭の断片（最初の「...」より前）だけで照合する
@@ -2125,7 +2157,7 @@ export async function generateQuestions(
     console.warn('[Reading/Vocab] CJK simplified char issues (continuing anyway):', cjkWarnings);
   }
   const explanationLengthWarnings = [
-    ...vocabQuestions.flatMap((q, i) => checkExplanationLength(`語彙(${i + 1})解説`, q.explanation, 400)),
+    ...vocabQuestions.flatMap((q, i) => checkExplanationLength(`語彙(${i + 1})解説`, q.explanation, 550)),
     ...finalReading.readingQuestions.flatMap((q, i) => checkExplanationLength(`読解(${i + 1})解説`, q.explanation, 450)),
   ];
   if (explanationLengthWarnings.length > 0) {
