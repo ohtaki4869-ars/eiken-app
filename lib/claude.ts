@@ -32,9 +32,11 @@ function logUsage(label: string, model: string, response: Anthropic.Messages.Mes
   );
 }
 
-// ===== モデル設定（環境変数で切り替え可能。デフォルトは haiku） =====
+// ===== モデル設定（環境変数で切り替え可能） =====
 const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
-const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-haiku-4-5';
+// v5.9: 解説（特に読解choiceTranslation）の訳文が直訳調になりやすかったため、
+// デフォルトをHaiku 4.5からSonnet 5に変更（品質優先。コスト増はREADME/CHANGELOG参照）。
+const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-sonnet-5';
 // v5.6: 読解リトライを許可する経過時間の上限（route.ts のソフトタイムアウトと合わせて調整）
 const READING_RETRY_TIME_BUDGET_MS = 150_000;
 
@@ -394,7 +396,7 @@ The word assignment for each question (correct word + its 3 wrong choices) is FI
 ■ 各設問に指定された「正解語」「誤答3語」をそのまま使うこと。語を追加・変更・入れ替えてはならない（4択内の並び順=A/B/C/Dへの割り当ては自由）。
 ■ **指定語は与えられた形（原形・単数形）のまま一字も変えずに空所に入ること。** そのために、指定語がその形で文法的に成立する構文で例文を設計する：
   - 動詞なら: to不定詞の後（"decided to ____"）／助動詞の後（"must/should/could ____"）／"help (人) ____"や"had no choice but to ____"等の後
-  - 名詞（単数形）なら: 単数で成立する枠を使う（"a/the ____"、"hold a ____"、"become a ____"等）
+  - 名詞（単数形）なら: 単数で成立する枠を使う（"a/the ____"、"hold a ____"、"become a ____"等）。**正解語のコロケーション例が"be exposed as a charlatan"のようにbe動詞・分詞・前置詞・冠詞を含む複数語のフレーズである場合、それらの語を省略せず全て例文中に実際に書くこと。名詞1語だけを空所に裸で残してはならない**（NG: "...was eventually ____"（"exposed as a"が抜落）／OK: "...was eventually exposed as a ____"）
   - 活用形・複数形・三人称単数現在形などに変えてはならない（例: 正解語がappallなら"appalled"ではなく"appall"のまま入る構文にする）
 ■ 正解語・誤答語は英検1級パス単収載レベル相当（CEFR C1〜C2）であることが前提（指定語は既にコード側でこの水準に絞り込み済みなので、語の選定について心配する必要はない）。
 ■ 各問題は、指定された正解語が最も自然・典型的に使われる例文を作る
@@ -433,12 +435,12 @@ The word assignment for each question (correct word + its 3 wrong choices) is FI
     - この項目より後ろには何も書かない（【例文和訳】がexplanation文字列の末尾になる）
 
 **生成後SELF-CHECK（出力前に必ず全て確認し、満たさない場合は問題文・選択肢を修正する）:**
-V1. 正解語を空所に入れた完全文を書き出し、文法的に成立するか確認する。成立しない場合は問題文を修正する。
+V1. 正解語を空所に入れた完全文を書き出し、文法的に成立するか確認する。**特に、空所の直前1〜3語がコロケーション例の動詞・前置詞・冠詞部分と一致しているか（省略していないか）を確認する**（例: コロケーション例が"be exposed as a charlatan"なのに例文が"was eventually charlatan"のように"exposed as a"を省略していないか）。成立しない場合は問題文を修正する。
 V2. 空所直前の冠詞(a/an)・前置詞が、4択のうち一部だけを文法的に排除してしまわないか確認する。排除する場合は冠詞を空所内に含めるか、選択肢（＝指定語なので実際には文構造）を調整して回避する。
 V3. 誤答3語それぞれについて「なぜ誤りか」と「なぜ選びたくなるか」を1文ずつ言語化できるか確認する。後者が言えない誤答は「文脈と不整合」ラベルに倒す（無理に「意味近接・焦点ズレ」を付けない）。
 - [ ] 指定された正解語・誤答3語をそのまま4択として使っている（語の追加・変更・入れ替えをしていない）
 - [ ] 4択すべてが指定された形（原形・単数形）のまま一字も変えず使われている（活用・語尾変化していない）
-- [ ] 正解語の例文が、与えられたコロケーション例と同じ構文パターン・目的語の種類になっている
+- [ ] 正解語の例文が、与えられたコロケーション例と同じ構文パターン・目的語の種類になっている（コロケーション例に含まれるbe動詞・分詞・前置詞・冠詞を省略せず、名詞を裸で空所に残していない）
 - [ ] 固定コロケーションの穴埋めだけで即答できる設計になっていない（文脈の論理で解ける）
 - [ ] 正解語が問題文中に出現していない（活用形・派生語も含む）
 - [ ] 問題文に ____ が1箇所だけある
@@ -907,6 +909,7 @@ async function generateVocabAnnotations(
   });
   const response = await stream.finalMessage();
   const text = extractText(response);
+  logUsage('VocabAnnotations', ANNOTATION_MODEL, response);
   console.log('[VocabAnnotations] Response length:', text.length);
   try {
     return parseJson(text) as { vocabAnnotations: Record<string, ChoiceAnnotation>; confusingPairs: ConfusingPair[] };
@@ -1101,6 +1104,7 @@ async function generateReadingAnnotations(questions: GeneratedQuestions): Promis
   });
   const response = await stream.finalMessage();
   const text = extractText(response);
+  logUsage('ReadingAnnotations', ANNOTATION_MODEL, response);
   console.log('[ReadingAnnotations] Response length:', text.length);
   try {
     return parseJson(text) as { reading: ChoiceAnnotationSet[]; readingChoiceExplanations?: ReadingQuestionExplanation[] };
@@ -1279,6 +1283,31 @@ function verifyChoiceLabelConsistency(rawExplanation: string, choices: { A: stri
   }
 }
 
+// v5.10: プロンプトで「番号順（1→2→3→4）に記述すること」を指示しているにもかかわらず、
+// モデルが誤答を生成順（＝番号がバラバラ）のまま出力するケースがある。この乱れはシャッフルによる
+// remapChoiceLetters（番号の付け替えのみ・文中の位置は動かさない）でも解消されないため、
+// 【】区切りのセグメントを抽出し、【N: word】形式（誤答参照）のものだけを番号の昇順に並べ替える。
+// 【正解】【紛らわしいペア】【例文和訳】等の非数字セグメントは元の位置のまま動かさない。
+function reorderExplanationChoiceSegments(explanation: string): string {
+  const segments = explanation.split(/(?=【)/).filter(s => s.length > 0);
+  if (segments.length <= 1) return explanation;
+
+  const numberedIndices: number[] = [];
+  segments.forEach((seg, i) => {
+    if (/^【([1-4]):/.test(seg)) numberedIndices.push(i);
+  });
+  if (numberedIndices.length <= 1) return explanation;
+
+  const numbered = numberedIndices.map(i => segments[i]);
+  numbered.sort((a, b) => {
+    const na = Number(a.match(/^【([1-4]):/)![1]);
+    const nb = Number(b.match(/^【([1-4]):/)![1]);
+    return na - nb;
+  });
+  numberedIndices.forEach((idx, k) => { segments[idx] = numbered[k]; });
+  return segments.join('');
+}
+
 function shuffleChoices<T extends { choices: { A: string; B: string; C: string; D: string }; answer: string; explanation: string }>(q: T): T {
   // key/value ペアごとシャッフルすることで、旧→新の記号対応（oldToNew）を値の一致に頼らず追跡できるようにする
   const entries = CHOICE_KEYS.map(k => ({ key: k, value: q.choices[k] }));
@@ -1298,7 +1327,7 @@ function shuffleChoices<T extends { choices: { A: string; B: string; C: string; 
   });
 
   const newAnswer = oldToNew[q.answer as ChoiceKey];
-  const explanation = remapChoiceLetters(q.explanation, oldToNew);
+  const explanation = reorderExplanationChoiceSegments(remapChoiceLetters(q.explanation, oldToNew));
   verifyChoiceLabelConsistency(explanation, newChoices);
   return { ...q, choices: newChoices, answer: newAnswer, explanation };
 }
@@ -1342,7 +1371,7 @@ function shuffleChoicesWithTarget<T extends { choices: { A: string; B: string; C
   CHOICE_KEYS.forEach(oldKey => { newChoices[oldToNew[oldKey]] = q.choices[oldKey]; });
 
   const newAnswer = targetLetter;
-  const explanation = remapChoiceLetters(q.explanation, oldToNew);
+  const explanation = reorderExplanationChoiceSegments(remapChoiceLetters(q.explanation, oldToNew));
   verifyChoiceLabelConsistency(explanation, newChoices);
   return { ...q, choices: newChoices, answer: newAnswer, explanation };
 }
@@ -1356,6 +1385,74 @@ function shuffleVocabQuestionsBalanced(vocabQuestions: VocabQuestion[]): VocabQu
 interface ValidationResult {
   valid: boolean;
   errors: string[];
+}
+
+// v5.10: 正解語（名詞）のコロケーション例が冠詞付き（例: "be exposed as a charlatan"）なのに、
+// 例文側でbe動詞・分詞・前置詞・冠詞を省略して名詞を裸で空所に残す不具合（例: "was eventually ____"）を
+// 機械的に検出する。品詞の完全な文法チェックは不可能だが、「コロケーション例が冠詞付きの名詞用法なら
+// 空所直前も限定詞（a/an/the等）で終わっているはず」という一点に絞ることで、誤検知を抑えつつ
+// V1（自己検証プロンプト）が見逃した空所直前の脱落を機械的に補足する。
+const DETERMINERS = new Set([
+  'a', 'an', 'the', 'his', 'her', 'its', 'their', 'our', 'your', 'my',
+  'no', 'such', 'every', 'each', 'another', 'any', 'some',
+]);
+
+function checkVocabBlankGrammar(q: VocabQuestion, group: VocabWordGroup): string[] {
+  if (group.correct.pos !== '名') return [];
+
+  const word = group.correct.word.toLowerCase().trim();
+  const phrase = group.correct.phrase.toLowerCase();
+  // コロケーション例自体が「冠詞+正解語」の形を含む場合のみ、可算名詞の単数用法とみなして検査対象にする
+  // （不可算名詞・固有名詞的用法のコロケーション例は対象外とし、誤検知を避ける）
+  const phraseHasArticle = new RegExp(`\\b(a|an|the)\\s+${word}\\b`).test(phrase);
+  if (!phraseHasArticle) return [];
+
+  const idx = q.sentence.indexOf('____');
+  if (idx === -1) return [];
+  const before = q.sentence.slice(0, idx).trim();
+  const words = before.split(/\s+/).map(w => w.replace(/[^a-zA-Z]/g, '').toLowerCase()).filter(Boolean);
+  const lastWord = words[words.length - 1] ?? '';
+  if (DETERMINERS.has(lastWord)) return [];
+
+  return [`正解語「${group.correct.word}」のコロケーション例「${group.correct.phrase}」は冠詞付きの名詞用法だが、例文の空所直前（"...${before.slice(-40)}"）に冠詞・限定詞（a/an/the等）がない。コロケーション例の動詞・前置詞・冠詞部分を省略せずそのまま例文に書くこと`];
+}
+
+// v5.10: プロンプトで「解説文中で正解語を記述する際は問題文の表記と完全に一致させること（タイポ禁止）」
+// を指示しているが、モデルが自由記述するプローズ部分でタイポが混入する事例を確認した
+// （例: 正解語sporadicが解説文中で「spooradic」と二重母音化して出現）。厳密な文法チェックはできないため、
+// 「正解語と綴りがほぼ同じ（編集距離1以内）だが完全一致ではない語」が解説文中に出現していないかだけを見る
+// 軽量ヒューリスティック。誤検知を避けるため、先頭文字が異なる語・長さが2文字以上違う語は対象外にする。
+function levenshteinAtMostOne(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  if (a === b) return false; // 完全一致はタイポではない
+  let i = 0, j = 0, edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    edits++;
+    if (edits > 1) return false;
+    if (a.length === b.length) { i++; j++; } // 置換
+    else if (a.length > b.length) { i++; } // 削除
+    else { j++; } // 挿入
+  }
+  edits += (a.length - i) + (b.length - j);
+  return edits <= 1;
+}
+
+function checkAnswerWordTypo(label: string, explanation: string, answerWord: string): string[] {
+  const word = answerWord.toLowerCase();
+  // v5.10: 一般的な英単語（例: report）が正解語（例: retort）とたまたま編集距離1になる誤検知を避けるため、
+  // 検査対象は「英単語の直後に空白なしで日本語の助詞・かな（ひらがな/カタカナ/長音記号）が続く」箇所に限定する。
+  // この解説文体（例:「deterrentが最適」「spooradicは」）は英単語そのものを日本語文中の用語として
+  // 参照する場合にのみ現れ、"annual report"のような通常の英語プローズの一部としては現れないため、
+  // 一般的な英単語との衝突リスクを大きく下げられる。
+  const tokens = [...explanation.matchAll(/([A-Za-z]+)(?=[ぁ-んァ-ヶー])/g)].map(m => m[1]);
+  const misspelled = tokens.find(t => {
+    const tw = t.toLowerCase();
+    return tw !== word && tw[0] === word[0] && levenshteinAtMostOne(tw, word);
+  });
+  return misspelled
+    ? [`${label}: 正解語「${answerWord}」のタイポの疑い（解説文中に別綴り「${misspelled}」が出現）`]
+    : [];
 }
 
 // 語彙1問分のバリデーション（設問単位リトライから直接呼べるよう単問チェックとして切り出し）
@@ -1430,6 +1527,18 @@ function validateOneVocabQuestion(
     if (answerLower !== group.correct.word.toLowerCase().trim()) {
       errors.push(`語彙(${num}): 正解が指定語「${group.correct.word}」と一致しない（実際: 「${answer}」）`);
     }
+
+    // チェック⑨: 正解語（名詞）が、コロケーション例の冠詞・動詞・前置詞を省略して裸で空所に入っていないか
+    checkVocabBlankGrammar(q, group).forEach(w => errors.push(`語彙(${num}): ${w}`));
+  }
+
+  // チェック⑩: explanationが550字上限に収まっているか（v5.10・ハードエラー化。従来は警告のみで
+  // リトライに乗らず、実効性がなかった）
+  errors.push(...checkExplanationLength(`語彙(${num})解説`, q.explanation, 550));
+
+  // チェック⑪: 正解語のタイポが解説文中に混入していないか（v5.10）
+  if (answer) {
+    errors.push(...checkAnswerWordTypo(`語彙(${num})`, q.explanation, answer));
   }
 
   return errors;
@@ -1650,15 +1759,21 @@ function checkPassageWordCount(passage: string, format: ReadingFormat): Validati
 // 日本語の解説文に混入しやすい、日本語では通常使わない簡体字（讠/钅/纟系の偏や頻出単漢字）を
 // 検出するためのベストエフォートなブロックリスト。網羅的ではないが、実績のある「维」等を含め
 // 週次レビューで見つかった文字を追記していく運用とする。
+// v5.10: 日本の新字体は戦後の漢字簡略化で、中国大陸の簡体字と（別々の改革でありながら）
+// 偶然同一の字形に収斂した文字が少なくない（学/国/会/当/万/写/医/来/双/号/与 等）。
+// これらは「簡体字にしか存在しない字」ではなく通常の日本語文章に頻出するため、リストに含めると
+// 誤検知が多発する（実例: 「医学」「与える」「写真」「国」「当」「来る」等での誤検知を確認）。
+// v5.2導入時の網羅的リストからこれらを除外し、日本語の標準字体（新字体・旧字体とも）に
+// 存在しない字形（簡体字専用の偏の置換等）のみを残した。
 const SIMPLIFIED_ONLY_CHARS = new Set([
   '维', '经', '现', '实', '际', '应', '难', '义', '认', '识', '让', '还', '这', '时', '间',
-  '问', '题', '该', '处', '与', '华', '会', '学', '国', '图', '书', '电', '车', '马', '门',
-  '爱', '写', '话', '语', '设', '访', '评', '诉', '词', '译', '试', '诗', '误', '说', '请',
+  '问', '题', '该', '处', '华', '图', '书', '电', '车', '马', '门',
+  '爱', '话', '语', '设', '访', '评', '诉', '词', '译', '试', '诗', '误', '说', '请',
   '读', '课', '谁', '调', '谈', '谎', '谢', '计', '议', '讨', '训', '证', '钟', '钢', '铁',
   '铅', '银', '错', '锁', '链', '纪', '约', '级', '给', '组', '红', '练', '细', '终', '绝',
-  '统', '继', '续', '绍', '绿', '缓', '缺', '网', '见', '对', '发', '来', '为', '从', '当',
-  '万', '与', '产', '严', '举', '丧', '业', '长', '飞', '击', '归', '欢', '权', '汉', '汇',
-  '决', '兴', '农', '动', '劳', '势', '医', '压', '厂', '历', '厉', '双', '变', '叶', '号',
+  '统', '继', '续', '绍', '绿', '缓', '缺', '网', '见', '对', '发', '为', '从',
+  '产', '严', '举', '丧', '业', '长', '飞', '击', '归', '欢', '权', '汉', '汇',
+  '决', '兴', '农', '动', '劳', '势', '压', '厂', '历', '厉', '变', '叶',
 ]);
 
 function checkCjkSimplifiedContamination(label: string, text: string): string[] {
@@ -1667,7 +1782,9 @@ function checkCjkSimplifiedContamination(label: string, text: string): string[] 
 }
 
 // explanation暴走（max_tokens到達によるJSON打ち切り）の再発監視用。プロンプト側の文字数上限
-// 指示が実際に守られているかを警告ログで可視化する（リトライには乗せない）。
+// 指示が実際に守られているかを検証する（v5.10: 語彙は`validateOneVocabQuestion`、読解は
+// `collectHardErrors`からそれぞれハードエラーとして呼ばれ、リトライに乗る。Step 3.5では
+// 全設問リトライ後の最終確認として同じ関数を再利用し、警告ログを出す）。
 function checkExplanationLength(label: string, text: string, maxChars: number): string[] {
   return text.length > maxChars ? [`${label}: 解説が${text.length}字（上限${maxChars}字を超過）`] : [];
 }
@@ -2066,6 +2183,9 @@ export async function generateQuestions(
       ] : []),
       // v5.8: 空所補充は本文語数（380〜470語）をハードエラー化し、リトライ対象に含める
       ...(format === 'fill-in-blank' ? checkPassageWordCount(q.readingPassage, format).errors : []),
+      // v5.10: 読解解説の450字上限。従来は警告のみでリトライに乗らず（実測713〜848字での
+      // 超過を放置していた）、両形式共通でハードエラー化した
+      ...q.readingQuestions.flatMap((rq, i) => checkExplanationLength(`読解(${i + 1})解説`, rq.explanation, 450)),
     ];
 
     const overLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;
