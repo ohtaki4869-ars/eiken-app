@@ -549,6 +549,27 @@ function normalizeVocabChoiceKeys(q: VocabQuestion, label: string): VocabQuestio
   throw new Error(`${label}: choicesのキーが不正（期待: A/B/C/D、実際: [${Object.keys(rawChoices).join(', ')}]）`);
 }
 
+// v5.11: 読解の解説（explanation）は、内容一致形式で4択すべてに技法ラベル付きの理由説明を
+// 書かせていたため500〜840字に膨らみ、プロンプト上の450字上限を大幅に超過していた
+// （checkExplanationLengthをハードエラー化したv5.10でも、モデルが指示に従い切れず解消しなかった）。
+// 「なぜ不正解か」の説明を丸ごと削除し、正解の根拠1文＋4択全ての日本語訳のみに絞ることで、
+// 分量そのものを問題構造として小さくする（内容一致・空所補充の両形式で共有）。
+const READING_EXPLANATION_FORMAT_BLOCK = `
+   **Explanation format for each question（v5.11・簡素化）:**
+   【解説文体ルール（必須）】
+   ■ 断定形で書く（「〜とも読める」「ただし〜」等の留保表現は禁止）
+   ■ 選択肢は数字(1〜4)で言及すること（A/B/C/Dは使わない。UI上の選択肢表示が1〜4の数字のため）
+   ■ **不正解の選択肢について「なぜ誤りか」の理由説明は書かない**（v5.11で廃止。日本語訳のみでよい）
+   ■ **長さの上限（厳守）**：explanationフィールド全体で日本語300字以内に収めること（目安150〜250字）。同じ内容を言い換えて繰り返さない。
+
+   【正解】（1文のみ）本文の該当箇所を直接引用せず、その趣旨を要約する形で、なぜこの選択肢が正解かを示す。
+     NG（直接引用）：「本文に'individuals who had access to more choices tend to report lower levels of satisfaction'とあり、これに対応する」
+     OK（趣旨の要約）：「選択肢が多いほど満足度が下がるという本文の指摘に対応する」
+   【選択肢の日本語訳】4択すべてに日本語訳を付ける（正解・不正解を問わず省略しない）。直訳調にせず自然な日本語にする（語彙問題の【例文和訳】と同じ品質基準：受動形の直訳禁止、無生物主語の直訳回避）。番号順（1→2→3→4）に「【N: 訳文】」の形式で1つずつ記述する（choicesオブジェクト自体のキーであるA/B/C/Dではなく、UI表示に合わせた1〜4の数字を使うこと）
+
+   **出力前SELF-CHECK（訳の取り違え防止・必須）**: 【1】〜【4】それぞれについて、対応する選択肢（choicesのA=1、B=2、C=3、D=4）の英文を指差し確認し、その英文の内容を訳しているか再確認する。特に隣り合う番号（例: 1と2）の訳文を入れ替えて書いていないか、4つの訳文と4つの選択肢英文を上から順に照合してから出力すること。
+`;
+
 // ===== 読解生成（記事に基づく。語彙とは完全に独立した呼び出し） =====
 function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
 
@@ -588,14 +609,15 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
      * 技法A「方向性の逆転」: content that reverses the passage's flow (e.g., if passage implies growth, the wrong choice implies decline)
      * 技法B「部分的整合」: uses correct keywords but the logic doesn't fit the paragraph's argument
    - **No obviously wrong choices**: every choice must feel plausible to someone who read the paragraph once.
-
-   **SELF-CHECK（穴埋め・6項目）:**
+${READING_EXPLANATION_FORMAT_BLOCK}
+   **SELF-CHECK（穴埋め・7項目）:**
    - [ ] 各段落に空欄が1つずつある（計3つ）
    - [ ] 選択肢の語数が±2語以内
    - [ ] 正解以外の選択肢も文法的に前後と接続可能
    - [ ] 誤答に「明らかな外れ」がない（本文と無関係な内容は禁止）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
    - [ ] 本文全体が400〜450語に収まっている（450語を超えていない）
+   - [ ] explanationが【正解】1文＋4択の日本語訳（【1〜4: 訳文】）のみで構成され、不正解の理由説明が書かれておらず、全体で300字以内（目安150〜250字）に収まっている
 ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
 
   // ===== 内容一致形式 (Part 3 style) =====
@@ -680,24 +702,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
    - "PURPOSE_RESULT_CONFUSION": 目的と結果の混同
    形式: { "text": "選択肢の英文", "isCorrect": true/false, "distractorType": "誤答のみ", "sourceSpan": "本文引用", "falseElement": "誤答のみ・誤りの最小部分" }
 
-   **Explanation format for each reading question:**
-   【解説文体ルール（必須）】
-   ■ 断定形で書く。「〜とも読める」「ただし〜」等の留保表現は禁止。
-   ■ 選択肢は数字(1〜4)で言及すること（A/B/C/Dのアルファベットは使わない。UI上の選択肢表示が1〜4の数字のため）。番号順（1→2→3→4）に記述すること
-   ■「極端化」を使った誤答の場合は、本文の「可能性・当為」と誤答の「必然・義務」の具体的な差を示す
-     例：「本文はvigilant oversightという自発的改善を述べており、government controlsという外部強制の必然性までは主張していない」
-   ■「主語すり替え」を使った誤答の場合は、本文中の本来の主体と誤答が差し替えた主体を両方明示する
-     例：「本文で指摘しているのはcriticsであり、authorではない」
-   ■ **長さの上限（暴走出力防止のため厳守）**：【正解】は本文引用込みで2文以内、各誤答の説明は1文のみ（2文以上に展開しない）。explanationフィールド全体で日本語450字以内に収めること。同じ内容を言い換えて繰り返さない。
-
-   【正解】本文の該当箇所を必ず引用：「本文に'～'とあり、これをparaphraseすると正解の'～'に対応する」。推論問題の場合は「本文の'A'と'B'から推論できる」と複数箇所を示す。
-   【各誤答】番号とラベルを明示（ラベルは上記5種のみ。新しい呼称を作らない）：
-     【2: ...】因果逆転　→「本文では原因と結果が逆に記述されている」
-     【3: ...】語句流用・内容ズレ　→「本文では'～'とあるが、選択肢では別の内容にズレている」
-     【4: ...】極端化　→「本文では'could/may'と可能性で述べているが、選択肢では断定している」
-     主語すり替え→「本文で～したのは(1)であり、選択肢の(2)ではない」
-     本文に根拠なし→「この内容は本文中に記述がない」（使用時のみ、1パッセージにつき2択まで）
-
+${READING_EXPLANATION_FORMAT_BLOCK}
    **SELF-CHECK（内容一致・14項目）:**
    - [ ] 問題数が4問である
    - [ ] 正解がparaphrase（語の言い換え＋構文変換の両方）されている
@@ -710,7 +715,7 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
    - [ ] 絶対語（every/all/never/always/certainly等）を含む選択肢が1問につき1つ以内である
    - [ ] 全選択肢が35語を超えていない（20-33語が目安、35語は絶対に超えない上限）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
-   - [ ] 各設問のexplanationが450字以内で、正解2文以内・各誤答1文以内に収まっている
+   - [ ] explanationが【正解】1文＋4択の日本語訳（【1〜4: 訳文】）のみで構成され、不正解の理由説明が書かれておらず、全体で300字以内（目安150〜250字）に収まっている
    - [ ] choiceDraftsをA/B/C/Dの順で4要素出力し、全選択肢にsourceSpan、誤答にはfalseElementとdistractorTypeを設定している
    - [ ] 同一設問内で誤答3つのdistractorTypeが（可能な限り）すべて異なっている
 ${CONTENT_FEWSHOT_BLOCK}`;
@@ -734,7 +739,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         "D": "disappear under bright conditions"
       },
       "answer": "A",
-      "explanation": "発光が防御だけでなくコミュニケーション目的でもあるという文脈に「コミュニケーション目的を果たす」が合う。"
+      "explanation": "【正解】発光が防御だけでなくコミュニケーションの役割も担うという文脈に一致する。【1: コミュニケーションの役割を果たす】【2: より大型の捕食者のみを引き寄せる】【3: 特定の一種にのみ見られる】【4: 明るい環境下では消える】"
     },
     {
       "number": 2,
@@ -746,7 +751,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         "D": "translating findings for the public"
       },
       "answer": "B",
-      "explanation": "直後に「深海での直接観察が困難」とあるため、「実験室で海洋環境を再現すること」が文脈に合う。"
+      "explanation": "【正解】直後の「深海での直接観察が困難」という記述に対応する。【1: 十分な研究資金を獲得すること】【2: 実験室で海洋環境を再現すること】【3: 政府を説得して行動させること】【4: 研究結果を一般向けに翻訳すること】"
     },
     {
       "number": 3,
@@ -758,7 +763,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         "D": "limited in their medical applications"
       },
       "answer": "B",
-      "explanation": "新ツール開発のヒントになっているという文脈から「研究者にとって非常に価値がある」が正解。"
+      "explanation": "【正解】新ツール開発のヒントになっているという文脈に対応する。【1: 実用には不安定すぎる】【2: 研究者にとって非常に価値がある】【3: 人工的に再現するのが難しい】【4: 医療応用の範囲が限られている】"
     }
   ]`;
 
@@ -782,7 +787,7 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         { "text": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions.", "isCorrect": false, "distractorType": "MODALITY_SHIFT", "sourceSpan": "some participants may eventually adapt by filtering out irrelevant alternatives", "falseElement": "leading to outcomes that were comparable" }
       ],
       "answer": "A",
-      "explanation": "第2段落「individuals who had access to more choices tend to report lower levels of satisfaction」をparaphraseした(1)が正解。(2)語句流用・内容ズレ─選択肢数が多いほど決定の「質」が上がると本文の限定的な記述を拡大解釈している。(3)因果逆転─Decision paralysisの原因と結果を入れ替え、経験不足が原因であるかのように描いている。(4)極端化─筆者が示唆する「適応の可能性」を「同等の結果に達する」と過度に強めている。"
+      "explanation": "【正解】選択肢が多いほど決定への満足度が下がるという本文の指摘に対応する。【1: 選択肢が多い群から選んだ人は、選択肢が少ない群より最終決定への満足度が低かった】【2: 選択肢が多い人ほど客観的に良い決定をしたが、熟考にかなり時間がかかった】【3: 決定麻痺は、その種の選択の経験がない人にのみ生じた】【4: 多くの選択肢を与えられた参加者は無関係な選択肢を除外する術を身につけ、選択肢が少ない場合と同程度の結果に至った】"
     }
   ]`;
 
@@ -1308,6 +1313,19 @@ function reorderExplanationChoiceSegments(explanation: string): string {
   return segments.join('');
 }
 
+// v5.11: 読解のexplanationは簡素化により【N: ...】タグの中身が英語の抜粋ではなく日本語訳になった
+// （verifyChoiceLabelConsistencyは選択肢の英文とタグ内容の一致を見る仕組みなので、翻訳文が
+// 入るようになった読解には意味を持たなくなり、常に不一致警告を出すだけのノイズになる）。
+// 代わりに、4択の日本語訳タグ【1】〜【4】が過不足なく1つずつ揃っているか（訳の付け忘れがないか）
+// だけを確認する（警告のみ・リトライには乗せない）。
+function checkReadingExplanationChoiceCoverage(explanation: string): void {
+  const nums = [...explanation.matchAll(/【([1-4]):/g)].map(m => m[1]);
+  const unique = new Set(nums);
+  if (nums.length !== 4 || unique.size !== 4) {
+    console.warn(`[ReadingExplanation] 選択肢訳タグ【1】〜【4】が過不足なく揃っていない疑い（検出: [${nums.join(', ')}]）`);
+  }
+}
+
 function shuffleChoices<T extends { choices: { A: string; B: string; C: string; D: string }; answer: string; explanation: string }>(q: T): T {
   // key/value ペアごとシャッフルすることで、旧→新の記号対応（oldToNew）を値の一致に頼らず追跡できるようにする
   const entries = CHOICE_KEYS.map(k => ({ key: k, value: q.choices[k] }));
@@ -1328,7 +1346,7 @@ function shuffleChoices<T extends { choices: { A: string; B: string; C: string; 
 
   const newAnswer = oldToNew[q.answer as ChoiceKey];
   const explanation = reorderExplanationChoiceSegments(remapChoiceLetters(q.explanation, oldToNew));
-  verifyChoiceLabelConsistency(explanation, newChoices);
+  checkReadingExplanationChoiceCoverage(explanation);
   return { ...q, choices: newChoices, answer: newAnswer, explanation };
 }
 
@@ -2183,9 +2201,11 @@ export async function generateQuestions(
       ] : []),
       // v5.8: 空所補充は本文語数（380〜470語）をハードエラー化し、リトライ対象に含める
       ...(format === 'fill-in-blank' ? checkPassageWordCount(q.readingPassage, format).errors : []),
-      // v5.10: 読解解説の450字上限。従来は警告のみでリトライに乗らず（実測713〜848字での
-      // 超過を放置していた）、両形式共通でハードエラー化した
-      ...q.readingQuestions.flatMap((rq, i) => checkExplanationLength(`読解(${i + 1})解説`, rq.explanation, 450)),
+      // v5.10で警告のみからハードエラー化したが、内容一致形式の解説（4択すべてに技法ラベル付き
+      // 理由説明を書かせる旧仕様）ではモデルが450字指示に従い切れず、実測500〜840字が残っていた。
+      // v5.11で不正解の理由説明そのものを廃止し（正解の根拠1文＋4択の日本語訳のみに簡素化）、
+      // 上限も新しい分量に合わせて300字（目安150〜250字）に引き下げた
+      ...q.readingQuestions.flatMap((rq, i) => checkExplanationLength(`読解(${i + 1})解説`, rq.explanation, 300)),
     ];
 
     const overLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;
@@ -2278,7 +2298,7 @@ export async function generateQuestions(
   }
   const explanationLengthWarnings = [
     ...vocabQuestions.flatMap((q, i) => checkExplanationLength(`語彙(${i + 1})解説`, q.explanation, 550)),
-    ...finalReading.readingQuestions.flatMap((q, i) => checkExplanationLength(`読解(${i + 1})解説`, q.explanation, 450)),
+    ...finalReading.readingQuestions.flatMap((q, i) => checkExplanationLength(`読解(${i + 1})解説`, q.explanation, 300)),
   ];
   if (explanationLengthWarnings.length > 0) {
     console.warn('[Reading/Vocab] explanation length issues (continuing anyway):', explanationLengthWarnings);
