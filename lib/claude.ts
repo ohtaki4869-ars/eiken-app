@@ -2140,6 +2140,166 @@ async function retryVocabQuestion(
   throw new Error(`question ${questionNumber}: all retries failed with no parseable candidate`);
 }
 
+// v5.12: 読解のハードエラーのうち、設問番号（"読解(N): ..." "読解(N)解説: ..."）が特定できるもの。
+// 単問修正（repairReadingQuestions）の対象抽出・効果測定の両方で使う共通ロジック
+function collectReadingQuestionScopedErrors(passage: string, questions: ReadingQuestion[], format: ReadingFormat): string[] {
+  return [
+    ...(format === 'content' ? [
+      ...checkWrongChoiceAbsoluteWords(questions).errors,
+      ...checkChoiceDraftSourceSpans(questions).errors,
+      ...checkDistractorTypeDiversity(questions).errors,
+      ...checkCorrectChoiceCopiesPassage(passage, questions).errors,
+    ] : []),
+    ...questions.flatMap((rq, i) => checkExplanationLength(`読解(${i + 1})解説`, rq.explanation, 300)),
+  ];
+}
+
+// エラーメッセージの先頭"読解(N)"から設問番号を読み取り、設問単位で直せるものと
+// 本文・タイトル起因でグローバルな再生成が必要なものに分ける
+function groupReadingErrorsByQuestionNumber(errors: string[]): { perQuestion: Map<number, string[]>; global: string[] } {
+  const perQuestion = new Map<number, string[]>();
+  const global: string[] = [];
+  for (const err of errors) {
+    const m = err.match(/^読解\((\d+)\)/);
+    if (m) {
+      const num = Number(m[1]);
+      const list = perQuestion.get(num) ?? [];
+      list.push(err);
+      perQuestion.set(num, list);
+    } else {
+      global.push(err);
+    }
+  }
+  return { perQuestion, global };
+}
+
+function buildReadingQuestionRepairPrompt(format: ReadingFormat, passage: string, question: ReadingQuestion, errors: string[]): string {
+  const hasChoiceDrafts = format === 'content' && !!question.choiceDrafts;
+  const questionForPrompt: Record<string, unknown> = {
+    number: question.number,
+    question: question.question,
+    choices: question.choices,
+    answer: question.answer,
+    explanation: question.explanation,
+  };
+  if (hasChoiceDrafts) questionForPrompt.choiceDrafts = question.choiceDrafts;
+
+  const outputFormat = hasChoiceDrafts
+    ? `{
+  "number": ${question.number},
+  "question": "...",
+  "choices": { "A": "...", "B": "...", "C": "...", "D": "..." },
+  "choiceDrafts": [
+    { "text": "...", "isCorrect": true, "sourceSpan": "..." },
+    { "text": "...", "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." },
+    { "text": "...", "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." },
+    { "text": "...", "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." }
+  ],
+  "answer": "A" | "B" | "C" | "D",
+  "explanation": "..."
+}`
+    : `{
+  "number": ${question.number},
+  "question": "...",
+  "choices": { "A": "...", "B": "...", "C": "...", "D": "..." },
+  "answer": "A" | "B" | "C" | "D",
+  "explanation": "..."
+}`;
+
+  return `英検1級（EIKEN Grade 1）レベルの読解問題のうち、設問1問だけを修正してください。他の設問には触れません。
+
+## 本文
+${passage}
+
+## 修正対象の設問（JSON）
+${JSON.stringify(questionForPrompt, null, 2)}
+
+## 検出された問題点（すべて必ず修正すること）
+${errors.map(e => `- ${e}`).join('\n')}
+
+## 修正方針
+- 指摘された問題点だけを修正し、それ以外（正解の位置・設問の意図・他の選択肢の趣旨）はできる限り維持する
+- 「正解選択肢が本文と5語以上連続一致」の指摘がある場合、該当箇所を本文の語順・表現のまま使わず、意味を保ったまま言い換える（paraphrase）。語の入れ替えだけでなく構文も変える
+- 解説の文字数超過の指摘がある場合、【正解】【1】【2】【3】【4】の各項目を簡潔にし、不正解の理由説明は書かず、合計300字以内（目安150〜250字）に収める
+${hasChoiceDrafts ? '- choiceDraftsを含める場合、sourceSpan（本文中の根拠引用）とdistractorType（誤答種別）の整合性も保つ\n' : ''}
+## 出力形式（JSONのみ。説明文・マークダウンのコードフェンス禁止）
+${outputFormat}`;
+}
+
+async function generateReadingQuestionRepair(
+  passage: string,
+  format: ReadingFormat,
+  question: ReadingQuestion,
+  errors: string[]
+): Promise<ReadingQuestion> {
+  const response = await client.messages.create({
+    model: GENERATION_MODEL,
+    max_tokens: 2000,
+    messages: [{ role: 'user', content: buildReadingQuestionRepairPrompt(format, passage, question, errors) }],
+  });
+  const text = extractText(response);
+  logUsage('ReadingQuestionRepair', GENERATION_MODEL, response);
+  try {
+    return parseJson(text) as ReadingQuestion;
+  } catch (e) {
+    console.error('[ReadingQuestionRepair] JSON parse error:', e);
+    console.error('[ReadingQuestionRepair] Claude response (full, length=' + text.length + '):', text);
+    throw new Error('Failed to parse JSON from Claude response (reading question repair)');
+  }
+}
+
+// v5.12: 設問単位のハードエラー（正解選択肢が本文と5語以上連続一致・解説の字数超過等）を、
+// 該当設問だけを対象にした軽量なリクエストで修正する（本文・他の設問は再生成しない）。
+// 従来は本文全体・全設問を含む32000トークンの読解生成を丸ごと再実行する1本のリトライしかなく、
+// 初回生成自体が長引くケース（実測150〜260秒）ではREADING_RETRY_TIME_BUDGET_MSの予算切れで
+// 1回もリトライされず生成失敗になっていた（設問1問分の軽微な問題でも全体が失敗する）。
+// 出力を1問分に絞ることでレイテンシを数秒程度に抑え、予算切れによる未リトライを防ぐ。
+// vocabのretryVocabQuestionと同じ考え方で最大2回まで再試行し、それでも直らなければ
+// 直近の再生成結果を採用する（無修正の下書きより改善している可能性が高いため）。
+async function repairReadingQuestions(
+  passage: string,
+  format: ReadingFormat,
+  questions: ReadingQuestion[],
+  errorsByNumber: Map<number, string[]>
+): Promise<ReadingQuestion[]> {
+  const updated = [...questions];
+  await Promise.all([...errorsByNumber.entries()].map(async ([num, initialErrors]) => {
+    const idx = num - 1;
+    const original = questions[idx];
+    if (!original) return;
+
+    let lastErrors = initialErrors;
+    let lastCandidate: ReadingQuestion | null = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const retryStart = Date.now();
+      try {
+        const repaired = await generateReadingQuestionRepair(passage, format, original, lastErrors);
+        console.log(`[Timing] reading question ${num} repair attempt ${attempt}/2: ${Date.now() - retryStart}ms`);
+        const candidate: ReadingQuestion = { ...repaired, number: original.number };
+        const trial = questions.map((q, i) => (i === idx ? candidate : q));
+        const remaining = collectReadingQuestionScopedErrors(passage, trial, format)
+          .filter(e => e.startsWith(`読解(${num})`));
+        lastCandidate = candidate;
+        if (remaining.length === 0) {
+          updated[idx] = candidate;
+          return;
+        }
+        console.warn(`[Reading] question ${num} repair attempt ${attempt}/2 still has issues:`, remaining);
+        lastErrors = remaining;
+      } catch (e) {
+        console.warn(`[Reading] question ${num} repair attempt ${attempt}/2 failed:`, e);
+      }
+    }
+    if (lastCandidate) {
+      console.warn(`[Reading] question ${num}: 2回のリトライ後も未解決。直近の再生成結果を採用:`, lastErrors);
+      updated[idx] = lastCandidate;
+    } else {
+      console.warn(`[Reading] question ${num}: repair failed entirely（有効な候補なし）。元の下書きを維持`);
+    }
+  }));
+  return updated;
+}
+
 export async function generateQuestions(
   article: Article,
   format: ReadingFormat,
@@ -2187,43 +2347,62 @@ export async function generateQuestions(
   }
 
   // ===== Step 3: 読解選択肢の語数・長さ癖・極端語・誤答精度チェック（内容一致形式のみ）＋タイトルの機械チェック（両形式） =====
-  // 35語超過が1セット3件以上、誤答精度チェック（v5.5）、またはタイトルチェック（v5.7）でエラーがある場合のみ、読解を1回だけ再生成する。
+  // 35語超過が1セット3件以上、誤答精度チェック（v5.5）、またはタイトルチェック（v5.7）でエラーがある場合、読解を再生成する。
   // それ未満・それ以外は警告のみ。
+  // v5.12: エラーの大半は設問1問分に閉じた原因（正解選択肢の言い換え不足・解説の字数超過等）のため、
+  // まず該当設問だけを直す軽量リトライ（repairReadingQuestions）を試す。本文全体（32000トークン）の
+  // 再生成は、それでも残ったタイトル・本文語数などグローバルなエラーに対してのみ、時間予算内であれば行う。
   let finalReading = readingDraft;
   {
     const collectHardErrors = (q: typeof finalReading) => [
       ...checkTitleValid(q.title).errors,
-      ...(format === 'content' ? [
-        ...checkWrongChoiceAbsoluteWords(q.readingQuestions).errors,
-        ...checkChoiceDraftSourceSpans(q.readingQuestions).errors,
-        ...checkDistractorTypeDiversity(q.readingQuestions).errors,
-        ...checkCorrectChoiceCopiesPassage(q.readingPassage, q.readingQuestions).errors,
-      ] : []),
+      ...collectReadingQuestionScopedErrors(q.readingPassage, q.readingQuestions, format),
       // v5.8: 空所補充は本文語数（380〜470語）をハードエラー化し、リトライ対象に含める
       ...(format === 'fill-in-blank' ? checkPassageWordCount(q.readingPassage, format).errors : []),
-      // v5.10で警告のみからハードエラー化したが、内容一致形式の解説（4択すべてに技法ラベル付き
-      // 理由説明を書かせる旧仕様）ではモデルが450字指示に従い切れず、実測500〜840字が残っていた。
-      // v5.11で不正解の理由説明そのものを廃止し（正解の根拠1文＋4択の日本語訳のみに簡素化）、
-      // 上限も新しい分量に合わせて300字（目安150〜250字）に引き下げた
-      ...q.readingQuestions.flatMap((rq, i) => checkExplanationLength(`読解(${i + 1})解説`, rq.explanation, 300)),
     ];
 
     const overLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;
-    const distractorErrors = collectHardErrors(finalReading);
+    let distractorErrors = collectHardErrors(finalReading);
 
-    // v5.6: 読解の初回生成が長引くケース（実測262秒経験あり）で無条件にリトライすると
-    // route.ts側のmaxDuration(300秒)を超え、Vercelのプラットフォームタイムアウト（非JSON応答）
-    // を招いてクライアントでJSON.parse失敗になる。残り時間が足りない場合はリトライしない。
+    // v5.12: 設問番号が特定できるエラー（"読解(N): ..."）は、該当設問だけを対象にした軽量な
+    // 修正リクエストで直す。本文全体の再生成より出力が小さく数秒で終わるため、初回生成が長引いた
+    // ケース（後述のREADING_RETRY_TIME_BUDGET_MS判定）でも予算切れの影響を受けにくい。
+    if (distractorErrors.length > 0) {
+      const { perQuestion, global: globalErrorsBeforeRepair } = groupReadingErrorsByQuestionNumber(distractorErrors);
+      if (perQuestion.size > 0) {
+        const repairStart = Date.now();
+        try {
+          const repairedQuestions = await repairReadingQuestions(finalReading.readingPassage, format, finalReading.readingQuestions, perQuestion);
+          finalReading = { ...finalReading, readingQuestions: repairedQuestions };
+          console.log(`[Timing] reading per-question repair (${perQuestion.size}問): ${Date.now() - repairStart}ms`);
+        } catch (e) {
+          console.warn('[Reading] per-question repair failed, keeping original drafts for those questions:', e);
+        }
+        if (globalErrorsBeforeRepair.length > 0) {
+          console.log('[Reading] per-question repairの対象外（本文・タイトル起因）のエラー:', globalErrorsBeforeRepair);
+        }
+      }
+      // 単問修正の結果を反映してハードエラーを再計算する（修正できなかった分・グローバルなエラーのみが残る）
+      distractorErrors = collectHardErrors(finalReading);
+    }
+
+    // v5.6: 読解の初回生成が長引くケース（実測262秒経験あり）で、本文全体を再生成する重いリトライを
+    // 無条件に行うと route.ts側のmaxDuration(300秒)を超え、Vercelのプラットフォームタイムアウト
+    // （非JSON応答）を招いてクライアントでJSON.parse失敗になる。残り時間が足りない場合、この
+    // 重いリトライ（本文全体の再生成）は行わない。
     // ただしこれらのエラーは「壊れた問題」を意味する（例: 正解選択肢が本文と5語以上連続一致）ため、
     // 下書きのまま配信すると質の低い問題がそのままユーザーに届いてしまう。配信は諦めてエラーを
     // 投げ、route.ts側のcatchでキャッシュへのフォールバック（なければJSONエラー応答）に任せる。
+    // v5.12: 設問単位のエラーは上の軽量修正で解決済みのことが多く、ここに到達するのは主に
+    // タイトル・本文語数などグローバルなエラーが残った場合、または軽量修正を尽くしても
+    // なお設問側のエラーが直らなかった場合。
     const elapsedSinceGenStart = Date.now() - genStart;
     if ((overLengthCount >= 3 || distractorErrors.length > 0) && elapsedSinceGenStart >= READING_RETRY_TIME_BUDGET_MS) {
       const reasons = [
         ...(overLengthCount >= 3 ? [`選択肢が35語の上限を${overLengthCount}件超過`] : []),
         ...distractorErrors,
       ];
-      console.error(`[Reading] リトライ対象のエラーがあるが、経過時間(${elapsedSinceGenStart}ms)が予算(${READING_RETRY_TIME_BUDGET_MS}ms)を超えているためリトライを断念。壊れた問題を配信しないよう生成を失敗させる:`, reasons);
+      console.error(`[Reading] リトライ対象のエラーが残っているが、経過時間(${elapsedSinceGenStart}ms)が予算(${READING_RETRY_TIME_BUDGET_MS}ms)を超えているため本文全体の再生成は断念。壊れた問題を配信しないよう生成を失敗させる:`, reasons);
       throw new Error(`Reading generation has unresolved quality errors and exceeded the retry time budget: ${reasons.join(' / ')}`);
     } else if (overLengthCount >= 3 || distractorErrors.length > 0) {
       const retryReasons = [
@@ -2232,7 +2411,7 @@ export async function generateQuestions(
           : []),
         ...distractorErrors,
       ];
-      console.warn('[Reading] リトライ対象のエラーを検出（読解を再生成）:', retryReasons);
+      console.warn('[Reading] リトライ対象のエラーを検出（読解本文全体を再生成）:', retryReasons);
       const retryStart = Date.now();
       try {
         const retried = await generateReadingOnly(trimmedArticle, format, retryReasons);
@@ -2244,11 +2423,28 @@ export async function generateQuestions(
         if (afterTotal < beforeTotal) {
           finalReading = retried;
         } else {
-          console.warn(`[Reading] retry did not improve (${afterTotal} vs ${beforeTotal} before), keeping original draft`);
+          console.warn(`[Reading] retry did not improve (${afterTotal} vs ${beforeTotal} before), keeping current draft`);
         }
       } catch (e) {
-        console.warn('[Reading] retry failed, keeping original draft:', e);
+        console.warn('[Reading] retry failed, keeping current draft:', e);
       }
+    }
+
+    // v5.12: 上の分岐（本文全体の再生成が「改善したが完全には解消しなかった」場合や、再生成自体が
+    // 失敗した場合）を通っても、finalReadingにハードエラーが残ったまま警告ログのみでこのブロックを
+    // 抜けてしまう抜け穴があった（v5.5から存在。afterTotal<beforeTotalなら改善量に関わらず即採用、
+    // afterTotal>=beforeTotalでもthrowせず現状維持していたため）。ここで最終確認し、
+    // 全てのリトライ手段を尽くしてもなおハードエラーが残っていれば必ず生成を失敗させる
+    // （壊れた問題を「たまたま改善したから」という理由で配信しないため）。
+    const finalOverLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;
+    const finalHardErrors = collectHardErrors(finalReading);
+    if (finalOverLengthCount >= 3 || finalHardErrors.length > 0) {
+      const finalReasons = [
+        ...(finalOverLengthCount >= 3 ? [`選択肢が35語の上限を${finalOverLengthCount}件超過`] : []),
+        ...finalHardErrors,
+      ];
+      console.error('[Reading] 設問単位の軽量修正・本文全体の再生成を尽くしてもなおハードエラーが残っているため、壊れた問題を配信しないよう生成を失敗させる:', finalReasons);
+      throw new Error(`Reading generation has unresolved quality errors after all retry attempts: ${finalReasons.join(' / ')}`);
     }
 
     if (format === 'content') {
