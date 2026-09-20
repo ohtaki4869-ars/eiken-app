@@ -59,31 +59,33 @@ async function getAndIncrementRefreshAttempt(dateKey: string): Promise<number> {
   }
 }
 
+// 生成済み日付一覧（新しい順、最大30件）を返す。KVでは question_dates キー、
+// ローカルファイルキャッシュでは .cache配下のファイル名一覧から求める。
+// getRecentlyUsedWords（出題済み語の除外集合作り）と generate失敗時の過去分フォールバックの両方で使う。
+async function getRecentDateKeys(limit = 30): Promise<string[]> {
+  const kv = await getKV();
+  if (kv) {
+    const allDates = (await kv.get<string[]>('question_dates')) || [];
+    return [...allDates].sort().reverse().slice(0, limit);
+  }
+  const fs = await import('fs');
+  const path = await import('path');
+  const dir = path.join(process.cwd(), '.cache');
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((f: string) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+    .map((f: string) => f.replace('.json', ''))
+    .sort()
+    .reverse()
+    .slice(0, limit);
+}
+
 // v5.2 A-1: 直近30日分の出題済み語（正解語・誤答語とも）を集めてsampleWordBankへの除外集合にする。
-// history側の日付一覧収集ロジック（KV question_dates / .cache配下のファイル一覧）と同じ考え方。
 async function getRecentlyUsedWords(): Promise<Set<string>> {
   const words = new Set<string>();
   try {
-    let dates: string[] = [];
-    const kv = await getKV();
-    if (kv) {
-      const allDates = (await kv.get<string[]>('question_dates')) || [];
-      dates = [...allDates].sort().reverse().slice(0, 30);
-    } else {
-      const fs = await import('fs');
-      const path = await import('path');
-      const dir = path.join(process.cwd(), '.cache');
-      if (fs.existsSync(dir)) {
-        dates = fs
-          .readdirSync(dir)
-          .filter((f: string) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-          .map((f: string) => f.replace('.json', ''))
-          .sort()
-          .reverse()
-          .slice(0, 30);
-      }
-    }
-
+    const dates = await getRecentDateKeys(30);
     for (const date of dates) {
       const data = await loadQuestions(date);
       data?.vocabQuestions?.forEach(q => {
@@ -94,6 +96,24 @@ async function getRecentlyUsedWords(): Promise<Set<string>> {
     console.warn('[getRecentlyUsedWords] failed, continuing with seed list only:', e);
   }
   return words;
+}
+
+// v5.14: 当日分の生成が失敗し、当日分のキャッシュも存在しない場合に、直近の生成済み過去分の
+// うち最新のものを代わりに返す（エラー画面を出さず、学習を継続できるようにするため）。
+async function findFallbackQuestions(
+  excludeDateKey: string
+): Promise<{ date: string; data: GeneratedQuestions } | null> {
+  try {
+    const dates = await getRecentDateKeys(30);
+    for (const date of dates) {
+      if (date === excludeDateKey) continue;
+      const data = await loadQuestions(date);
+      if (data) return { date, data };
+    }
+  } catch (e) {
+    console.warn('[findFallbackQuestions] failed:', e);
+  }
+  return null;
 }
 
 export async function loadQuestions(dateKey: string): Promise<GeneratedQuestions | null> {
@@ -175,9 +195,22 @@ export async function GET(request: Request) {
     return NextResponse.json(questions);
   } catch (e) {
     console.error('[generate] Fatal error:', String(e));
-    // 生成失敗時はキャッシュがあればそれを返す
+    // 生成失敗時は当日分のキャッシュがあればそれを返す
+    // （forceRefreshでの再生成失敗時、上書き前の当日分が残っているケース）
     const cached = await loadQuestions(todayKey);
     if (cached) return NextResponse.json(cached);
+
+    // 当日分が1件もない場合、直近の過去分にフォールバックしてエラー画面を回避する
+    const fallback = await findFallbackQuestions(todayKey);
+    if (fallback) {
+      console.warn(`[generate] falling back to past questions from ${fallback.date}`);
+      return NextResponse.json({
+        ...fallback.data,
+        isFallback: true,
+        fallbackDate: fallback.date,
+      });
+    }
+
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }

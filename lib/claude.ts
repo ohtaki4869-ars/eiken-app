@@ -33,7 +33,12 @@ function logUsage(label: string, model: string, response: Anthropic.Messages.Mes
 }
 
 // ===== モデル設定（環境変数で切り替え可能） =====
+// GENERATION_MODELは語彙生成（generateVocabOnly）専用。2026-09-15にHaiku 4.5へ統一。
 const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
+// v5.14: 読解生成（generateReadingOnly・repairReadingQuestions）専用。Haiku 4.5統一後、
+// 読解本文の語数（380〜470語目標）が不安定になり（実例: 273語, 327語）リトライを使い切って
+// 生成失敗する事例が発生したため、読解のみSonnet 5に戻す（語彙は生成量が小さく安定していたため据え置き）。
+const READING_MODEL = process.env.READING_MODEL ?? 'claude-sonnet-5';
 // v5.9: 解説（特に読解choiceTranslation）の訳文が直訳調になりやすかったため、
 // デフォルトをHaiku 4.5からSonnet 5に変更（品質優先。コスト増はREADME/CHANGELOG参照）。
 const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-sonnet-5';
@@ -374,6 +379,9 @@ export interface GeneratedQuestions {
   difficultyScore?: DifficultyScore;
   choiceAnnotations?: ChoiceAnnotations;
   confusingPairs?: ConfusingPair[];
+  // v5.14: 当日分の生成が失敗し、直近の過去分を代わりに返した場合のみ付与される
+  isFallback?: boolean;
+  fallbackDate?: string;
 }
 
 export function getTodayFormat(): ReadingFormat {
@@ -825,7 +833,7 @@ async function generateReadingOnly(
   }
 
   const stream = client.messages.stream({
-    model: GENERATION_MODEL,
+    model: READING_MODEL,
     max_tokens: 32000,
     system: [
       { type: 'text', text: buildReadingOnlyStaticInstructions(format), cache_control: { type: 'ephemeral' } },
@@ -834,7 +842,7 @@ async function generateReadingOnly(
   });
   const response = await stream.finalMessage();
   const text = extractText(response);
-  logUsage('Reading', GENERATION_MODEL, response);
+  logUsage('Reading', READING_MODEL, response);
   if (response.stop_reason === 'max_tokens') {
     console.error(`[Reading] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
   }
@@ -1773,6 +1781,35 @@ function checkPassageWordCount(passage: string, format: ReadingFormat): Validati
   return { valid: true, errors: [] };
 }
 
+// ===== 空所補充：段落ごとの空所配置チェック（ハードエラー・リトライ対象） =====
+// プロンプト側は「各段落に空所を1つずつ」と指示しているが（buildReadingOnlyStaticInstructions内）、
+// この制約を機械的に検証するコードがこれまで存在せず、モデルが指示から逸脱しても検出されずに
+// 配信されてしまっていた（例: 2026/9/16分で段落2に(2)(3)の2個、段落3に0個という配置崩れが発生）。
+// 段落分割は既存のUI側（app/reading/page.tsx等）と同じ規約（'\n'で分割し空行を除外）に合わせる。
+function checkFillInBlankParagraphDistribution(passage: string): ValidationResult {
+  const paragraphs = passage.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+  const errors: string[] = [];
+
+  if (paragraphs.length !== 3) {
+    errors.push(`読解: 段落数が${paragraphs.length}個（想定3段落）`);
+  }
+
+  const countsPerParagraph = paragraphs.map(p => (p.match(/\(\s*[1-3]\s*\)/g) ?? []).length);
+  const totalBlanks = countsPerParagraph.reduce((a, b) => a + b, 0);
+  const breakdown = countsPerParagraph.map((c, i) => `段落${i + 1}: ${c}個`).join(', ');
+
+  const unevenDistribution = countsPerParagraph.some(c => c !== 1);
+  if (paragraphs.length === 3 && unevenDistribution) {
+    errors.push(`読解: 空所の段落ごとの配置が${breakdown} — 各段落ちょうど1個である必要があります`);
+  }
+
+  if (totalBlanks !== 3) {
+    errors.push(`読解: 空所(1)(2)(3)の合計出現数が${totalBlanks}個（想定3個、内訳: ${breakdown}）`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 // ===== v5.2 A-3: 中国語簡体字混入チェック（警告のみ・リトライには乗せない） =====
 // 日本語の解説文に混入しやすい、日本語では通常使わない簡体字（讠/钅/纟系の偏や頻出単漢字）を
 // 検出するためのベストエフォートなブロックリスト。網羅的ではないが、実績のある「维」等を含め
@@ -2233,12 +2270,12 @@ async function generateReadingQuestionRepair(
   errors: string[]
 ): Promise<ReadingQuestion> {
   const response = await client.messages.create({
-    model: GENERATION_MODEL,
+    model: READING_MODEL,
     max_tokens: 2000,
     messages: [{ role: 'user', content: buildReadingQuestionRepairPrompt(format, passage, question, errors) }],
   });
   const text = extractText(response);
-  logUsage('ReadingQuestionRepair', GENERATION_MODEL, response);
+  logUsage('ReadingQuestionRepair', READING_MODEL, response);
   try {
     return parseJson(text) as ReadingQuestion;
   } catch (e) {
@@ -2359,6 +2396,8 @@ export async function generateQuestions(
       ...collectReadingQuestionScopedErrors(q.readingPassage, q.readingQuestions, format),
       // v5.8: 空所補充は本文語数（380〜470語）をハードエラー化し、リトライ対象に含める
       ...(format === 'fill-in-blank' ? checkPassageWordCount(q.readingPassage, format).errors : []),
+      // 空所補充は「各段落に空所1つずつ」の配置崩れもハードエラー化し、リトライ対象に含める
+      ...(format === 'fill-in-blank' ? checkFillInBlankParagraphDistribution(q.readingPassage).errors : []),
     ];
 
     const overLengthCount = format === 'content' ? countOverMaxWordChoices(finalReading.readingQuestions) : 0;

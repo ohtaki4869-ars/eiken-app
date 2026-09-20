@@ -297,6 +297,11 @@ export default function Home() {
 
         {data && !loading && (
           <>
+            {data.isFallback && (
+              <div className="no-print mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded p-3">
+                本日分の生成に失敗したため、前回（{data.fallbackDate}）の問題を表示しています。
+              </div>
+            )}
             <div className="mb-6 flex items-center gap-3 flex-wrap no-print">
               <span className={`text-xs font-bold px-2 py-1 rounded ${formatBadgeColor}`}>
                 本日の形式: {formatLabel}

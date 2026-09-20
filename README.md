@@ -52,19 +52,21 @@
 
 ### 生成モデル
 
-- **生成モデル**（語彙・読解本文の生成）: 環境変数 `GENERATION_MODEL`（**未設定＝コード側デフォルトの`claude-haiku-4-5`に正式統一、v5.12**。経緯は下記「モデル選定の経緯」を参照）
+- **語彙生成モデル**（`generateVocabOnly`）: 環境変数 `GENERATION_MODEL`（未設定＝コード側デフォルトの`claude-haiku-4-5`。v5.12で正式統一。出力量が小さく、Haiku 4.5でも安定しているため据え置き）
+- **読解生成モデル**（`generateReadingOnly`・`repairReadingQuestions`）: 環境変数 `READING_MODEL`（**未設定＝コード側デフォルトの`claude-sonnet-5`、v5.14**。経緯は下記「モデル選定の経緯」を参照）
 - **注釈モデル**（解説・アノテーション生成）: 環境変数 `ANNOTATION_MODEL`（未設定＝コード側デフォルトの`claude-sonnet-5`を使用。v5.9で品質改善のためHaiku 4.5→Sonnet 5に変更）
 - **記事取得AI生成フォールバックモデル**（v5.3）: `claude-sonnet-5` に固定（環境変数では切替不可）。RSS全滅時のみ発火する低頻度経路のため、コストより品質を優先
 
-#### モデル選定の経緯（`GENERATION_MODEL`、v5.1〜v5.12）
+#### モデル選定の経緯（v5.1〜v5.14）
 
-2026年7月にSonnet 5へ切り替え、9月にHaiku 4.5へ戻すという経緯を辿った。
+2026年7月にSonnet 5へ切り替え、9月にHaiku 4.5へ戻し、同月中に読解のみ再度Sonnet 5へ戻すという経緯を辿った。
 
 1. **2026-07-06**: Fableモデルで基準サンプル（`samples/fable5-v5/`）を作成して品質のものさしとし、Haiku 4.5とSonnet 5それぞれで生成した問題（`samples/regression-v5_1/`）と比較。誤答技法の多様性・正解選択肢のパラフレーズの質でSonnet 5が優位と判断し、本番の`GENERATION_MODEL`をSonnet 5に設定した（コミット`42ae53b`「Sonnet 5運用に向けた安定化」）。この時点でSonnet 5の生成時間がHaikuの3.5〜4倍（178.9秒 vs 51.7秒 等）であることは把握済みだった
 2. **2026-08-17（v5.6）**: 読解生成が実測262秒に達する事例を確認し、`READING_RETRY_TIME_BUDGET_MS`（150秒）・`SOFT_TIMEOUT_MS`（270秒）の時間予算チェックを導入（Sonnet 5の遅さを前提に設計）
-3. **2026-09-15**: 本番で`/api/generate`が270秒のソフトタイムアウトで失敗する障害が発生。Sonnet 5の生成時間が7月の実測からさらに悪化し250秒超（タイムアウトすることも）に達していたことが直接原因と判明。加えて、7月の比較でSonnet優位が最も顕著だった「誤答技法付きの詳細な解説」は、v5.11の解説簡素化で既に配信対象から外れており、Sonnet優位の根拠の大部分が失われていたことも判明した。改めて7月のサンプルを読み比べた結果、品質差自体は確認できるが「使い物にならない」ほどの断絶ではなく、日次cronでの生成失敗（＝その日の新しい問題が配信されない）というリスクの方が学習継続の観点で重いと判断し、`GENERATION_MODEL`を本番から削除してHaiku 4.5に正式統一した
+3. **2026-09-15**: 本番で`/api/generate`が270秒のソフトタイムアウトで失敗する障害が発生。Sonnet 5の生成時間が7月の実測からさらに悪化し250秒超（タイムアウトすることも）に達していたことが直接原因と判明。加えて、7月の比較でSonnet優位が最も顕著だった「誤答技法付きの詳細な解説」は、v5.11の解説簡素化で既に配信対象から外れており、Sonnet優位の根拠の大部分が失われていたことも判明した。改めて7月のサンプルを読み比べた結果、品質差自体は確認できるが「使い物にならない」ほどの断絶ではなく、日次cronでの生成失敗（＝その日の新しい問題が配信されない）というリスクの方が学習継続の観点で重いと判断し、`GENERATION_MODEL`を本番から削除してHaiku 4.5に正式統一した（語彙・読解の両方）
+4. **2026-09-20（v5.14）**: Haiku 4.5統一後、読解本文の語数（空所補充形式、目標380〜470語）が不安定化し、実測273語・327語など大幅な範囲外でリトライを使い切って生成失敗する事例が発生。語彙側は出力量が小さく問題が出ていなかったため、`GENERATION_MODEL`とは別に読解専用の`READING_MODEL`を新設し、読解のみSonnet 5に戻した（語彙はHaiku 4.5のまま）。これにより読解生成の所要時間は再びSonnet 5相当（150〜260秒台）に戻るため、`/api/generate`の`SOFT_TIMEOUT_MS`（270秒）に対する時間的な余裕は9月15日以前の水準に戻ることになる
 
-詳細な経緯・品質比較の具体例は [CHANGELOG.md](./CHANGELOG.md) のv5.12を参照。比較に使った生成サンプルは`samples/regression-v5_1/`（Haiku/Sonnet）・`samples/fable5-v5/`（Fable基準）に保存されている（今後の参考のため削除せず保持）。
+詳細な経緯・品質比較の具体例は [CHANGELOG.md](./CHANGELOG.md) のv5.12・v5.14を参照。比較に使った生成サンプルは`samples/regression-v5_1/`（Haiku/Sonnet）・`samples/fable5-v5/`（Fable基準）に保存されている（今後の参考のため削除せず保持）。
 
 ### 生成パイプライン（v5.2）
 
@@ -129,6 +131,12 @@
     - **既存の抜け穴を修正: 全リトライ後の最終ハードエラー確認を追加**: 従来は「本文全体の再生成を試みたがエラー総数が改善しなかった」場合、`throw`されずに警告ログのみでハードエラーが残った下書きがそのまま配信される抜け穴があった（v5.5から存在）。Step 3の末尾で、採用が決まった下書きに対する最終確認を追加し、設問単位修正・本文全体再生成のどちらを尽くしてもなおハードエラーが残っていれば必ず生成を失敗させるようにした。
     - **検証**: `npx tsc --noEmit`・`npx eslint lib/claude.ts`でエラーがないことを確認した。さらにローカル`next dev`で`/api/generate?refresh=true`を実際に実行し、内容一致形式で総所要時間66秒・`200 OK`で生成できることを確認した。読解の設問1・2でハードエラー（うち設問1は5語一致、詳細はCHANGELOG参照）が検出され、`repairReadingQuestions`が発火（設問単位修正の追加コストは約11秒、本文全体の再生成へのフォールバックは発生せず）。配信されたJSONを独立スクリプトで再検証し、4問全問で本文との5語以上連続一致がないこと・explanationが4問とも300字以内であることを確認した。詳細は[CHANGELOG.md](./CHANGELOG.md)のv5.12を参照。
 
+16. **空所補充の段落ごと空所配置を機械チェック化**（v5.13）
+    本番で、空所補充読解の段落2に空所2個・段落3に空所0個という配置崩れが配信される事故が発生した。調査の結果、「各段落に空所1つずつ」というルールはプロンプト指示（`buildReadingOnlyStaticInstructions`）とSELF-CHECKリストのみに依存しており、機械的な検証コードが一度も存在しなかったことが判明した（モデルをHaiku 4.5に統一した直後の発生だが、この制約自体はSonnet運用時から未検証だった）。
+    - **`checkFillInBlankParagraphDistribution`を追加**（`lib/claude.ts`）: `readingPassage`を既存UI（`app/reading/page.tsx`等）と同じ規約（`'\n'`分割・空行除外）で段落に分割し、段落数が3であること、各段落の`(1)`〜`(3)`出現数がちょうど1個ずつであること、合計出現数がちょうど3個であることを検証する。違反時は段落ごとの内訳をエラーメッセージに含める
+    - **`collectHardErrors`（fill-in-blank分岐）に接続**: エラーメッセージが`読解(N)`形式でないため`groupReadingErrorsByQuestionNumber`により自動的に`global`側へ分類され、設問単位の軽量修正（v5.12）ではなく本文全体の再生成（既存の時間予算チェック・afterTotal比較・最終throw確認を含む既存経路）で解消を試みる
+    - **検証**: `npx tsc --noEmit`でエラーがないことを確認した。今回の不具合（段落1:1個/段落2:2個/段落3:0個）を再現したサンプル文字列で検証ロジックを単体実行し、配置崩れが検出されること・正しい配置ではエラーが出ないことを確認した。新規プロンプト変更を伴わない後処理ロジックのため、実API呼び出しを伴う生成テストは行っていない。詳細は[CHANGELOG.md](./CHANGELOG.md)のv5.13を参照。
+
 ### 記事取得の3段階フォールバック（v5.4、`lib/rss.ts`）
 
 読解パッセージの元記事は、以下の優先順位で取得する。
@@ -161,6 +169,7 @@
 - **Vercel Fluid Compute**: 有効（Vercelプロジェクト設定）
 - **maxDuration**: `300`秒（`/api/generate`、`/api/annotations`。Fluid Compute前提の設定）
 - **ソフトタイムアウト（v5.6）**: `/api/generate`の`maxDuration`（300秒）にVercelのプラットフォームタイムアウトで到達すると応答本文がJSONでなくなり、クライアントの`res.json()`が`SyntaxError`で失敗する（本番で発生・`npx vercel logs`で特定）。`app/api/generate/route.ts`は`generateQuestions`を`SOFT_TIMEOUT_MS`（270秒）で`withTimeout`ラップし、必ずルート自身が先にJSONで応答（キャッシュへのフォールバック、またはJSON形式のエラー）できるようにしている
+- **生成失敗時の過去分フォールバック（v5.14）**: 上記のキャッシュフォールバックは当日分のキャッシュしか見ないため、当日分が1件も無い状態で生成が失敗すると従来は500エラーJSONがそのままクライアントに届いていた。`findFallbackQuestions`（`app/api/generate/route.ts`）が`question_dates`を新しい順に遡り、最初に見つかった過去分を`isFallback: true`・`fallbackDate`付きで返す。過去分も1件も無い場合のみ500エラーを返す。`app/reading/page.tsx`は`isFallback`時に「本日分の生成に失敗したため、前回の問題を表示しています」という控えめな注意書きを表示する
 - **max_tokens**: 生成系呼び出しは用途ごとに異なる（読解生成 32,000 / 語彙生成 16,000 / 読解アノテーション 20,000 / 語彙アノテーション 8,000。詳細は `lib/claude.ts` 内の各Anthropic API呼び出しを参照）。語彙・読解の両方で`stop_reason === 'max_tokens'`（出力打ち切り）を検知した場合は明示的にエラーログを出す
 - **Cron**: `vercel.json` で毎日 `23:00 UTC`（JST 08:00）に `/api/generate?refresh=true` を叩き、当日分の問題を事前生成（ライティング3機能はオンデマンド生成のみで、cronは設定していない）
 - **`serverExternalPackages: ['pdfkit']`**（`next.config.ts`）: pdfkitは標準14フォントのAFMメトリクスを`fs.readFileSync(__dirname + '/data/...')`で実行時に読み込むが、Turbopackにバンドル・トレースされると`__dirname`が仮想パスに書き換えられ`ENOENT`になるため、ネイティブ`require`のまま解決させて回避している（`lib/pdfKit.ts`を使う`/api/pdf/seidoku`・`/api/pdf/writing`の両方に必要）
@@ -172,14 +181,15 @@
 | 変数名 | 用途 | 未設定時の挙動 |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Anthropic API認証 | 必須（未設定だとAPI呼び出しが失敗） |
-| `GENERATION_MODEL` | 語彙・読解生成に使うモデルID | 未設定時は `claude-haiku-4-5` にフォールバック |
+| `GENERATION_MODEL` | 語彙生成に使うモデルID | 未設定時は `claude-haiku-4-5` にフォールバック |
+| `READING_MODEL` | 読解生成・読解リトライ/単問修正に使うモデルID | 未設定時は `claude-sonnet-5` にフォールバック（v5.14。旧: `GENERATION_MODEL`と共通で`claude-haiku-4-5`） |
 | `ANNOTATION_MODEL` | 解説・アノテーション生成に使うモデルID | 未設定時は `claude-sonnet-5` にフォールバック（v5.10。旧: `claude-haiku-4-5`） |
 | `KV_REST_API_URL` | Vercel KV（Upstash）接続の有無判定 | 未設定時はローカルの `.cache/` ディレクトリへのファイル書き込みにフォールバック |
 | `GOOGLE_TTS_API_KEY` | Google Cloud Text-to-Speech API認証（`/api/tts`） | 未設定時は500エラーを返す |
 
 `KV_REST_API_URL` を含むVercel KV関連の他の変数（`KV_REST_API_TOKEN`等）はVercel連携時に自動設定される。
 
-**運用ルール（v5.12）**: `GENERATION_MODEL`・`ANNOTATION_MODEL`等、生成に使うモデルをVercelの環境変数で上書き（コード側デフォルトから変更）する場合は、その理由と検証結果（品質比較・生成時間の実測等）を**コミットメッセージかCHANGELOG.mdに必ず残すこと**。2026-07-06に`GENERATION_MODEL=claude-sonnet-5`が本番に設定された際はこの記録が残っておらず、2026-09-15のタイムアウト障害の原因調査で経緯の特定（Vercel CLIには環境変数の変更履歴が残らないため、`git log`と`samples/`ディレクトリの成果物のタイムスタンプから状況証拠を積み上げる必要があった）に時間を要した。詳細は[CHANGELOG.md](./CHANGELOG.md)のv5.12を参照。
+**運用ルール（v5.12）**: `GENERATION_MODEL`・`READING_MODEL`・`ANNOTATION_MODEL`等、生成に使うモデルをVercelの環境変数で上書き（コード側デフォルトから変更）する場合は、その理由と検証結果（品質比較・生成時間の実測等）を**コミットメッセージかCHANGELOG.mdに必ず残すこと**。2026-07-06に`GENERATION_MODEL=claude-sonnet-5`が本番に設定された際はこの記録が残っておらず、2026-09-15のタイムアウト障害の原因調査で経緯の特定（Vercel CLIには環境変数の変更履歴が残らないため、`git log`と`samples/`ディレクトリの成果物のタイムスタンプから状況証拠を積み上げる必要があった）に時間を要した。詳細は[CHANGELOG.md](./CHANGELOG.md)のv5.12・v5.14を参照。
 
 ## バリデーション方針
 
@@ -203,6 +213,7 @@
 - 読解: 解説（explanation）が文字数上限（300字）を超えていないか（両形式共通。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkExplanationLength`、v5.10でハードエラー化）
 - 読解: タイトルが空文字でないか・10語以内か（両形式共通。**リトライ対象・本文全体の再生成**）（`checkTitleValid`、v5.7）
 - 読解: 空所補充の本文語数が380〜470語の範囲内か（空所補充形式のみ。**リトライ対象・本文全体の再生成**）（`checkPassageWordCount`、v5.8）
+- 読解: 空所補充が段落数3・各段落ちょうど1個の空所配置になっているか（空所補充形式のみ。**リトライ対象・本文全体の再生成**）（`checkFillInBlankParagraphDistribution`、v5.13）
 
 **プロンプト側（意味的チェック）**
 - 誤答の作り方（ラベルの配分、本文由来の要素の使い方）
@@ -213,7 +224,7 @@
 
 ## ルールバージョン
 
-現在の生成ルール（語彙・読解の出題ロジック）は **v5.12**（読解ハードエラーのリトライを設問単位の軽量修正に変更。本文全体の再生成（150〜260秒）1本のみだったリトライを、エラーメッセージから設問番号を特定できるものは該当設問1問だけを直す軽量修正（`repairReadingQuestions`、数秒程度）に置き換え、時間予算切れによる未リトライ・生成失敗を防止。旧: v5.11 読解explanationの簡素化。不正解の理由説明を廃止し、正解の根拠1文＋4択すべての日本語訳のみに絞った上で上限を450字→300字に短縮。旧: v5.10 品質改善5点セット。`ANNOTATION_MODEL`をSonnet 5に変更、語彙の正解語空所文法バグ修正、読解解説450字上限のリトライ実効化、正解語タイポ検知、解説の誤答参照順整列、簡体字誤検知修正。旧: v5.9 解説への日本語訳の追加。語彙は`explanation`末尾に`【例文和訳】`（例文全体の和訳）を生成し、`remapChoiceLetters`/`verifyChoiceLabelConsistency`が和訳セクションを触らないよう分割。読解は既存の`choiceTranslation`（4択すべての和訳）のプロンプト指示を省略禁止・直訳禁止で補強。旧: v5.8 空所補充形式の本文語数を本番相当の400〜450語（バッファ込み380〜470語）に是正。プロンプトの目標語数を修正した上で、`checkPassageWordCount`の空所補充判定を警告のみからリトライ対象に変更し、既存の読解リトライ機構（項目4・時間予算チェック含む）に接続。旧: v5.7 本番EIKEN Grade 1を再現した読解本文タイトルを追加。読解生成の同一呼び出しで`title`を出力させ、`checkTitleValid`（空文字でない・10語以内）を既存の読解リトライ機構に接続（空所補充形式にもこのチェックに限り拡張）。v5.5 読解の誤答生成に`ReadingChoiceDraft`型（`distractorType`/`sourceSpan`/`falseElement`）を導入し、誤答の精度（絶対表現の集中・本文根拠の欠落・型の単調さ・正解の本文丸写し）を機械チェックしてリトライ対象に追加。正解選択肢のパラフレーズ指示も強化。v5.2 出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定、v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
+現在の生成ルール（語彙・読解の出題ロジック）は **v5.14**（読解生成専用モデル`READING_MODEL`を追加しデフォルトを`claude-sonnet-5`に固定。Haiku 4.5統一後に不安定化した読解本文の語数エラーへの対処。語彙は`GENERATION_MODEL`＝Haiku 4.5のまま据え置き。加えて`/api/generate`に生成失敗時の過去分フォールバック（`isFallback`/`fallbackDate`）を追加し、当日分が無くエラーになるケースでもエラー画面ではなく前回分を表示できるようにした。旧: v5.13 空所補充の段落ごと空所配置を機械チェック化。`checkFillInBlankParagraphDistribution`を追加し、段落数3・各段落ちょうど1個の空所配置をハードエラー化してリトライ対象に接続。旧: v5.12 読解ハードエラーのリトライを設問単位の軽量修正に変更。本文全体の再生成（150〜260秒）1本のみだったリトライを、エラーメッセージから設問番号を特定できるものは該当設問1問だけを直す軽量修正（`repairReadingQuestions`、数秒程度）に置き換え、時間予算切れによる未リトライ・生成失敗を防止。旧: v5.11 読解explanationの簡素化。不正解の理由説明を廃止し、正解の根拠1文＋4択すべての日本語訳のみに絞った上で上限を450字→300字に短縮。旧: v5.10 品質改善5点セット。`ANNOTATION_MODEL`をSonnet 5に変更、語彙の正解語空所文法バグ修正、読解解説450字上限のリトライ実効化、正解語タイポ検知、解説の誤答参照順整列、簡体字誤検知修正。旧: v5.9 解説への日本語訳の追加。語彙は`explanation`末尾に`【例文和訳】`（例文全体の和訳）を生成し、`remapChoiceLetters`/`verifyChoiceLabelConsistency`が和訳セクションを触らないよう分割。読解は既存の`choiceTranslation`（4択すべての和訳）のプロンプト指示を省略禁止・直訳禁止で補強。旧: v5.8 空所補充形式の本文語数を本番相当の400〜450語（バッファ込み380〜470語）に是正。プロンプトの目標語数を修正した上で、`checkPassageWordCount`の空所補充判定を警告のみからリトライ対象に変更し、既存の読解リトライ機構（項目4・時間予算チェック含む）に接続。旧: v5.7 本番EIKEN Grade 1を再現した読解本文タイトルを追加。読解生成の同一呼び出しで`title`を出力させ、`checkTitleValid`（空文字でない・10語以内）を既存の読解リトライ機構に接続（空所補充形式にもこのチェックに限り拡張）。v5.5 読解の誤答生成に`ReadingChoiceDraft`型（`distractorType`/`sourceSpan`/`falseElement`）を導入し、誤答の精度（絶対表現の集中・本文根拠の欠落・型の単調さ・正解の本文丸写し）を機械チェックしてリトライ対象に追加。正解選択肢のパラフレーズ指示も強化。v5.2 出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定、v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
 
 ## ローカル開発
 
@@ -232,7 +243,7 @@ npm run start   # ビルド済みアプリの起動
 
 ## デプロイ
 
-`main` ブランチへの push でVercelが自動ビルド・デプロイする。環境変数（`ANTHROPIC_API_KEY` / `GENERATION_MODEL` / `ANNOTATION_MODEL` / `GOOGLE_TTS_API_KEY` / Vercel KV関連）はVercelプロジェクト設定側で管理する。
+`main` ブランチへの push でVercelが自動ビルド・デプロイする。環境変数（`ANTHROPIC_API_KEY` / `GENERATION_MODEL` / `READING_MODEL` / `ANNOTATION_MODEL` / `GOOGLE_TTS_API_KEY` / Vercel KV関連）はVercelプロジェクト設定側で管理する。
 
 ## ディレクトリ構成
 
