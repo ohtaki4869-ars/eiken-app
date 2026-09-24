@@ -33,8 +33,11 @@ function logUsage(label: string, model: string, response: Anthropic.Messages.Mes
 }
 
 // ===== モデル設定（環境変数で切り替え可能） =====
-// GENERATION_MODELは語彙生成（generateVocabOnly）専用。2026-09-15にHaiku 4.5へ統一。
-const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-haiku-4-5';
+// GENERATION_MODELは語彙生成（generateVocabOnly・retryVocabQuestion）専用。2026-09-15にHaiku 4.5へ統一。
+// v5.15: 同一単語セットでの3モデル比較（各3回）で、Haiku 4.5は初回下書きが全問「空所____なし＋正解語の埋め込み」で
+// リトライ後も15問中2問が空所なしのまま残り、Sonnet 5は3回中2回がthinkingでmax_tokens(16000)を使い切り
+// JSON未完成で失敗した。Opus 5は3回とも全問一発合格・欠陥ゼロだったため、コスト増（Haikuの約2.6倍）を許容して切り替える。
+const GENERATION_MODEL = process.env.GENERATION_MODEL ?? 'claude-opus-5';
 // v5.14: 読解生成（generateReadingOnly・repairReadingQuestions）専用。Haiku 4.5統一後、
 // 読解本文の語数（380〜470語目標）が不安定になり（実例: 273語, 327語）リトライを使い切って
 // 生成失敗する事例が発生したため、読解のみSonnet 5に戻す（語彙は生成量が小さく安定していたため据え置き）。
@@ -1481,6 +1484,34 @@ function checkAnswerWordTypo(label: string, explanation: string, answerWord: str
     : [];
 }
 
+// v5.15: 正解語の露出チェック。旧実装は「正解語の先頭5文字が文中のどこかに部分一致するか」だったため、
+// 単語の途中や無関係な語に誤ヒットしていた（実例: 正解語interveneの"inter"が"international"に一致し、
+// 空所が正しく作られた設問が2回リトライされた末に「未解決」扱いになった）。
+// 文中の各単語について、語頭が以下のいずれかの語幹で始まる場合のみ露出とみなす:
+//   - 正解語そのもの（活用形 careened / doomed、複数形 reparations 等）
+//   - 語末のeを落とした形（intervene→interven: intervening / intervention）
+//   - 語末のyをiに変えた形（deny→deni: denied）
+//   - 8文字以上の語は末尾3文字を除いた形（transparency→transpare: transparent）。
+//     短い語に適用すると careen→car(eer) 等の無関係語に当たるため長い語に限定する
+function findExposedAnswerForm(sentence: string, answerLower: string): string | null {
+  if (!answerLower) return null;
+  const text = sentence.replace(/____/g, ' ').toLowerCase();
+  // 句動詞など単語以外の文字を含む正解語は、単語境界つきの完全一致のみを見る
+  if (/[^a-z]/.test(answerLower)) {
+    const escaped = answerLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`).test(text) ? answerLower : null;
+  }
+  const words = text.match(/[a-z]+/g) ?? [];
+  if (answerLower.length < 4) return words.find(w => w === answerLower) ?? null;
+
+  const stems = new Set([answerLower]);
+  if (answerLower.endsWith('e')) stems.add(answerLower.slice(0, -1));
+  if (answerLower.endsWith('y')) stems.add(answerLower.slice(0, -1) + 'i');
+  if (answerLower.length >= 8) stems.add(answerLower.slice(0, -3));
+  const validStems = [...stems].filter(s => s.length >= 4);
+  return words.find(w => validStems.some(s => w.startsWith(s))) ?? null;
+}
+
 // 語彙1問分のバリデーション（設問単位リトライから直接呼べるよう単問チェックとして切り出し）
 function validateOneVocabQuestion(
   q: VocabQuestion,
@@ -1503,13 +1534,12 @@ function validateOneVocabQuestion(
     errors.push(`語彙(${num}): 空所が${blankCount}個ある（1つのみ許可）`);
   }
 
-  // チェック③: 正解語が文中に露出していないか（大文字小文字・語幹も考慮）
+  // チェック③: 正解語が文中に露出していないか（大文字小文字・活用形/派生形も考慮）
   const sentenceWithoutBlank = sentence.replace(/____/g, '').toLowerCase();
   const answerLower = answer?.toLowerCase().trim() ?? '';
-  // 語幹チェック（最初の5文字が一致する語が含まれていないか）
-  const answerStem = answerLower.slice(0, 5);
-  if (answerStem.length >= 4 && sentenceWithoutBlank.includes(answerStem)) {
-    errors.push(`語彙(${num}): 正解語 "${answer}" またはその語幹が問題文中に露出している可能性がある`);
+  const exposedWord = findExposedAnswerForm(sentence, answerLower);
+  if (exposedWord) {
+    errors.push(`語彙(${num}): 正解語 "${answer}" またはその語幹が問題文中に露出している可能性がある（該当語: "${exposedWord}"）`);
   }
 
   // チェック④: 選択肢が4つあるか
