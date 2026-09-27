@@ -2367,11 +2367,20 @@ async function repairReadingQuestions(
   return updated;
 }
 
+// v5.16: route.ts側のソフトタイムアウトはgenerateQuestionsを外から打ち切るため、打ち切った時点で
+// どのステップが未完了だったかを呼び出し元が知る手段がなかった。各ステップの完了時の経過時間を
+// 呼び出し元が渡したオブジェクトに書き込み、失敗時のログ・KV記録（failure_log）に使えるようにする。
+export interface GenerationTimings {
+  vocabInitialMs?: number;
+  readingInitialMs?: number;
+}
+
 export async function generateQuestions(
   article: Article,
   format: ReadingFormat,
   attempt = 0,
-  recentlyUsedWords?: Set<string>
+  recentlyUsedWords?: Set<string>,
+  timings?: GenerationTimings
 ): Promise<GeneratedQuestions> {
   const jstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDate();
   // v5.2 A-1: 呼び出し元(route.ts)が集めた直近30日分の出題済み語 + 初期シードを合わせて除外集合とする
@@ -2386,8 +2395,18 @@ export async function generateQuestions(
   // タイムアウトリスクを下げつつ、互いに独立なので並列実行でレイテンシも短縮する） =====
   const genStart = Date.now();
   const [vocabDraft, readingDraft] = await Promise.all([
-    generateVocabOnly(wordSet.groups, undefined, excludedWords).then(r => { console.log(`[Timing] vocab initial: ${Date.now() - genStart}ms`); return r; }),
-    generateReadingOnly(trimmedArticle, format).then(r => { console.log(`[Timing] reading: ${Date.now() - genStart}ms`); return r; }),
+    generateVocabOnly(wordSet.groups, undefined, excludedWords).then(r => {
+      const ms = Date.now() - genStart;
+      if (timings) timings.vocabInitialMs = ms;
+      console.log(`[Timing] vocab initial: ${ms}ms`);
+      return r;
+    }),
+    generateReadingOnly(trimmedArticle, format).then(r => {
+      const ms = Date.now() - genStart;
+      if (timings) timings.readingInitialMs = ms;
+      console.log(`[Timing] reading: ${ms}ms`);
+      return r;
+    }),
   ]);
 
   // ===== Step 2: 語彙を設問単位でバリデーション＋個別リトライ（違反した設問のみ、最大2回、並列実行） =====

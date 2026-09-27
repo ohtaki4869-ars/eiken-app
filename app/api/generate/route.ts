@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchNewsArticle } from '@/lib/rss';
-import { generateQuestions, getTodayFormat, GeneratedQuestions } from '@/lib/claude';
+import { generateQuestions, getTodayFormat, GeneratedQuestions, GenerationTimings } from '@/lib/claude';
 
 export const maxDuration = 300;
 
@@ -10,6 +10,30 @@ export const maxDuration = 300;
 const SOFT_TIMEOUT_MS = 270_000;
 
 class GenerationTimeoutError extends Error {}
+
+// v5.16: 生成に失敗した日は、/api/generateへのアクセスのたびに再生成を試みてまた失敗し、
+// そのたびにAPI課金が発生していた（2026-09-27は読解のタイムアウトで2回連続、各270秒）。
+// 失敗後しばらくは再生成を試みず過去分フォールバックを即返すため、短いTTLの失敗マーカーを置く。
+// FAILURE_MARKER_TTL_SEC はローカルでTTL経過後の挙動を確認するための上書き用（本番では未設定）。
+const FAILURE_MARKER_TTL_SEC = Number(process.env.FAILURE_MARKER_TTL_SEC) > 0
+  ? Math.floor(Number(process.env.FAILURE_MARKER_TTL_SEC))
+  : 15 * 60;
+// Vercelのランタイムログは保持期間が短く（1時間未満の実績あり）、翌日には失敗原因を追えないため、
+// 失敗イベントをKVにも残す。日付ごとに最大20件、7日で自然に消える。
+const FAILURE_LOG_TTL_SEC = 60 * 60 * 24 * 7;
+const FAILURE_LOG_MAX_ENTRIES = 20;
+
+interface FailureLogEntry {
+  at: string;
+  kind: 'timeout' | 'error';
+  error: string;
+  forceRefresh: boolean;
+  // 失敗した時点でまだ終わっていなかったステップ（タイムアウト時にどちらが原因かを判別するため）
+  stage: string;
+  generationElapsedMs: number;
+  vocabInitialMs: number | null;
+  readingInitialMs: number | null;
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -164,6 +188,71 @@ async function saveQuestions(dateKey: string, data: GeneratedQuestions) {
   }
 }
 
+// v5.16: 失敗マーカーの有無。ローカルファイルキャッシュではKVのTTLが使えないため期限時刻を持たせる。
+async function hasFailureMarker(dateKey: string): Promise<boolean> {
+  try {
+    const kv = await getKV();
+    if (kv) return (await kv.get(`failed_attempt:${dateKey}`)) !== null;
+    const fs = await import('fs');
+    const path = await import('path');
+    const markerFile = path.join(process.cwd(), '.cache', `failed-attempt-${dateKey}.json`);
+    if (!fs.existsSync(markerFile)) return false;
+    return JSON.parse(fs.readFileSync(markerFile, 'utf-8')).expiresAt > Date.now();
+  } catch {
+    // マーカーが読めない場合は抑制しない（従来通り生成を試みる）
+    return false;
+  }
+}
+
+async function setFailureMarker(dateKey: string) {
+  try {
+    const kv = await getKV();
+    if (kv) {
+      await kv.set(`failed_attempt:${dateKey}`, new Date().toISOString(), { ex: FAILURE_MARKER_TTL_SEC });
+      return;
+    }
+    const fs = await import('fs');
+    const path = await import('path');
+    const dir = path.join(process.cwd(), '.cache');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, `failed-attempt-${dateKey}.json`),
+      JSON.stringify({ expiresAt: Date.now() + FAILURE_MARKER_TTL_SEC * 1000 })
+    );
+  } catch (e) {
+    console.warn('[setFailureMarker] failed:', e);
+  }
+}
+
+async function appendFailureLog(dateKey: string, entry: FailureLogEntry) {
+  try {
+    const kv = await getKV();
+    if (kv) {
+      const entries = (await kv.get<FailureLogEntry[]>(`failure_log:${dateKey}`)) || [];
+      const updated = [...entries, entry].slice(-FAILURE_LOG_MAX_ENTRIES);
+      await kv.set(`failure_log:${dateKey}`, updated, { ex: FAILURE_LOG_TTL_SEC });
+      return;
+    }
+    const fs = await import('fs');
+    const path = await import('path');
+    const dir = path.join(process.cwd(), '.cache');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const logFile = path.join(dir, `failure-log-${dateKey}.json`);
+    const entries: FailureLogEntry[] = fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf-8')) : [];
+    fs.writeFileSync(logFile, JSON.stringify([...entries, entry].slice(-FAILURE_LOG_MAX_ENTRIES)));
+  } catch (e) {
+    console.warn('[appendFailureLog] failed:', e);
+  }
+}
+
+function fallbackResponse(fallback: { date: string; data: GeneratedQuestions }) {
+  return NextResponse.json({
+    ...fallback.data,
+    isFallback: true,
+    fallbackDate: fallback.date,
+  });
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forceRefresh = searchParams.get('refresh') === 'true';
@@ -172,6 +261,21 @@ export async function GET(request: Request) {
   if (!forceRefresh) {
     const cached = await loadQuestions(todayKey);
     if (cached) return NextResponse.json(cached);
+
+    // v5.16: 直近で生成に失敗していれば、再生成（数分・API課金あり）を試みず過去分を即返す。
+    // forceRefresh（cronの?refresh=true・画面の再生成ボタン）は明示的な再試行要求なのでマーカーを無視する。
+    // 特にcronは1日1回の定期生成で、0時〜8時のアクセスで失敗マーカーが立っていても抑制されてはいけない。
+    if (await hasFailureMarker(todayKey)) {
+      const fallback = await findFallbackQuestions(todayKey);
+      if (fallback) {
+        console.warn(`[generate] recent failure marker for ${todayKey}; skipping generation, falling back to ${fallback.date}`);
+        return fallbackResponse(fallback);
+      }
+      return NextResponse.json(
+        { error: 'Generation failed recently and no past questions are available; retry is suppressed for now.' },
+        { status: 503 }
+      );
+    }
   }
 
   // force refresh 時は古いアノテーションキャッシュを削除して不整合を防ぐ
@@ -182,19 +286,50 @@ export async function GET(request: Request) {
     } catch { /* ignore */ }
   }
 
+  const timings: GenerationTimings = {};
+  let generationStart: number | null = null;
   try {
     const format = getTodayFormat();
     const article = await fetchNewsArticle();
     const attempt = forceRefresh ? await getAndIncrementRefreshAttempt(todayKey) : 0;
     const recentlyUsedWords = await getRecentlyUsedWords();
+    generationStart = Date.now();
     const questions = await withTimeout(
-      generateQuestions(article, format, attempt, recentlyUsedWords),
+      generateQuestions(article, format, attempt, recentlyUsedWords, timings),
       SOFT_TIMEOUT_MS
     );
     await saveQuestions(todayKey, questions);
     return NextResponse.json(questions);
   } catch (e) {
+    const isTimeout = e instanceof GenerationTimeoutError;
+    const generationElapsedMs = generationStart === null ? 0 : Date.now() - generationStart;
+    // v5.16: どのステップが終わっていなかったかを記録する。読解・語彙は並列実行のため、
+    // 未完了側の所要時間は「失敗時点の経過時間を超えていた」としか分からない。
+    const stage = generationStart === null
+      ? '生成開始前（記事取得・準備）'
+      : [
+          timings.vocabInitialMs === undefined ? `語彙初回生成が未完了(>${generationElapsedMs}ms)` : null,
+          timings.readingInitialMs === undefined ? `読解初回生成が未完了(>${generationElapsedMs}ms)` : null,
+        ].filter(Boolean).join(' / ') || '初回生成後の検証・リトライ中';
     console.error('[generate] Fatal error:', String(e));
+    console.error(
+      `[generate] failure detail: kind=${isTimeout ? 'timeout' : 'error'} stage=${stage}` +
+      ` generationElapsed=${generationElapsedMs}ms` +
+      ` vocabInitial=${timings.vocabInitialMs !== undefined ? `${timings.vocabInitialMs}ms` : 'unfinished'}` +
+      ` readingInitial=${timings.readingInitialMs !== undefined ? `${timings.readingInitialMs}ms` : 'unfinished'}`
+    );
+    await setFailureMarker(todayKey);
+    await appendFailureLog(todayKey, {
+      at: new Date().toISOString(),
+      kind: isTimeout ? 'timeout' : 'error',
+      error: String(e).slice(0, 500),
+      forceRefresh,
+      stage,
+      generationElapsedMs,
+      vocabInitialMs: timings.vocabInitialMs ?? null,
+      readingInitialMs: timings.readingInitialMs ?? null,
+    });
+
     // 生成失敗時は当日分のキャッシュがあればそれを返す
     // （forceRefreshでの再生成失敗時、上書き前の当日分が残っているケース）
     const cached = await loadQuestions(todayKey);
@@ -204,11 +339,7 @@ export async function GET(request: Request) {
     const fallback = await findFallbackQuestions(todayKey);
     if (fallback) {
       console.warn(`[generate] falling back to past questions from ${fallback.date}`);
-      return NextResponse.json({
-        ...fallback.data,
-        isFallback: true,
-        fallbackDate: fallback.date,
-      });
+      return fallbackResponse(fallback);
     }
 
     return NextResponse.json({ error: String(e) }, { status: 500 });
