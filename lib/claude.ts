@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 // type importにすればコンパイル時に消去されrss.ts→claude.tsの一方向のみが実行時に残る）
 import type { Article } from './rss';
 import { WORD_BANK, WordEntry, CEFR_BELOW_C1_BLOCKLIST } from './wordbank';
+import { countWords } from './readingTime';
 import contentFewshotExample from '../samples/fable5-v5/content-culture.fewshot.json';
 import fillInBlankFewshotExample from '../samples/fable5-v5/fillinblank-2.fewshot.json';
 
@@ -1802,7 +1803,7 @@ function checkTitleValid(title: string): ValidationResult {
 
 // ===== v5.2 A-3: 本文語数チェック（内容一致=警告のみ・リトライには乗せない／空所補充=v5.8でリトライ対象化、collectHardErrors経由） =====
 function checkPassageWordCount(passage: string, format: ReadingFormat): ValidationResult {
-  const wordCount = passage.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = countWords(passage);
   // 空所補充は本番EIKEN Grade 1 Part 2（400〜450語）に合わせ、バッファを持たせた380〜470語を許容範囲とする（v5.8）
   const [min, max] = format === 'content' ? [550, 650] : [380, 470];
   if (wordCount < min || wordCount > max) {

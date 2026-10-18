@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { GeneratedQuestions, ChoiceAnnotation, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair, ReadingQuestionExplanation } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
+import { calcTargetMinutes } from '@/lib/readingTime';
 
 function ChoiceDissect({ vocabAnnotations, choices, answer }: {
   vocabAnnotations: Record<string, ChoiceAnnotation>;
@@ -175,6 +176,9 @@ export default function QuizPage() {
 
   const isFillInBlank = data?.readingFormat === 'fill-in-blank';
   const formatBadgeColor = isFillInBlank ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800';
+  const targetMinutes = data
+    ? calcTargetMinutes(data.readingPassage, data.readingFormat ?? 'content', data.readingQuestions.length)
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -274,6 +278,7 @@ export default function QuizPage() {
                 <span className={`ml-3 text-sm font-normal px-2 py-0.5 rounded ${formatBadgeColor}`}>
                   {isFillInBlank ? '【穴埋め形式】' : '【内容一致形式】'}
                 </span>
+                {targetMinutes !== null && <span className="ml-3 text-base">目標 {targetMinutes}分</span>}
               </h2>
               <p className="text-sm text-gray-600 mb-4">
                 {isFillInBlank ? '次の英文の(1)〜(3)に入れるのに最も適切なものを1、2、3、4の中から一つ選びなさい。' : '次の英文を読み、(1)〜(4)の質問に対して最も適切なものを1、2、3、4の中から一つ選びなさい。'}

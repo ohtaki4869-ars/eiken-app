@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { GeneratedQuestions, ChoiceAnnotation, ChoiceAnnotationSet, ChoiceAnnotations, ConfusingPair, ReadingQuestionExplanation } from '@/lib/claude';
 import SpeechPlayer from '@/components/SpeechPlayer';
+import { calcTargetMinutes } from '@/lib/readingTime';
 
 function ChoiceDissect({ vocabAnnotations, choices, answer }: {
   vocabAnnotations: Record<string, ChoiceAnnotation>;
@@ -212,6 +213,9 @@ export default function Home() {
   const isFillInBlank = data?.readingFormat === 'fill-in-blank';
   const formatLabel = isFillInBlank ? '【穴埋め形式】' : '【内容一致形式】';
   const formatBadgeColor = isFillInBlank ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800';
+  const targetMinutes = data
+    ? calcTargetMinutes(data.readingPassage, data.readingFormat ?? 'content', data.readingQuestions.length)
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -380,6 +384,7 @@ export default function Home() {
                 <span className={`ml-3 text-sm font-normal px-2 py-0.5 rounded ${formatBadgeColor}`}>
                   {formatLabel}
                 </span>
+                {targetMinutes !== null && <span className="ml-3 text-base">目標 {targetMinutes}分</span>}
               </h2>
               <p className="text-sm text-gray-600 mb-4">
                 {isFillInBlank
