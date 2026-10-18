@@ -5,6 +5,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { Article } from './rss';
 import { WORD_BANK, WordEntry, CEFR_BELOW_C1_BLOCKLIST } from './wordbank';
 import { countWords } from './readingTime';
+import {
+  getWordNgrams, runReadingChoiceChecks, formatReadingCheckRecord, findExtremeWords, countHedgeDistribution,
+  EXTREME_WORDS, EXTREME_WORDS_PER_SET_LIMIT, IS_WHAT_CAUSED_PATTERN, IS_WHAT_CAUSED_PER_SET_LIMIT,
+  FIB_LIMITED_DISTRACTOR_TYPES, FIB_LIMITED_DISTRACTOR_PER_SET_LIMIT,
+} from './readingChoiceChecks';
 import contentFewshotExample from '../samples/fable5-v5/content-culture.fewshot.json';
 import fillInBlankFewshotExample from '../samples/fable5-v5/fillinblank-2.fewshot.json';
 
@@ -48,6 +53,8 @@ const READING_MODEL = process.env.READING_MODEL ?? 'claude-sonnet-5';
 const ANNOTATION_MODEL = process.env.ANNOTATION_MODEL ?? 'claude-sonnet-5';
 // v5.6: 読解リトライを許可する経過時間の上限（route.ts のソフトタイムアウトと合わせて調整）
 const READING_RETRY_TIME_BUDGET_MS = 150_000;
+// v5.17: 読解生成（generateReadingOnly）のeffort。Sonnet 5の既定はhigh
+const READING_EFFORT = 'medium' as const;
 
 // ===== 記事取得 Step B: RSS全滅時のAI生成フォールバック（lib/rss.tsから呼ばれる） =====
 // GENERATION_MODEL（環境変数で切替可能）ではなく Claude Sonnet 5 に固定する。
@@ -157,7 +164,9 @@ const CONTENT_FEWSHOT_BLOCK = `
 以下は品質基準を満たす見本である。模倣すべき点:
 - パッセージの論説構成の質（ただし構成パターン自体は記事内容に応じて変えること）
 - 正解選択肢のパラフレーズ抽象度（語の置換だけでなく構文の組み替え・原理レベルへの抽象化）
-- 誤答技法1〜4の配分と、本文に実在する要素を使った誤答の作り方
+- 誤答の型の配分と、本文に実在する要素を使った誤答の作り方（主語すり替え・因果逆転・別段落の混入・前半だけ正しい誤答）
+- 「極端化」型の誤答がセット全体で1つ（Q3-Aの"exclusively"）、「is what ... compelled」型が1つ（Q2-A）に抑えられ、Q2-Dのように「前半は正しく後半が誤り（別段落の内容を混ぜる）」誤答を使っていること
+- 控えめな表現（may/can/tends to/suggests）が誤答にも使われ、表現のトーンで正解が分からないこと
 - 選択肢の語数バランス
 
 模倣してはいけない点:
@@ -171,8 +180,11 @@ ${JSON.stringify(contentFewshotExample, null, 2)}`;
 const FILL_IN_BLANK_FEWSHOT_BLOCK = `
 【few-shot見本（出力形式・空所設計の参考。話題・単語は模倣しないこと）】
 以下は品質基準を満たす見本である。模倣すべき点:
-- 3つの空所がそれぞれ異なる能力（目的把握/理由節からの逆算/対比構造の理解等）を測定する設計
-- 選択肢の語数バランス（±2語以内）と、技法A「方向性の逆転」/技法B「部分的整合」の使い分け
+- 空所(3)が discourse 型（懸念が個人レベルを超えて資源配分という制度レベルに及ぶ、という話の展開を問う）で、(1)(2)は content 型であること
+- どの正解も空所の隣の1文だけでは決まらず、2文以上を合わせて一段抽象化しないと選べないこと（evidenceSentences が2文ずつ）
+- 誤答が型1「本文の語を使うが支持されない主張」/型2「後の文・段落と矛盾する主張」/型3「文と文の関係の取り違え」で作られ、「本文と真逆」は1つ（(3)の"has largely been overstated by critics"）、「話題と無関係」は0であること。各誤答の型を distractorTypes に正直に記録していること
+- discourse型の(3)の正解（懸念が個人から制度に波及する）が、本文のどの1文にも明示されていないこと
+- 選択肢の語数バランス（±2語以内）
 - パッセージの論説構成の質（構成パターン自体は記事内容に応じて変えること）
 
 模倣してはいけない点:
@@ -290,7 +302,8 @@ export type ReadingDistractorType =
   | 'PURPOSE_RESULT_CONFUSION'; // 目的と結果の混同
 
 export interface ReadingChoiceDraft {
-  text: string;
+  // v5.17: 選択肢本文はchoicesと重複するため出力させない（choicesとはA/B/C/Dの位置で対応付ける）。旧出力との互換のため型には残す
+  text?: string;
   isCorrect: boolean;
   distractorType?: ReadingDistractorType;
   sourceSpan: string;   // 根拠にした本文箇所（正解・誤答とも必須）
@@ -305,7 +318,20 @@ export interface ReadingQuestion {
   explanation: string;
   // v5.5: A/B/C/D生成順のメタデータ。バリデーション専用で、シャッフル前に取り除かれ最終出力には残らない
   choiceDrafts?: ReadingChoiceDraft[];
+  // v5.17: 空所補充のみ。空所の種類（内容を問う/話の展開を問う）と、正解の根拠になる本文の文番号
+  // （1始まり・段落をまたいで通し番号・空所を含む文自体は含めない）。警告ログ専用で、最終出力には残らない
+  blankType?: 'content' | 'discourse';
+  evidenceSentences?: number[];
+  // v5.17: 空所補充のみ。誤答3つの型（キーは誤答の選択肢記号。正解の記号は含めない）。警告ログ専用で、最終出力には残らない
+  distractorTypes?: Partial<Record<'A' | 'B' | 'C' | 'D', FillInBlankDistractorType>>;
 }
+
+export type FillInBlankDistractorType =
+  | 'unsupported'        // 本文の語を使うが、本文が支持していない主張
+  | 'contradicts_later'  // 後の文・段落と矛盾する主張
+  | 'relation_error'     // 文と文の関係の取り違え
+  | 'opposite'           // 本文と真逆（1セット最大1つ）
+  | 'off_topic';         // 話題と無関係（1セット最大1つ）
 
 export interface ChoiceAnnotation {
   translation: string;
@@ -582,6 +608,108 @@ const READING_EXPLANATION_FORMAT_BLOCK = `
    **出力前SELF-CHECK（訳の取り違え防止・必須）**: 【1】〜【4】それぞれについて、対応する選択肢（choicesのA=1、B=2、C=3、D=4）の英文を指差し確認し、その英文の内容を訳しているか再確認する。特に隣り合う番号（例: 1と2）の訳文を入れ替えて書いていないか、4つの訳文と4つの選択肢英文を上から順に照合してから出力すること。
 `;
 
+// ===== v5.17: 選択肢・誤答のルール。読解の本体生成プロンプトと設問単位の修正プロンプト（buildReadingQuestionRepairPrompt）で共有する =====
+// （修正プロンプトにこれらが無く、修正を受けた設問だけ誤答の質が落ちていたため。ルールの定義はここだけで管理する）
+const FIB_CHOICE_RULES_BLOCK = `
+   **CRITICAL RULES FOR FILL-IN-BLANK CHOICES:**
+   - **Grammar match**: ALL 4 choices must connect grammatically with both what comes before AND after the blank. Never create a choice that breaks the surrounding sentence.
+   - **Similar length**: Keep all 4 choices within ±2 words of each other so no choice stands out visually.
+   - **誤答の型（v5.17）**: 誤答は話題から外れず、一見もっともらしいものにする。次の3つの型から作る:
+     * 型1「本文の語を使うが、本文が支持していない主張」: 本文に出てくる語句を使い、もっともらしいが本文のどこにも根拠がない内容にする
+     * 型2「後の文・段落と矛盾する主張」: 空所の周辺だけ読むと入りそうだが、空所より後の文や段落まで読むと否定される内容にする
+     * 型3「文と文の関係の取り違え」: 前後の文の論理関係を取り違えたもの（対比なのに「同様に」の内容、譲歩部分を主張と取り違えた内容、"rather than" で否定された側を採用した内容など）
+   - **セット全体の上限**: 「本文と真逆」の誤答（本文の流れをそのまま反転しただけのもの）は1セット（3問・誤答9つ）で最大1つ。「話題と無関係」の誤答も1セットで最大1つ。これ以外の誤答はすべて型1〜3で作る。
+   - **No obviously wrong choices**: every choice must feel plausible to someone who read the paragraph once.
+   - **代名詞の指す先を一つに特定できるようにする（v5.17）**: 選択肢の中の代名詞（it / they / this / that / its 等）は、指す先がその選択肢の中で一つに決まるようにする。指す先が2つ以上考えられる場合は名詞で書き直す（例: "rather than causing it outright" の it が「猛暑」か「基準線」か決まらない）。
+   - **誤答も英文として自然で一貫していること（v5.17）**: 誤答だからといって文法・論理の破綻した英文にしない（例: "…is indeed driven by X, so temperatures are nevertheless expected to…" のように矛盾する接続語を並べない）。誤りは内容のずれだけで作り、英文の不自然さで見分けられるようにしない。また同じ意味の極端な語を重ねない（"alone is solely responsible" など）。
+`;
+
+const FIB_INTERNAL_FIELDS_BLOCK = `
+   **blankType / evidenceSentences（各設問に必須。内部チェック用で画面には出ない）:**
+   - "blankType": その空所が内容を問うなら "content"、話の展開を問うなら "discourse"
+   - "evidenceSentences": 正解の根拠になる本文の文番号の配列。文番号は本文全体で1から数える通し番号（段落をまたいで連番。ピリオド・?・!で文を区切る）。空所を含む文自体は含めない。
+   - "distractorTypes": 誤答3つそれぞれの型。キーは誤答の選択肢記号（正解の記号は含めない）、値は次のいずれか: "unsupported"（型1）/ "contradicts_later"（型2）/ "relation_error"（型3）/ "opposite"（本文と真逆）/ "off_topic"（話題と無関係）。"opposite" と "off_topic" はそれぞれ1セットで最大1つ。正直に分類すること（真逆の誤答を "unsupported" などと偽らない）
+   - 根拠が2文以上になるように空所を設計すること（少なくとも1問は必ず2文以上）
+`;
+
+const CONTENT_CHOICE_RULES_BLOCK = `
+   - Each question has 4 choices that are COMPLETE SENTENCES, **20-33 words each — 35 words is a HARD CEILING that must never be exceeded, and 15 words is a hard floor**. Count your words before finalizing each choice; if a choice runs long, cut a subordinate clause rather than let it exceed 35.
+   - **No length bias**: the correct choice must NOT be the single longest of the 4 by itself. At least one wrong choice must be the same length as or longer than the correct choice — otherwise a test-taker could answer correctly just by picking the longest option without reading.
+   - **Uniform construction**: keep all 4 choices similar in length and grammatical structure (e.g., don't make only the correct choice a complex sentence with subordinate clauses while the others are simple) — only the content should differ, not the shape.
+
+   **CRITICAL RULES FOR CORRECT ANSWERS:**
+   - **No direct quotation**: NEVER copy-paste from the passage.
+   - **True paraphrase = word substitution AND syntactic restructuring BOTH**:
+     ❌ NG: "the conditions focus on territorial integrity" → "the conditions address territorial integrity"（語の置換のみ）
+     ✅ OK: "the conditions focus on territorial integrity" → "preserving national borders forms the basis of the proposed framework"
+   - 正解選択肢は本文と同じ語句の連続使用を避け、主語・述語の構造を変え、可能であれば具体例を上位概念へまとめて言い換えること。ただし抽象化しすぎて本文から論理的に導けない表現にはしないこと。
+   - **本文と同じ5語以上の連続を正解に含めない**（固有名詞を含む場合も同じ。冠詞・前置詞を挟んだ連続も数える）。
+
+   **CRITICAL RULES FOR WRONG CHOICES（v5.2）:**
+   Choose exactly one type per wrong choice from the 5 fixed types below. **Never use the same type twice for the 3 wrong choices within a single question** (you may reuse a type across different questions in the passage). Do not invent new type names — these 5 are the fixed label set:
+
+   **1.「語句流用・内容ズレ」**
+   Reuse real words/phrases from the passage but shift the content so it no longer matches. This also covers: (i) taking the side of a contrast that the passage explicitly negated or set in opposition (対比節の言い換え) — e.g. 本文「AではなくB」→ 誤答「A」を正しい内容として提示, and (ii) pulling in content that actually belongs to a different paragraph than the one relevant to this question (別段落の内容の混入).
+   例: 本文「Aが重要だが、Bは限定的にしか有効でない」→ 誤答「Bが最も有効な手段である」（対比の逆側を採用）
+
+   **2.「因果逆転」**
+   Swap cause and effect from the passage.
+   例: 本文「Aが起きたのでBになった」→ 誤答「BのためにAが生じた」
+
+   **3.「主語すり替え」**
+   Present an action/claim made by subject A in the passage as if made by a different subject B that also appears in the passage.
+   例: 本文「批評家が指摘した」→ 誤答「著者が主張している」
+   例: 本文「NICEが推奨した」→ 誤答「NHSが実施した」
+
+   **4.「極端化」**
+   Turn a tentative claim into a certainty, in this priority order:
+   (a) 既成事実化（優先）: turn could/may/suggests into has/did/demonstrated
+   (b) 条件・留保の削除（優先）: drop qualifying phrases like "in part" / "some" / "において"
+   (c) 絶対語の使用（最終手段）: every / all / never / always / certainly / invariably / definitively / entirely / undoubtedly 等
+   - **v5.17: 範囲や確信度を言い過ぎた誤答は、下の極端な語の一覧に入っているかどうかに関係なく、すべて「極端化」に数える**（例: "no meaningful role whatsoever" / "a single satellite program provided the primary data" / "thoroughly discredited" / "would rise at exactly the rate observed" / "have demonstrated that … already" のような既成事実化）。
+   - **v5.17: 「極端化」型の誤答は1セット（4問・誤答12個）で1つまで**。言い過ぎで切れる誤答は本番より易しくなるため、代わりに「前半は本文どおりに正しく、後半だけが誤り」「別の段落の内容を混ぜる」「主語・対象のすり替え」を優先して使うこと。
+
+   **5.「本文に根拠なし」**
+   Introduce a subject/fact that never appears in the passage. **Use sparingly — at most 2 choices per passage (across all 4 questions)**, and **never construct this as a fully fabricated, lexically unconnected invention** (e.g. an invented ocean current, treaty, or study with no vocabulary overlap with the passage) — such choices are trivially eliminable by cross-checking and defeat the purpose of the question.
+
+   **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
+
+   **誤答の作り方（v5.17）:** 誤答は本文の語句を使いながら、内容をずらして作る。上の5種のラベルの範囲で、次の作り方を使い分ける:
+   - 主語・対象のすり替え（型3）
+   - 因果の逆転（型2）
+   - 別の段落の内容を混ぜる（型1）
+   - 前半は本文どおりに正しく、後半だけが誤り（型1〜3のいずれか。distractorTypeは HALF_TRUE_COMPOSITE）
+   - 本文にない情報を足す（型5。上限は上記のとおり）
+
+   **セット全体の偏りの上限（v5.17。1セット＝4問・誤答12個の合計で数える）:**
+   - **極端な語は誤答全体で2回まで**: ${EXTREME_WORDS.join(' / ')}。1つの誤答に2語あれば2回と数える。
+   - **「X is what (first/originally) caused/led to/prompted/made Y」型の誤答は1セットで1回まで**（"were what originally prompted" "is what ultimately compelled" なども同じ型として数える）。因果の逆転は "because of X, Y ..." "X resulted from Y" など別の構文で書く。
+   - **控えめな表現を正解だけに偏らせない**: may / can / often / tend to / increasingly / likely などの控えめな表現は誤答にも使い（例: 主語をすり替えた誤答を "may" で書く）、正解にも断定的な表現を使ってよい。表現のトーン（断定か控えめか）で正解が分からないようにする。
+
+   **Additional precision rules for wrong choices（v5.5）:**
+   - 誤答は本文と無関係な内容を新しく作ってはならない。
+   - 各誤答は本文中の情報を少なくとも1つ正しく含み、誤りは原則として1か所だけに限定する。
+   - 誤答を長くして不正解部分を隠すのではなく、主体・範囲・因果・時制・確実性・目的と結果などの精密な違いによって不正解にする。
+   - always, never, every, entirely, completely, solely, regardless of など見ただけで除外しやすい絶対表現は、本文自体に同じ強さの主張がある場合を除き使用しない（使う場合もセット全体で${EXTREME_WORDS_PER_SET_LIMIT}回まで）。
+   - 3つの誤答は可能な限り異なるdistractorTypeにする（同一パターンの繰り返しを避ける）。
+   - **代名詞の指す先を一つに特定できるようにする（v5.17）**: 選択肢の中の代名詞（it / they / this / that / its 等）は、指す先がその選択肢の中で一つに決まるようにする。指す先が2つ以上考えられる場合は名詞で書き直す（例: "rather than causing it outright" の it が「猛暑」か「基準線」か決まらない）。
+   - **誤答も英文として自然で一貫していること（v5.17）**: 誤答だからといって文法・論理の破綻した英文にしない（例: "…is indeed driven by X, so temperatures are nevertheless expected to…" のように矛盾する接続語を並べない）。誤りは内容のずれだけで作り、英文の不自然さで見分けられるようにしない。また同じ意味の極端な語を重ねない（"alone is solely responsible" など）。
+`;
+
+const CONTENT_CHOICE_DRAFTS_BLOCK = `
+   **choiceDrafts（各設問に必須。choicesとは別に、choiceDraftsという配列をA/B/C/Dの順で4要素出力する。選択肢の英文はchoicesと重複するので書かない。i番目の要素がchoicesのi番目の記号に対応する）:**
+   各選択肢について、根拠にした本文箇所をsourceSpanに入れる。誤答では誤っている最小部分をfalseElementに入れる。誤答には以下7種から最も近いdistractorTypeを1つ選んで付与する（正解にはdistractorTypeを付けない）：
+   - "SCOPE_SHIFT": 範囲のずれ（some→allなど）
+   - "AGENT_SWAP": 主体の入れ替え
+   - "CAUSAL_REVERSAL": 因果関係のずれ・逆転
+   - "TIMELINE_SHIFT": 時系列のずれ
+   - "MODALITY_SHIFT": 確実性のずれ（may→willなど）
+   - "HALF_TRUE_COMPOSITE": 半分正しい合成
+   - "PURPOSE_RESULT_CONFUSION": 目的と結果の混同
+   形式: { "isCorrect": true/false, "distractorType": "誤答のみ", "sourceSpan": "本文引用", "falseElement": "誤答のみ・誤りの最小部分" }
+
+`;
+
 // ===== 読解生成（記事に基づく。語彙とは完全に独立した呼び出し） =====
 function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
 
@@ -600,7 +728,7 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
    - Place exactly 3 blanks marked as (1), (2), (3) — exactly one blank per paragraph
    - Each blank replaces a SHORT PHRASE (3-8 words) that fits grammatically and logically
    - **Blank placement**: position blanks in the middle or end of a sentence — NEVER at the start of a paragraph
-   - **Context design**: the 5 words before and after each blank must provide meaningful context clues
+   - **Context design**: the words before and after each blank must give grammatical and logical clues, but those clues alone must NOT be enough to pick the answer (see "Blank design" below)
    - The blank should complete a sentence naturally, like these real EIKEN examples:
      * "These rogue waves were long assumed to ( )" → choices: "no longer exist" / "only occur during storms" / "be a thing of legend" / "be deadly to marine life"
      * "However, researchers have struggled ( )" → choices: "to find sailors willing to test them" / "with the difficulty of creating waves indoors" / "to understand these theories" / "with how unpredictable the ocean can be"
@@ -614,19 +742,32 @@ function buildReadingOnlyStaticInstructions(format: ReadingFormat): string {
    - 4 choices each: SHORT PHRASES of 3-8 words, all plausible but only one fits
    - The correct answer and a brief Japanese explanation
 
-   **CRITICAL RULES FOR FILL-IN-BLANK CHOICES:**
-   - **Grammar match**: ALL 4 choices must connect grammatically with both what comes before AND after the blank. Never create a choice that breaks the surrounding sentence.
-   - **Similar length**: Keep all 4 choices within ±2 words of each other so no choice stands out visually.
-   - **Two distortion techniques** — use one per wrong choice (技法A for one wrong choice, 技法B for another):
-     * 技法A「方向性の逆転」: content that reverses the passage's flow (e.g., if passage implies growth, the wrong choice implies decline)
-     * 技法B「部分的整合」: uses correct keywords but the logic doesn't fit the paragraph's argument
-   - **No obviously wrong choices**: every choice must feel plausible to someone who read the paragraph once.
-${READING_EXPLANATION_FORMAT_BLOCK}
-   **SELF-CHECK（穴埋め・7項目）:**
+   **BLANK DESIGN（v5.17）:**
+   - **空所の種類**: 3つの空所のうち最低1つは「話の展開」を問う空所（discourse）にする。残りは内容を問う空所（content）でよい。
+     discourse型の例: 前の事例との対比を示す / 別の研究でも同じ結果が出たことを示す / 影響が個人レベルを超えて社会・制度に及んだことを示す / 直前までの複数の事例から読み取れる結論をまとめる
+   - **discourse型の条件（厳守）**: 正解の内容が、本文のどこか1文に明示されていてはならない。複数の文から読み取れる結論か、文と文の関係（対比・類似・波及など）を答えさせること。
+     ❌ discourse型と認めない: "In other words" / "In short" / "That is" などの直後に空所を置き、段落の主題文や別の1文をそのまま言い換えるだけの空所（例: 段落冒頭に "the stakes extend well beyond Merz's personal popularity" があり、"In other words, the consequences are likely to ( 3 )" の正解が "extend far beyond the chancellor himself"）
+     ✅ discourse型: 前の文（個人が取り残される）と後の文（記録された需要に基づく予算配分が地域全体の資源を偏らせる）の関係から、正解 "reaches beyond the individuals directly affected"（懸念が個人から制度に波及する）を選ばせる。どちらの文にも「個人を超える」とは書かれていない
+   - **正解は隣の1文だけでは決まらない**: 空所の直前・直後の1文を読むだけで選べてはいけない。2文以上の内容を合わせるか、本文の具体例を一段抽象的にまとめないと選べない形にする。
+     ❌ NG: 直後の文が "allowing clinicians to concentrate on patients who need face-to-face care" で、正解が "ease the pressure on frontline services"（隣の1文の言い換え）
+     ✅ OK: 正解 "ensure scarce clinical resources reach those in need" が、前の文（症状に応じて薬局〜救急まで振り分ける）と後の文（軽症が予約を埋め、重症者が何週間も待つ）の両方を合わせて初めて選べる
+   - **隣の文と同じ内容語を使わない**: 正解には、空所を含む文とその直前・直後の文に出てくる内容語（名詞・動詞・形容詞。語形変化を含む）を使わない。"rather than" などの構文も隣の文から写さない。
+
+${FIB_CHOICE_RULES_BLOCK}${FIB_INTERNAL_FIELDS_BLOCK}${READING_EXPLANATION_FORMAT_BLOCK}
+   **SELF-CHECK（穴埋め・16項目）:**
    - [ ] 各段落に空欄が1つずつある（計3つ）
    - [ ] 選択肢の語数が±2語以内
    - [ ] 正解以外の選択肢も文法的に前後と接続可能
-   - [ ] 誤答に「明らかな外れ」がない（本文と無関係な内容は禁止）
+   - [ ] 誤答に「明らかな外れ」がない
+   - [ ] 3つの空所のうち最低1つが discourse 型（話の展開を問う）
+   - [ ] どの正解も、空所の直前・直後の1文だけでは選べない（2文以上を合わせるか一段抽象化しないと選べない）
+   - [ ] 正解に、空所を含む文と直前・直後の文の内容語を使っていない
+   - [ ] 誤答が型1〜3のいずれかで作られている。「本文と真逆」は1セットで最大1つ、「話題と無関係」も最大1つ
+   - [ ] 各設問に blankType と evidenceSentences を出力し、evidenceSentences が2文以上の設問が1つ以上ある
+   - [ ] discourse型の空所の正解が、本文のどの1文にも明示されていない（"In other words" 等の直後で主題文を言い換えるだけの空所ではない）
+   - [ ] 各設問に distractorTypes を出力し、"opposite" と "off_topic" がそれぞれセット全体で1つ以内
+   - [ ] 選択肢の中の代名詞が、指す先を一つに特定できる
+   - [ ] 誤答も英文として自然で、矛盾する接続語や同じ意味の極端な語の重ねがない
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
    - [ ] 本文全体が400〜450語に収まっている（450語を超えていない）
    - [ ] explanationが【正解】1文＋4択の日本語訳（【1〜4: 訳文】）のみで構成され、不正解の理由説明が書かれておらず、全体で300字以内（目安150〜250字）に収まっている
@@ -657,74 +798,22 @@ ${FILL_IN_BLANK_FEWSHOT_BLOCK}`;
    - 細部一致問題 1問まで: factual detail only
      stems: "According to the passage...", "What is one thing stated about...?"
    - **Distinct-paragraph requirement**: each of the 4 questions must draw its evidence from a DIFFERENT paragraph of the passage. Never let two questions rely on the same paragraph (or substantially the same point) as their evidence.
-   - Each question has 4 choices that are COMPLETE SENTENCES, **20-33 words each — 35 words is a HARD CEILING that must never be exceeded, and 15 words is a hard floor**. Count your words before finalizing each choice; if a choice runs long, cut a subordinate clause rather than let it exceed 35.
-   - **No length bias**: the correct choice must NOT be the single longest of the 4 by itself. At least one wrong choice must be the same length as or longer than the correct choice — otherwise a test-taker could answer correctly just by picking the longest option without reading.
-   - **Uniform construction**: keep all 4 choices similar in length and grammatical structure (e.g., don't make only the correct choice a complex sentence with subordinate clauses while the others are simple) — only the content should differ, not the shape.
-
-   **CRITICAL RULES FOR CORRECT ANSWERS:**
-   - **No direct quotation**: NEVER copy-paste from the passage.
-   - **True paraphrase = word substitution AND syntactic restructuring BOTH**:
-     ❌ NG: "the conditions focus on territorial integrity" → "the conditions address territorial integrity"（語の置換のみ）
-     ✅ OK: "the conditions focus on territorial integrity" → "preserving national borders forms the basis of the proposed framework"
-   - 正解選択肢は本文と同じ語句の連続使用を避け、主語・述語の構造を変え、可能であれば具体例を上位概念へまとめて言い換えること。ただし抽象化しすぎて本文から論理的に導けない表現にはしないこと。
-
-   **CRITICAL RULES FOR WRONG CHOICES（v5.2）:**
-   Choose exactly one type per wrong choice from the 5 fixed types below. **Never use the same type twice for the 3 wrong choices within a single question** (you may reuse a type across different questions in the passage). Do not invent new type names — these 5 are the fixed label set:
-
-   **1.「語句流用・内容ズレ」**
-   Reuse real words/phrases from the passage but shift the content so it no longer matches. This also covers: (i) taking the side of a contrast that the passage explicitly negated or set in opposition (対比節の言い換え) — e.g. 本文「AではなくB」→ 誤答「A」を正しい内容として提示, and (ii) pulling in content that actually belongs to a different paragraph than the one relevant to this question (別段落の内容の混入).
-   例: 本文「Aが重要だが、Bは限定的にしか有効でない」→ 誤答「Bが最も有効な手段である」（対比の逆側を採用）
-
-   **2.「因果逆転」**
-   Swap cause and effect from the passage.
-   例: 本文「Aが起きたのでBになった」→ 誤答「BのためにAが生じた」
-
-   **3.「主語すり替え」**
-   Present an action/claim made by subject A in the passage as if made by a different subject B that also appears in the passage.
-   例: 本文「批評家が指摘した」→ 誤答「著者が主張している」
-   例: 本文「NICEが推奨した」→ 誤答「NHSが実施した」
-
-   **4.「極端化」**
-   Turn a tentative claim into a certainty, in this priority order:
-   (a) 既成事実化（優先）: turn could/may/suggests into has/did/demonstrated
-   (b) 条件・留保の削除（優先）: drop qualifying phrases like "in part" / "some" / "において"
-   (c) 絶対語の使用（最終手段）: every / all / never / always / certainly / invariably / definitively / entirely / undoubtedly 等
-   - **絶対表現（all/every/never/always/certainly/invariably/definitively/entirely/undoubtedly等）を含む選択肢は、1問の4択の中で最大1つまでとする**。目立って消去法の手がかりになるため、(a)(b)による「穏やかな断定」を主力にすること。
-
-   **5.「本文に根拠なし」**
-   Introduce a subject/fact that never appears in the passage. **Use sparingly — at most 2 choices per passage (across all 4 questions)**, and **never construct this as a fully fabricated, lexically unconnected invention** (e.g. an invented ocean current, treaty, or study with no vocabulary overlap with the passage) — such choices are trivially eliminable by cross-checking and defeat the purpose of the question.
-
-   **Keyword overlap requirement**: Each wrong choice must include at least 2 actual keywords from the passage (same subject, proper nouns, or technical terms). Never introduce concepts completely absent from the passage.
-
-   **Additional precision rules for wrong choices（v5.5）:**
-   - 誤答は本文と無関係な内容を新しく作ってはならない。
-   - 各誤答は本文中の情報を少なくとも1つ正しく含み、誤りは原則として1か所だけに限定する。
-   - 誤答を長くして不正解部分を隠すのではなく、主体・範囲・因果・時制・確実性・目的と結果などの精密な違いによって不正解にする。
-   - always, never, every, entirely, completely, solely, regardless of など見ただけで除外しやすい絶対表現は、本文自体に同じ強さの主張がある場合を除き使用しない。
-   - 3つの誤答は可能な限り異なるdistractorTypeにする（同一パターンの繰り返しを避ける）。
-
-   **choiceDrafts（各設問に必須。choicesとは別に、choiceDraftsという配列をA/B/C/Dの順で4要素出力する）:**
-   各選択肢について、根拠にした本文箇所をsourceSpanに入れる。誤答では誤っている最小部分をfalseElementに入れる。誤答には以下7種から最も近いdistractorTypeを1つ選んで付与する（正解にはdistractorTypeを付けない）：
-   - "SCOPE_SHIFT": 範囲のずれ（some→allなど）
-   - "AGENT_SWAP": 主体の入れ替え
-   - "CAUSAL_REVERSAL": 因果関係のずれ・逆転
-   - "TIMELINE_SHIFT": 時系列のずれ
-   - "MODALITY_SHIFT": 確実性のずれ（may→willなど）
-   - "HALF_TRUE_COMPOSITE": 半分正しい合成
-   - "PURPOSE_RESULT_CONFUSION": 目的と結果の混同
-   形式: { "text": "選択肢の英文", "isCorrect": true/false, "distractorType": "誤答のみ", "sourceSpan": "本文引用", "falseElement": "誤答のみ・誤りの最小部分" }
-
-${READING_EXPLANATION_FORMAT_BLOCK}
-   **SELF-CHECK（内容一致・14項目）:**
+${CONTENT_CHOICE_RULES_BLOCK}${CONTENT_CHOICE_DRAFTS_BLOCK}${READING_EXPLANATION_FORMAT_BLOCK}
+   **SELF-CHECK（内容一致・19項目）:**
    - [ ] 問題数が4問である
    - [ ] 正解がparaphrase（語の言い換え＋構文変換の両方）されている
+   - [ ] 正解に本文と同じ5語以上の連続が含まれていない
    - [ ] 4問それぞれが互いに異なる段落を根拠としている（同じ段落・実質同じ論点を2問が根拠にしていない）
    - [ ] 同一設問内で誤答3つの型（語句流用・内容ズレ/因果逆転/主語すり替え/極端化/本文に根拠なし）が重複していない
    - [ ]「本文に根拠なし」型は1パッセージにつき2択以内に収まっており、本文と語彙的接点のない完全な捏造ではない
    - [ ] 各誤答に本文キーワードが2語以上含まれている
    - [ ] 誤答に「明らかな外れ」がない
    - [ ] 正解選択肢が4択中で単独最長になっていない（誤答1つ以上が正解と同等以上の長さ）。4択の長さ・文法構造も揃っている
-   - [ ] 絶対語（every/all/never/always/certainly等）を含む選択肢が1問につき1つ以内である
+   - [ ] 誤答12個に含まれる極端な語が合計2回以内、「極端化」型の誤答（語の一覧にない言い過ぎも含む）が1つ以内である
+   - [ ] 「X is what caused/led/prompted Y」型の誤答が1セットで1回以内である
+   - [ ] 控えめな表現（may/can/often等）が正解だけに偏っておらず、誤答にも使われている
+   - [ ] 選択肢の中の代名詞が、指す先を一つに特定できる
+   - [ ] 誤答も英文として自然で、矛盾する接続語（so と nevertheless 等）や同じ意味の極端な語の重ね（alone と solely 等）がない
    - [ ] 全選択肢が35語を超えていない（20-33語が目安、35語は絶対に超えない上限）
    - [ ] パッセージが自分自身の筆者を三人称で参照していない（"the author contends"等の自己言及禁止）
    - [ ] explanationが【正解】1文＋4択の日本語訳（【1〜4: 訳文】）のみで構成され、不正解の理由説明が書かれておらず、全体で300字以内（目安150〜250字）に収まっている
@@ -738,44 +827,53 @@ ${CONTENT_FEWSHOT_BLOCK}`;
 
   // ===== JSON examples =====
   const fillInBlankJsonExample = `  "title": "The Dual Purpose of Bioluminescence",
-  "readingPassage": "For decades, scientists have been studying the mysterious phenomenon of deep-sea bioluminescence, the ability of marine organisms to produce light. Researchers initially believed this trait evolved primarily as a defense mechanism, but new findings suggest it may ( 1 ) as well. Studies of various species have revealed unexpected complexity in how and when they produce light.\\n\\nThe scientific community has made significant advances in understanding bioluminescence, yet many questions remain. One major challenge has been ( 2 ), as the deep ocean environment makes direct observation extremely difficult. Recent technological innovations, however, have enabled researchers to collect data that was previously impossible to obtain.\\n\\nThese discoveries have implications beyond pure science. Bioluminescent compounds are increasingly being used in medical research and diagnostics. The natural light-producing mechanisms found in marine life have proven ( 3 ), inspiring engineers and biochemists to develop new tools for detecting diseases at an early stage.",
-  "readingPassageJa": "数十年にわたり、科学者たちは深海生物の発光現象を研究してきた。研究者たちは当初、この特性は主に防御メカニズムとして進化したと考えていたが、新たな知見はそれが__(1)__でもあることを示唆している。さまざまな種の研究から、光を発する方法やタイミングにおける予想外の複雑さが明らかになった。\\n\\n科学界は生物発光の理解において大きな進歩を遂げたが、多くの疑問が残っている。主な課題の一つは__(2)__であり、深海環境が直接観察を非常に困難にしている。しかし最近の技術革新により、以前は不可能だったデータの収集が可能になった。\\n\\nこれらの発見は純粋な科学を超えた意義を持っている。発光化合物は医学研究や診断にますます活用されている。海洋生物に見られる自然の発光メカニズムは__(3)__ことが証明されており、エンジニアや生化学者が疾患を早期発見するための新しいツールを開発するヒントとなっている。",
+  "readingPassage": "For decades, scientists have been studying the mysterious phenomenon of deep-sea bioluminescence, the ability of marine organisms to produce light. Researchers initially believed this trait evolved primarily as a defense mechanism, but new findings suggest it may ( 1 ) as well. Some species of shrimp, for instance, flash in distinct rhythmic patterns only during the mating season. Certain fish, meanwhile, appear to change the color of their glow when others of their kind are nearby.\\n\\nThe scientific community has made significant advances in understanding bioluminescence, yet many questions remain. One major challenge has been ( 2 ). Specimens hauled to the surface usually die within hours. Meanwhile, the dim, high-pressure world they come from has long been beyond the reach of ordinary cameras. Recent technological innovations, however, have enabled researchers to collect data that was previously impossible to obtain.\\n\\nWhatever their evolutionary origins, these discoveries ( 3 ). Bioluminescent compounds are increasingly being used in medical research and diagnostics. Engineers, too, are adapting the light-producing mechanisms of marine life to build tools that detect diseases at an early stage.",
+  "readingPassageJa": "数十年にわたり、科学者たちは深海生物の発光現象、すなわち海洋生物が光を発する能力を研究してきた。研究者たちは当初、この特性は主に防御メカニズムとして進化したと考えていたが、新たな知見はそれが__(1)__可能性も示唆している。たとえば、ある種のエビは繁殖期にだけ独特のリズムで明滅する。また、ある種の魚は、近くに同種の個体がいると発光の色を変えるようだ。\\n\\n科学界は生物発光の理解において大きな進歩を遂げたが、多くの疑問が残っている。主な課題の一つは__(2)__ことだった。海面に引き上げられた標本はたいてい数時間で死んでしまう。一方、彼らが暮らす薄暗く高圧の世界には、通常のカメラは長らく届かなかった。しかし最近の技術革新により、以前は不可能だったデータの収集が可能になった。\\n\\n進化上の起源が何であれ、これらの発見は__(3)__。発光化合物は医学研究や診断にますます活用されている。技術者たちもまた、海洋生物の発光の仕組みを応用して、疾患を早期に発見する道具を作り出している。",
   "readingQuestions": [
     {
       "number": 1,
       "question": "Which phrase best completes blank (1)?",
       "choices": {
-        "A": "serve a communicative purpose",
-        "B": "attract only larger predators",
-        "C": "be unique to a single species",
-        "D": "disappear under bright conditions"
+        "A": "strengthen its defensive function further",
+        "B": "attract prey during the mating season",
+        "C": "allow creatures to exchange information",
+        "D": "have little use outside the ocean"
       },
-      "answer": "A",
-      "explanation": "【正解】発光が防御だけでなくコミュニケーションの役割も担うという文脈に一致する。【1: コミュニケーションの役割を果たす】【2: より大型の捕食者のみを引き寄せる】【3: 特定の一種にのみ見られる】【4: 明るい環境下では消える】"
+      "answer": "C",
+      "explanation": "【正解】繁殖期だけの明滅と、同種が近くにいるときの色の変化という2つの例から、防御以外に情報伝達の役割があると分かる。【1: 防御の機能をさらに強める】【2: 繁殖期に獲物を引き寄せる】【3: 生物同士が情報をやり取りできるようにする】【4: 海の外ではほとんど役に立たない】",
+      "blankType": "content",
+      "evidenceSentences": [3, 4],
+      "distractorTypes": { "A": "relation_error", "B": "unsupported", "D": "contradicts_later" }
     },
     {
       "number": 2,
       "question": "Which phrase best completes blank (2)?",
       "choices": {
-        "A": "attracting sufficient research funding",
-        "B": "replicating ocean conditions in labs",
-        "C": "persuading governments to act",
-        "D": "translating findings for the public"
+        "A": "explaining why the trait evolved for defense",
+        "B": "documenting how the animals behave in the wild",
+        "C": "processing the data that new cameras collect",
+        "D": "keeping laboratory research costs within budget"
       },
       "answer": "B",
-      "explanation": "【正解】直後の「深海での直接観察が困難」という記述に対応する。【1: 十分な研究資金を獲得すること】【2: 実験室で海洋環境を再現すること】【3: 政府を説得して行動させること】【4: 研究結果を一般向けに翻訳すること】"
+      "explanation": "【正解】標本は引き上げると死に、生息域にはカメラが届かないという2点から、自然な状態での行動の記録が難しかったと分かる。【1: その特性が防御のために進化した理由を説明する】【2: 生物が野生でどう振る舞うかを記録する】【3: 新しいカメラが集めたデータを処理する】【4: 実験室の研究費を予算内に収める】",
+      "blankType": "content",
+      "evidenceSentences": [7, 8],
+      "distractorTypes": { "A": "unsupported", "C": "relation_error", "D": "off_topic" }
     },
     {
       "number": 3,
       "question": "Which phrase best completes blank (3)?",
       "choices": {
-        "A": "too unstable for practical use",
-        "B": "highly valuable to researchers",
-        "C": "difficult to replicate artificially",
-        "D": "limited in their medical applications"
+        "A": "remain of purely academic interest",
+        "B": "have already cured several serious diseases",
+        "C": "reach far beyond academic curiosity",
+        "D": "have mainly benefited deep-sea engineers"
       },
-      "answer": "B",
-      "explanation": "【正解】新ツール開発のヒントになっているという文脈に対応する。【1: 実用には不安定すぎる】【2: 研究者にとって非常に価値がある】【3: 人工的に再現するのが難しい】【4: 医療応用の範囲が限られている】"
+      "answer": "C",
+      "explanation": "【正解】後に医学研究・診断や疾患の早期発見の道具への応用が続くことから、発見の意義が学問の枠を超えて広がるという展開だと分かる。【1: 純粋に学問的な関心にとどまる】【2: すでにいくつかの重い病気を治した】【3: 学問的な好奇心をはるかに超えて広がる】【4: 主に深海の技術者に恩恵をもたらした】",
+      "blankType": "discourse",
+      "evidenceSentences": [11, 12],
+      "distractorTypes": { "A": "opposite", "B": "unsupported", "D": "unsupported" }
     }
   ]`;
 
@@ -793,10 +891,10 @@ ${CONTENT_FEWSHOT_BLOCK}`;
         "D": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions."
       },
       "choiceDrafts": [
-        { "text": "Individuals who selected from a larger pool of options reported lower levels of satisfaction with their final decision than those who chose from a more restricted set of alternatives.", "isCorrect": true, "sourceSpan": "individuals who had access to more choices tend to report lower levels of satisfaction" },
-        { "text": "Researchers found that people with access to more choices made objectively better decisions, even though they spent considerably more time deliberating before reaching a conclusion.", "isCorrect": false, "distractorType": "HALF_TRUE_COMPOSITE", "sourceSpan": "individuals who had access to more choices tend to report lower levels of satisfaction", "falseElement": "made objectively better decisions" },
-        { "text": "The studies demonstrated that decision paralysis occurred only among individuals who lacked prior experience with the type of choice they were confronted with in the experiment.", "isCorrect": false, "distractorType": "CAUSAL_REVERSAL", "sourceSpan": "decision paralysis became more common as the number of options increased", "falseElement": "occurred only among individuals who lacked prior experience" },
-        { "text": "Participants who were given extensive options ultimately learned to filter out irrelevant alternatives, leading to outcomes that were comparable to those made under limited-choice conditions.", "isCorrect": false, "distractorType": "MODALITY_SHIFT", "sourceSpan": "some participants may eventually adapt by filtering out irrelevant alternatives", "falseElement": "leading to outcomes that were comparable" }
+        { "isCorrect": true, "sourceSpan": "individuals who had access to more choices tend to report lower levels of satisfaction" },
+        { "isCorrect": false, "distractorType": "HALF_TRUE_COMPOSITE", "sourceSpan": "individuals who had access to more choices tend to report lower levels of satisfaction", "falseElement": "made objectively better decisions" },
+        { "isCorrect": false, "distractorType": "CAUSAL_REVERSAL", "sourceSpan": "decision paralysis became more common as the number of options increased", "falseElement": "occurred only among individuals who lacked prior experience" },
+        { "isCorrect": false, "distractorType": "MODALITY_SHIFT", "sourceSpan": "some participants may eventually adapt by filtering out irrelevant alternatives", "falseElement": "leading to outcomes that were comparable" }
       ],
       "answer": "A",
       "explanation": "【正解】選択肢が多いほど決定への満足度が下がるという本文の指摘に対応する。【1: 選択肢が多い群から選んだ人は、選択肢が少ない群より最終決定への満足度が低かった】【2: 選択肢が多い人ほど客観的に良い決定をしたが、熟考にかなり時間がかかった】【3: 決定麻痺は、その種の選択の経験がない人にのみ生じた】【4: 多くの選択肢を与えられた参加者は無関係な選択肢を除外する術を身につけ、選択肢が少ない場合と同程度の結果に至った】"
@@ -829,16 +927,21 @@ Content: ${article.content}`;
 async function generateReadingOnly(
   article: Article,
   format: ReadingFormat,
-  errors?: string[]
+  errors?: string[],
+  stats?: ReadingGenerationStats
 ): Promise<{ title: string; readingPassage: string; readingPassageJa: string; readingQuestions: ReadingQuestion[] }> {
   let dynamicContext = buildReadingOnlyDynamicContext(article);
   if (errors && errors.length > 0) {
     dynamicContext += `\n\n## ⚠️ 前回の生成で以下のエラーが検出されました。必ず修正してください：\n${errors.map(e => `- ${e}`).join('\n')}`;
   }
 
+  const callStart = Date.now();
   const stream = client.messages.stream({
     model: READING_MODEL,
     max_tokens: 32000,
+    // v5.17: thinking（adaptive、既定effort=high）がmax_tokensの半分以上を使い切って出力が途中で切れたため、
+    // 読解の生成だけeffortをmediumに下げる（語彙・アノテーション・設問単位の修正は既定のまま）
+    output_config: { effort: READING_EFFORT },
     system: [
       { type: 'text', text: buildReadingOnlyStaticInstructions(format), cache_control: { type: 'ephemeral' } },
     ],
@@ -847,6 +950,12 @@ async function generateReadingOnly(
   const response = await stream.finalMessage();
   const text = extractText(response);
   logUsage('Reading', READING_MODEL, response);
+  stats?.calls.push({
+    kind: errors && errors.length > 0 ? 'retry' : 'initial',
+    outputTokens: response.usage?.output_tokens ?? null,
+    stopReason: response.stop_reason ?? null,
+    ms: Date.now() - callStart,
+  });
   if (response.stop_reason === 'max_tokens') {
     console.error(`[Reading] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
   }
@@ -1359,6 +1468,13 @@ function shuffleChoices<T extends { choices: { A: string; B: string; C: string; 
   const newAnswer = oldToNew[q.answer as ChoiceKey];
   const explanation = reorderExplanationChoiceSegments(remapChoiceLetters(q.explanation, oldToNew));
   checkReadingExplanationChoiceCoverage(explanation);
+  // v5.17: 空所補充の誤答の型（キーが選択肢記号）も新しい記号に付け替える（警告ログを画面の記号で出すため）
+  const distractorTypes = (q as { distractorTypes?: Partial<Record<ChoiceKey, string>> }).distractorTypes;
+  if (distractorTypes) {
+    const remapped: Partial<Record<ChoiceKey, string>> = {};
+    (Object.keys(distractorTypes) as ChoiceKey[]).forEach(k => { if (oldToNew[k]) remapped[oldToNew[k]] = distractorTypes[k]; });
+    return { ...q, choices: newChoices, answer: newAnswer, explanation, distractorTypes: remapped };
+  }
   return { ...q, choices: newChoices, answer: newAnswer, explanation };
 }
 
@@ -1754,24 +1870,19 @@ function checkDistractorTypeDiversity(questions: ReadingQuestion[]): ValidationR
   return { valid: errors.length === 0, errors };
 }
 
-// 本文と正解選択肢が5語以上の連続語句を共有していないか（簡易文字列一致検査）
-function getWordNgrams(text: string, n: number): Set<string> {
-  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
-  const grams = new Set<string>();
-  for (let i = 0; i + n <= words.length; i++) {
-    grams.add(words.slice(i, i + n).join(' '));
-  }
-  return grams;
-}
-
-// choiceDraftsはバリデーション専用のため、最終出力から取り除く（シャッフル後は記号と対応しなくなる）
-function stripChoiceDrafts(q: ReadingQuestion): ReadingQuestion {
-  if (!q.choiceDrafts) return q;
+// choiceDrafts・blankType・evidenceSentences・distractorTypesはバリデーション専用のため、最終出力から取り除く
+// （choiceDrafts・distractorTypesはシャッフル後は記号と対応しなくなる。空所補充のメタデータは画面・PDFに出さない）
+function stripInternalFields(q: ReadingQuestion): ReadingQuestion {
+  if (!q.choiceDrafts && !q.blankType && !q.evidenceSentences && !q.distractorTypes) return q;
   const clone = { ...q };
   delete clone.choiceDrafts;
+  delete clone.blankType;
+  delete clone.evidenceSentences;
+  delete clone.distractorTypes;
   return clone;
 }
 
+// 本文と正解選択肢が5語以上の連続語句を共有していないか（簡易文字列一致検査。正規化はgetWordNgrams側、v5.17でアポストロフィ対応）
 function checkCorrectChoiceCopiesPassage(passage: string, questions: ReadingQuestion[]): ValidationResult {
   const errors: string[] = [];
   const passageGrams = getWordNgrams(passage, 5);
@@ -2241,7 +2352,25 @@ function groupReadingErrorsByQuestionNumber(errors: string[]): { perQuestion: Ma
   return { perQuestion, global };
 }
 
-function buildReadingQuestionRepairPrompt(format: ReadingFormat, passage: string, question: ReadingQuestion, errors: string[]): string {
+// v5.17: セット全体で数える上限（極端な語・is what型・真逆/無関係の誤答）のうち、修正対象以外の設問で
+// すでに使われている分を数え、この設問で使ってよい残り回数を修正プロンプトに渡す
+function describeSetBudgetForRepair(format: ReadingFormat, questions: ReadingQuestion[], targetIdx: number): string {
+  const others = questions.filter((_, i) => i !== targetIdx);
+  const wrongTexts = (q: ReadingQuestion) => CHOICE_KEYS.filter(k => k !== q.answer).map(k => q.choices[k] ?? '');
+  if (format === 'content') {
+    const extremeUsed = others.flatMap(wrongTexts).flatMap(findExtremeWords).length;
+    const isWhatUsed = others.flatMap(wrongTexts).filter(t => IS_WHAT_CAUSED_PATTERN.test(t)).length;
+    return `- 極端な語（${EXTREME_WORDS.join(' / ')}）: 他の設問の誤答ですでに${extremeUsed}回使われている。この設問の誤答で使ってよいのは最大${Math.max(0, EXTREME_WORDS_PER_SET_LIMIT - extremeUsed)}回
+- 「X is what caused/led/prompted Y」型: 他の設問ですでに${isWhatUsed}回。この設問で使ってよいのは最大${Math.max(0, IS_WHAT_CAUSED_PER_SET_LIMIT - isWhatUsed)}回`;
+  }
+  return FIB_LIMITED_DISTRACTOR_TYPES.map(t => {
+    const used = others.flatMap(q => Object.values(q.distractorTypes ?? {})).filter(v => v === t).length;
+    const label = t === 'opposite' ? '「本文と真逆」（opposite）' : '「話題と無関係」（off_topic）';
+    return `- ${label}の誤答: 他の設問ですでに${used}つ。この設問で使ってよいのは最大${Math.max(0, FIB_LIMITED_DISTRACTOR_PER_SET_LIMIT - used)}つ`;
+  }).join('\n');
+}
+
+function buildReadingQuestionRepairPrompt(format: ReadingFormat, passage: string, question: ReadingQuestion, errors: string[], setBudget: string): string {
   const hasChoiceDrafts = format === 'content' && !!question.choiceDrafts;
   const questionForPrompt: Record<string, unknown> = {
     number: question.number,
@@ -2251,6 +2380,13 @@ function buildReadingQuestionRepairPrompt(format: ReadingFormat, passage: string
     explanation: question.explanation,
   };
   if (hasChoiceDrafts) questionForPrompt.choiceDrafts = question.choiceDrafts;
+  // v5.17: 空所補充の内部用メタデータも修正後に残す（警告チェックが「missing」と誤判定しないため）
+  const hasBlankMeta = format === 'fill-in-blank' && (!!question.blankType || !!question.evidenceSentences || !!question.distractorTypes);
+  if (hasBlankMeta) {
+    questionForPrompt.blankType = question.blankType;
+    questionForPrompt.evidenceSentences = question.evidenceSentences;
+    questionForPrompt.distractorTypes = question.distractorTypes;
+  }
 
   const outputFormat = hasChoiceDrafts
     ? `{
@@ -2258,10 +2394,10 @@ function buildReadingQuestionRepairPrompt(format: ReadingFormat, passage: string
   "question": "...",
   "choices": { "A": "...", "B": "...", "C": "...", "D": "..." },
   "choiceDrafts": [
-    { "text": "...", "isCorrect": true, "sourceSpan": "..." },
-    { "text": "...", "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." },
-    { "text": "...", "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." },
-    { "text": "...", "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." }
+    { "isCorrect": true, "sourceSpan": "..." },
+    { "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." },
+    { "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." },
+    { "isCorrect": false, "distractorType": "...", "sourceSpan": "...", "falseElement": "..." }
   ],
   "answer": "A" | "B" | "C" | "D",
   "explanation": "..."
@@ -2271,7 +2407,7 @@ function buildReadingQuestionRepairPrompt(format: ReadingFormat, passage: string
   "question": "...",
   "choices": { "A": "...", "B": "...", "C": "...", "D": "..." },
   "answer": "A" | "B" | "C" | "D",
-  "explanation": "..."
+  "explanation": "..."${hasBlankMeta ? ',\n  "blankType": "content" | "discourse",\n  "evidenceSentences": [...],\n  "distractorTypes": { "誤答の記号": "unsupported" | "contradicts_later" | "relation_error" | "opposite" | "off_topic" }' : ''}
 }`;
 
   return `英検1級（EIKEN Grade 1）レベルの読解問題のうち、設問1問だけを修正してください。他の設問には触れません。
@@ -2287,9 +2423,22 @@ ${errors.map(e => `- ${e}`).join('\n')}
 
 ## 修正方針
 - 指摘された問題点だけを修正し、それ以外（正解の位置・設問の意図・他の選択肢の趣旨）はできる限り維持する
+- 書き換える選択肢・解説は、下の「選択肢・誤答のルール」と「解説の形式」を本体の生成時と同じ基準で満たすこと（修正だからといって誤答の質を落とさない）
 - 「正解選択肢が本文と5語以上連続一致」の指摘がある場合、該当箇所を本文の語順・表現のまま使わず、意味を保ったまま言い換える（paraphrase）。語の入れ替えだけでなく構文も変える
 - 解説の文字数超過の指摘がある場合、【正解】【1】【2】【3】【4】の各項目を簡潔にし、不正解の理由説明は書かず、合計300字以内（目安150〜250字）に収める
 ${hasChoiceDrafts ? '- choiceDraftsを含める場合、sourceSpan（本文中の根拠引用）とdistractorType（誤答種別）の整合性も保つ\n' : ''}
+## セット全体の上限のうち、この設問で使える残り（他の設問は修正しないため、この範囲に収めること）
+${setBudget}
+
+## 選択肢・誤答のルール（本体の生成プロンプトと共通）
+${format === 'content' ? CONTENT_CHOICE_RULES_BLOCK : FIB_CHOICE_RULES_BLOCK}${hasChoiceDrafts ? CONTENT_CHOICE_DRAFTS_BLOCK : ''}${hasBlankMeta ? FIB_INTERNAL_FIELDS_BLOCK : ''}
+## 解説の形式（本体の生成プロンプトと共通）
+${READING_EXPLANATION_FORMAT_BLOCK}
+## 出力前の確認
+- 指摘された問題点がすべて直っている
+- 書き換えた誤答が上のルール（型、極端な語・is what型・真逆/無関係の残り回数、控えめな表現の配分、代名詞、英文としての一貫性）を満たしている
+- explanationが【正解】1文＋「【N: 訳文】」形式の4択の日本語訳のみで、不正解の理由を書いていない
+
 ## 出力形式（JSONのみ。説明文・マークダウンのコードフェンス禁止）
 ${outputFormat}`;
 }
@@ -2298,15 +2447,21 @@ async function generateReadingQuestionRepair(
   passage: string,
   format: ReadingFormat,
   question: ReadingQuestion,
-  errors: string[]
+  errors: string[],
+  setBudget: string
 ): Promise<ReadingQuestion> {
   const response = await client.messages.create({
     model: READING_MODEL,
-    max_tokens: 2000,
-    messages: [{ role: 'user', content: buildReadingQuestionRepairPrompt(format, passage, question, errors) }],
+    // v5.17: 2000ではadaptive thinkingで使い切ってJSONが途中で切れる例があった（試し生成でstop_reason=max_tokens）。
+    // 共有ルールを入れてプロンプトが長くなったこともあり8000に引き上げ
+    max_tokens: 8000,
+    messages: [{ role: 'user', content: buildReadingQuestionRepairPrompt(format, passage, question, errors, setBudget) }],
   });
   const text = extractText(response);
   logUsage('ReadingQuestionRepair', READING_MODEL, response);
+  if (response.stop_reason === 'max_tokens') {
+    console.error(`[ReadingQuestionRepair] レスポンスがmax_tokens(${response.usage?.output_tokens})で打ち切られた（JSON未完成の可能性が高い）`);
+  }
   try {
     return parseJson(text) as ReadingQuestion;
   } catch (e) {
@@ -2328,7 +2483,8 @@ async function repairReadingQuestions(
   passage: string,
   format: ReadingFormat,
   questions: ReadingQuestion[],
-  errorsByNumber: Map<number, string[]>
+  errorsByNumber: Map<number, string[]>,
+  stats?: ReadingGenerationStats
 ): Promise<ReadingQuestion[]> {
   const updated = [...questions];
   await Promise.all([...errorsByNumber.entries()].map(async ([num, initialErrors]) => {
@@ -2338,16 +2494,25 @@ async function repairReadingQuestions(
 
     let lastErrors = initialErrors;
     let lastCandidate: ReadingQuestion | null = null;
+    // v5.17: 修正のきっかけになったエラーを残す（どの設問がなぜ修正されたかを後から追えるように）
+    console.log(`[Reading] question ${num} repair reasons:`, initialErrors);
+    stats?.repairs.push({ question: num, reasons: initialErrors.map(e => e.slice(0, 200)) });
+    const setBudget = describeSetBudgetForRepair(format, questions, idx);
     for (let attempt = 1; attempt <= 2; attempt++) {
       const retryStart = Date.now();
       try {
-        const repaired = await generateReadingQuestionRepair(passage, format, original, lastErrors);
+        const repaired = await generateReadingQuestionRepair(passage, format, original, lastErrors, setBudget);
         console.log(`[Timing] reading question ${num} repair attempt ${attempt}/2: ${Date.now() - retryStart}ms`);
         const candidate: ReadingQuestion = { ...repaired, number: original.number };
         const trial = questions.map((q, i) => (i === idx ? candidate : q));
         const remaining = collectReadingQuestionScopedErrors(passage, trial, format)
           .filter(e => e.startsWith(`読解(${num})`));
         lastCandidate = candidate;
+        // v5.17: 修正で書き換わった選択肢を記録する（誤答まで書き換わったかを後から確認できるように）
+        const changedKeys = CHOICE_KEYS.filter(k => candidate.choices?.[k] !== original.choices[k]);
+        console.log(`[Reading] question ${num} repair attempt ${attempt}/2 changed: choices=[${changedKeys.join(',')}] answer=${candidate.answer === original.answer ? 'same' : `${original.answer}->${candidate.answer}`} explanation=${candidate.explanation === original.explanation ? 'same' : 'changed'}`);
+        const repairRecord = stats?.repairs.find(r => r.question === num);
+        if (repairRecord) repairRecord.changedChoices = changedKeys;
         if (remaining.length === 0) {
           updated[idx] = candidate;
           return;
@@ -2374,6 +2539,18 @@ async function repairReadingQuestions(
 export interface GenerationTimings {
   vocabInitialMs?: number;
   readingInitialMs?: number;
+  // v5.17: 読解の呼び出しごとのトークン数・停止理由と、修正・再生成の回数（generation_logに記録する）
+  reading?: ReadingGenerationStats;
+}
+
+export interface ReadingGenerationStats {
+  calls: { kind: 'initial' | 'retry'; outputTokens: number | null; stopReason: string | null; ms: number }[];
+  repairedQuestionCount: number; // 設問単位の軽量修正にかけた設問数
+  // 修正にかけた設問ごとの、きっかけになったエラー（各200字まで）と、最後の修正で書き換わった選択肢の記号
+  repairs: { question: number; reasons: string[]; changedChoices?: string[] }[];
+  retryCount: number;            // 本文全体の再生成の回数
+  // 内容一致のみ: 控えめな表現が正解・誤答に出てくる回数（1セット合計）。正解に1回以上・誤答に0回ならwarn
+  hedges?: { correct: number; wrong: number; warn: boolean };
 }
 
 export async function generateQuestions(
@@ -2395,6 +2572,8 @@ export async function generateQuestions(
   // ===== Step 1: 語彙・読解を並列で独立生成（v5.1: 記事に依存しない語彙は別呼び出しにして
   // タイムアウトリスクを下げつつ、互いに独立なので並列実行でレイテンシも短縮する） =====
   const genStart = Date.now();
+  const readingStats: ReadingGenerationStats = { calls: [], repairedQuestionCount: 0, repairs: [], retryCount: 0 };
+  if (timings) timings.reading = readingStats;
   const [vocabDraft, readingDraft] = await Promise.all([
     generateVocabOnly(wordSet.groups, undefined, excludedWords).then(r => {
       const ms = Date.now() - genStart;
@@ -2402,7 +2581,7 @@ export async function generateQuestions(
       console.log(`[Timing] vocab initial: ${ms}ms`);
       return r;
     }),
-    generateReadingOnly(trimmedArticle, format).then(r => {
+    generateReadingOnly(trimmedArticle, format, undefined, readingStats).then(r => {
       const ms = Date.now() - genStart;
       if (timings) timings.readingInitialMs = ms;
       console.log(`[Timing] reading: ${ms}ms`);
@@ -2460,8 +2639,9 @@ export async function generateQuestions(
       const { perQuestion, global: globalErrorsBeforeRepair } = groupReadingErrorsByQuestionNumber(distractorErrors);
       if (perQuestion.size > 0) {
         const repairStart = Date.now();
+        readingStats.repairedQuestionCount += perQuestion.size;
         try {
-          const repairedQuestions = await repairReadingQuestions(finalReading.readingPassage, format, finalReading.readingQuestions, perQuestion);
+          const repairedQuestions = await repairReadingQuestions(finalReading.readingPassage, format, finalReading.readingQuestions, perQuestion, readingStats);
           finalReading = { ...finalReading, readingQuestions: repairedQuestions };
           console.log(`[Timing] reading per-question repair (${perQuestion.size}問): ${Date.now() - repairStart}ms`);
         } catch (e) {
@@ -2503,7 +2683,8 @@ export async function generateQuestions(
       console.warn('[Reading] リトライ対象のエラーを検出（読解本文全体を再生成）:', retryReasons);
       const retryStart = Date.now();
       try {
-        const retried = await generateReadingOnly(trimmedArticle, format, retryReasons);
+        readingStats.retryCount++;
+        const retried = await generateReadingOnly(trimmedArticle, format, retryReasons, readingStats);
         console.log(`[Timing] reading retry: ${Date.now() - retryStart}ms`);
         const retryOverLengthCount = format === 'content' ? countOverMaxWordChoices(retried.readingQuestions) : 0;
         const retryDistractorErrors = collectHardErrors(retried);
@@ -2549,13 +2730,8 @@ export async function generateQuestions(
       if (!absoluteWordsValidation.valid) {
         console.warn('[Reading] absolute-word issues (continuing anyway):', absoluteWordsValidation.errors);
       }
-
-      // choiceDraftsはバリデーション専用。シャッフル後は記号と対応しなくなるため最終出力には含めない
-      finalReading = {
-        ...finalReading,
-        readingQuestions: finalReading.readingQuestions.map(stripChoiceDrafts),
-      };
     }
+
   }
 
   // ===== Step 3.5: 追加の警告ログ（内容一致は警告のみでリトライ対象外。空所補充は上のcollectHardErrorsで
@@ -2590,7 +2766,7 @@ export async function generateQuestions(
   }
 
   // ===== Step 4: 選択肢シャッフル =====
-  return applyChoiceShuffle({
+  const shuffled = applyChoiceShuffle({
     article,
     readingFormat: format,
     vocabQuestions,
@@ -2600,6 +2776,19 @@ export async function generateQuestions(
     readingQuestions: finalReading.readingQuestions,
     generatedAt: new Date().toISOString(),
   });
+
+  // v5.17: 選択肢の偏りの機械チェック（両形式。警告ログのみで再生成はしない）。
+  // ログの記号が画面と一致するよう、シャッフル後に行う（distractorTypesはshuffleChoicesで記号を付け替え済み）
+  const dateKey = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  for (const r of runReadingChoiceChecks(shuffled.readingPassage, shuffled.readingQuestions, format)) {
+    const line = formatReadingCheckRecord(dateKey, format, r);
+    if (r.warn) console.warn(line);
+    else console.log(line);
+  }
+  if (format === 'content') readingStats.hedges = countHedgeDistribution(shuffled.readingQuestions);
+
+  // 内部用メタデータ（choiceDrafts・blankType・evidenceSentences・distractorTypes）は最終出力に含めない
+  return { ...shuffled, readingQuestions: shuffled.readingQuestions.map(stripInternalFields) };
 }
 
 function applyChoiceShuffle(q: GeneratedQuestions): GeneratedQuestions {

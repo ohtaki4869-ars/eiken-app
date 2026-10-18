@@ -73,13 +73,13 @@
       "number": 1,
       "question": "What is one thing stated in the passage about FIFA's disciplinary code?",
       "choices": {
-        "A": "The clause permitting retrospective review of sanctions has been applied routinely at every major international tournament, ensuring that all officiating errors are corrected before decisive matches are allowed to take place.",
+        "A": "Because the clause permitting retrospective review of sanctions can be invoked in cases of obvious error, it has often been used to reverse dismissals during the later stages of the World Cup.",
         "B": "Skeptics of the ruling concede that the disciplinary code's review clause strengthens the sport's credibility because it enables the governing body to acknowledge its own fallibility openly to spectators around the world.",
         "C": "It includes a mechanism under which punishments may be reexamined after the fact when a clear officiating mistake is identified, although this option has hardly ever been exercised at the sport's premier tournament.",
         "D": "FIFA added the provision allowing sanctions to be reviewed to its disciplinary code as a direct result of the controversy over Balogun's red card and the widespread public criticism of his automatic suspension."
       },
       "answer": "C",
-      "explanation": "【正解】明白な誤審の場合に処分を事後的に見直せる規定があるが、最高峰の大会ではほぼ発動されてこなかった、という記述に対応する。【1: 処分の事後的見直し条項はあらゆる主要大会で日常的に適用され、誤審は必ず修正される】【2: 懐疑派も、審査条項は統括団体の過ちを公然と認める仕組みで信頼性を高めると認める】【3: 明白な誤審の場合に処分を事後的に見直せるが、最高峰の大会ではほぼ発動されてこなかった】【4: FIFAはバログン処分への批判を受け、見直し条項を懲戒規程に追加した】"
+      "explanation": "【正解】明白な誤審の場合に処分を事後的に見直せる規定があるが、最高峰の大会ではほぼ発動されてこなかった、という記述に対応する。【1: 明白な誤審の場合に処分の事後的見直し条項を発動できるため、W杯の終盤で退場処分の取り消しにたびたび使われてきた】【2: 懐疑派も、審査条項は統括団体の過ちを公然と認める仕組みで信頼性を高めると認める】【3: 明白な誤審の場合に処分を事後的に見直せるが、最高峰の大会ではほぼ発動されてこなかった】【4: FIFAはバログン処分への批判を受け、見直し条項を懲戒規程に追加した】"
     },
     {
       "number": 2,
@@ -88,34 +88,34 @@
         "A": "They argue that referees' growing reluctance to make difficult calls in high-stakes matches is what ultimately compelled FIFA to rescind the suspension and grant Balogun his rare reprieve.",
         "B": "Supporters of the ruling privately acknowledged that national federations with political and commercial clout had lobbied FIFA aggressively to overturn Balogun's suspension before the decisive encounter with Belgium.",
         "C": "They suspect that how a player is treated after a controversial dismissal may depend as much on that player's fame and financial value to the sport as on the actual merits of the case.",
-        "D": "They have demonstrated that FIFA's quasi-judicial process has already been distorted by commercial interests, and that referees now consistently avoid making difficult calls against star players in commercially important matches."
+        "D": "They suspect that the enormous commercial stakes around marquee players could distort FIFA's decisions, which is why they call for an independent panel to review such reversals in the future."
       },
       "answer": "C",
-      "explanation": "【正解】処分後の扱いは事案の妥当性だけでなく選手の知名度や商業的価値にも左右されかねないという懸念に対応する。【1: 審判が重要な判定に消極的になったことがFIFAに処分撤回を強いた最大の要因だと論じている】【2: 支持派は、影響力ある加盟協会がFIFAに処分撤回を働きかけたと内々に認めた】【3: 退場処分後の扱いは事案の妥当性だけでなく選手の知名度や商業的価値にも左右されかねないと疑う】【4: FIFAの手続きはすでに商業的利害に歪められ、審判はスター選手への厳しい判定を避けていると実証した】"
+      "explanation": "【正解】処分後の扱いは事案の妥当性だけでなく選手の知名度や商業的価値にも左右されかねないという懸念に対応する。【1: 審判が重要な判定に消極的になったことがFIFAに処分撤回を強いた最大の要因だと論じている】【2: 支持派は、影響力ある加盟協会がFIFAに処分撤回を働きかけたと内々に認めた】【3: 退場処分後の扱いは事案の妥当性だけでなく選手の知名度や商業的価値にも左右されかねないと疑う】【4: 巨額の商業的利害がFIFAの判断を歪めかねないと疑い、そのため今後こうした撤回を審査する独立委員会の設置を求めている】"
     },
     {
       "number": 3,
       "question": "What does the author imply about the legitimacy of future acts of clemency by FIFA?",
       "choices": {
-        "A": "Sports governing bodies around the world should abandon their disciplinary codes altogether and rely exclusively on case-by-case discretion exercised by administrators when officiating controversies arise during tournaments.",
+        "A": "Sports governing bodies should set aside their disciplinary codes and rely exclusively on case-by-case discretion exercised by administrators whenever officiating controversies arise during major tournaments.",
         "B": "FIFA has already committed itself to publishing the reasoning behind sanction reversals and to defining precise criteria for obvious errors before the next edition of the World Cup begins.",
         "C": "Whether such interventions are ultimately judged to be fair will hinge less on the correctness of each individual verdict than on the openness and consistency of the procedures through which it is reached.",
-        "D": "Unless an independent review panel is established immediately, the Balogun ruling is certain to be remembered as an act of privilege rather than as a victory for common sense."
+        "D": "Future acts of clemency will come to be seen as legitimate once accusations of favoritism have subsided, at which point FIFA will be in a position to begin publishing the reasoning behind its reversals."
       },
       "answer": "C",
-      "explanation": "【正解】公正さの評価は個々の判定の正しさより、手続きの公開性と一貫性にかかるという見解に対応する。【1: 統括団体は懲戒規程を全廃し、判定論争は運営者の個別裁量のみに委ねるべきだ】【2: FIFAはすでに、処分撤回の理由公表と誤りの明確な基準策定を約束している】【3: こうした介入の公正さは、判定の正しさより手続きの公開性と一貫性にかかっている】【4: 独立審査委員会が直ちに設置されなければ、この裁定は特権の行使として記憶される】"
+      "explanation": "【正解】公正さの評価は個々の判定の正しさより、手続きの公開性と一貫性にかかるという見解に対応する。【1: 統括団体は懲戒規程を脇に置き、大会で判定論争が起きたら運営者の個別裁量のみに頼るべきだ】【2: FIFAはすでに、処分撤回の理由公表と誤りの明確な基準策定を約束している】【3: こうした介入の公正さは、判定の正しさより手続きの公開性と一貫性にかかっている】【4: えこひいきの非難が収まれば今後の温情措置は正当と見なされ、その時点でFIFAは撤回理由の公表を始められる】"
     },
     {
       "number": 4,
       "question": "What is the author's main point regarding the debate over discretion in sports governance?",
       "choices": {
         "A": "Rather than treating flexibility and strict rule enforcement as mutually exclusive alternatives, governing bodies should embed discretionary power within formal structures that make its exercise both predictable and accountable.",
-        "B": "Accusations of favoritism were what originally prompted FIFA to exercise common-sense discretion in the Balogun case, demonstrating that public criticism reliably produces fairer outcomes in sports governance.",
-        "C": "The willingness to correct officiating errors should be extended to every decision in every match, with referees' calls routinely subject to retrospective reversal whenever a national team lodges an objection.",
-        "D": "The Balogun reprieve has definitively proven that FIFA's governance is fairer than that of other sports organizations, thereby settling the long-standing dispute between the ruling's supporters and its skeptics."
+        "B": "Accusations of favoritism prompted FIFA to exercise common-sense discretion in the Balogun case, which suggests that public criticism tends to produce fairer outcomes in sports governance.",
+        "C": "The willingness to correct officiating errors can best be preserved by allowing national federations to request a retrospective review of any referee's decision that they consider to have been unjust.",
+        "D": "The Balogun reprieve shows that FIFA's governance has become fairer than that of other sports organizations, and it may therefore help to settle the dispute between the ruling's supporters and its skeptics."
       },
       "answer": "A",
-      "explanation": "【正解】柔軟性と厳格な規則執行を対立させず、裁量権を説明責任のある枠組みに組み込むべきだという主張に対応する。【1: 柔軟性と規則執行を対立させず、裁量権を公式の枠組みに組み込むべきだ】【2: えこひいきへの非難がFIFAに常識的な裁量を行使させ、批判が統治をより公正にすると示している】【3: 誤審を正す姿勢はあらゆる判定に拡大されるべきで、異議があればいつでも判定は覆されるべきだ】【4: この温情措置はFIFAの統治が他より公正だと証明し、長年の論争に決着をつけた】"
+      "explanation": "【正解】柔軟性と厳格な規則執行を対立させず、裁量権を説明責任のある枠組みに組み込むべきだという主張に対応する。【1: 柔軟性と規則執行を対立させず、裁量権を公式の枠組みに組み込むべきだ】【2: えこひいきへの非難がFIFAに常識的な裁量を行使させたことから、世論の批判はスポーツ統治をより公正にする傾向があると言える】【3: 誤審を正す姿勢は、各国協会が不当と考える判定の事後的見直しを請求できるようにすることで最もよく保たれる】【4: この温情措置はFIFAの統治が他の競技団体より公正になったことを示し、支持派と懐疑派の論争の決着に役立つかもしれない】"
     }
   ]
 }

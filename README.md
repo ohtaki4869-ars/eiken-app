@@ -55,7 +55,7 @@
 ### 生成モデル
 
 - **語彙生成モデル**（`generateVocabOnly`・`retryVocabQuestion`）: 環境変数 `GENERATION_MODEL`（**未設定＝コード側デフォルトの`claude-opus-5`、v5.15**。Haiku 4.5・Sonnet 5・Opus 5の3モデル比較の結果、安定性・品質を優先してOpus 5に変更。経緯は下記「モデル選定の経緯」を参照）
-- **読解生成モデル**（`generateReadingOnly`・`repairReadingQuestions`）: 環境変数 `READING_MODEL`（**未設定＝コード側デフォルトの`claude-sonnet-5`、v5.14**。経緯は下記「モデル選定の経緯」を参照）
+- **読解生成モデル**（`generateReadingOnly`・`repairReadingQuestions`）: 環境変数 `READING_MODEL`（**未設定＝コード側デフォルトの`claude-sonnet-5`、v5.14**。経緯は下記「モデル選定の経緯」を参照）。v5.17から`generateReadingOnly`（初回生成・本文全体の再生成）だけ`output_config: { effort: 'medium' }`（定数`READING_EFFORT`）を指定する。thinkingは未指定のまま（Sonnet 5の既定のadaptive）。Sonnet 5は`budget_tokens`を受け付けない（400）ため、thinking量の調整はeffortで行う
 - **注釈モデル**（解説・アノテーション生成）: 環境変数 `ANNOTATION_MODEL`（未設定＝コード側デフォルトの`claude-sonnet-5`を使用。v5.9で品質改善のためHaiku 4.5→Sonnet 5に変更）
 - **記事取得AI生成フォールバックモデル**（v5.3）: `claude-sonnet-5` に固定（環境変数では切替不可）。RSS全滅時のみ発火する低頻度経路のため、コストより品質を優先
 
@@ -96,7 +96,7 @@
 8. **explanationの長さ上限（暴走出力・生成時間の長期化対策）**
    語彙・読解（両形式）の各解説文にプロンプト上の文字数上限（語彙550字/読解300字）を明記し、SELF-CHECKリストにも追加した（語彙はv5.9で【例文和訳】を追加したぶん400字→550字に緩和、読解はv5.11の解説簡素化に伴い450字→300字に短縮）。`checkExplanationLength`（`lib/claude.ts`）は語彙・読解ともハードエラーとしてリトライに接続済み（v5.10。語彙は`validateOneVocabQuestion`、読解は`collectHardErrors`経由）。
 9. **誤答メタデータ（`choiceDrafts`）による精度チェック**（内容一致形式のみ、v5.5）
-   読解生成の同一呼び出しで、各選択肢に本文根拠（`sourceSpan`）と、誤答には誤りの分類（`distractorType`: `SCOPE_SHIFT`/`AGENT_SWAP`/`CAUSAL_REVERSAL`/`TIMELINE_SHIFT`/`MODALITY_SHIFT`/`HALF_TRUE_COMPOSITE`/`PURPOSE_RESULT_CONFUSION`）と誤りの最小部分（`falseElement`）を出力させる（`ReadingChoiceDraft`型、追加のLLM呼び出しなし）。このメタデータはバリデーション専用で、シャッフル後に記号と対応しなくなるため最終保存データからは取り除く（`stripChoiceDrafts`）。
+   読解生成の同一呼び出しで、各選択肢に本文根拠（`sourceSpan`）と、誤答には誤りの分類（`distractorType`: `SCOPE_SHIFT`/`AGENT_SWAP`/`CAUSAL_REVERSAL`/`TIMELINE_SHIFT`/`MODALITY_SHIFT`/`HALF_TRUE_COMPOSITE`/`PURPOSE_RESULT_CONFUSION`）と誤りの最小部分（`falseElement`）を出力させる（`ReadingChoiceDraft`型、追加のLLM呼び出しなし）。v5.17で選択肢の英文（`text`）は出力させないようにした（`choices`と同じ文字列の重複で、出力量を減らすため。`choices`とはA/B/C/Dの位置で対応付ける）。このメタデータはバリデーション専用で、シャッフル後に記号と対応しなくなるため最終保存データからは取り除く（`stripInternalFields`、旧`stripChoiceDrafts`）。
 10. **本文タイトルの生成**（両形式共通、v5.7）
     本番EIKEN Grade 1の長文冒頭に付くタイトルを再現するため、読解生成の同一呼び出しで`title`（名詞句・短いフレーズ形式、6語以内目安、空所の答えや設問の結論を示唆しない）を出力させる（追加のLLM呼び出しなし）。`checkTitleValid`（空文字でない・10語以内）が違反を検知した場合、既存の読解リトライ機構（項目4）に接続して読解を1回だけ再生成する。従来は内容一致形式のみが対象だったこのリトライ機構を、タイトルチェックに限り空所補充形式にも適用するよう拡張した。フロントエンド（`/reading`・`/quiz/[date]`の問題表示・解答解説）はページ上部のRSS記事出典表示（`data.article.source`/`data.article.title`、`no-print`）とは別要素として、本文直前にこのタイトルを表示する。
 11. **空所補充の本文語数をリトライ対象化**（v5.8）
@@ -167,6 +167,8 @@
 
 `samples/fable5-v5/*.fewshot.json` を `lib/claude.ts` からモジュールとして直接importし、cache_control対象の静的プロンプトに埋め込んでいる（ビルド時にバンドルされ、リクエスト時にファイルI/Oは発生しない）。`samples/regression-v5_1/` にはモデル切り替え時の回帰確認用の生成サンプルが保存されている。
 
+v5.17で`fillinblank-2.fewshot.json`と`content-culture.fewshot.json`の読解部分を書き直した（語彙部分は変更なし）。見本自体が「空所の隣の1文だけで正解が決まる」「真逆・無関係の誤答」「誤答に極端な語が集中」「is what caused型」「控えめな表現が正解だけ」という偏りを含んでおり、プロンプトを直しても生成結果が引きずられるため。空所補充の見本は空所(3)を話の展開を問う空所に作り直し（本文の一部も変更）、各設問に`blankType`・`evidenceSentences`を付けた。`lib/claude.ts`内の空所補充JSON例（生物発光の話題）も同じ方針で書き直した。
+
 ## インフラ設定
 
 - **Vercel Fluid Compute**: 有効（Vercelプロジェクト設定）
@@ -175,6 +177,7 @@
 - **生成失敗時の過去分フォールバック（v5.14）**: 上記のキャッシュフォールバックは当日分のキャッシュしか見ないため、当日分が1件も無い状態で生成が失敗すると従来は500エラーJSONがそのままクライアントに届いていた。`findFallbackQuestions`（`app/api/generate/route.ts`）が`question_dates`を新しい順に遡り、最初に見つかった過去分を`isFallback: true`・`fallbackDate`付きで返す。過去分も1件も無い場合のみ500エラーを返す。`app/reading/page.tsx`は`isFallback`時に「本日分の生成に失敗したため、前回の問題を表示しています」という控えめな注意書きを表示する
 - **失敗マーカーによる再生成抑制（v5.16）**: 生成に失敗すると`failed_attempt:{日付}`（TTL 15分、ローカルは`.cache/failed-attempt-{日付}.json`に期限時刻）を記録し、その間の`/api/generate`（`?refresh=true`なし）は再生成を試みず即座に過去分フォールバックを返す（過去分も無い場合は503）。失敗日にアクセスのたびに数分の生成とAPI課金が繰り返されるのを防ぐため。`?refresh=true`（cron・画面の再生成ボタン）は明示的な再試行要求としてマーカーを無視する（0〜8時のアクセスで立ったマーカーにより、1日1回のcronが抑制されないようにするため）。TTLは環境変数`FAILURE_MARKER_TTL_SEC`で上書き可能（ローカル検証用、本番は未設定）
 - **失敗イベントのKV記録（v5.16）**: Vercelのランタイムログは保持期間が短く（1時間未満の実績あり）翌日には追えないため、生成失敗ごとに`failure_log:{日付}`（1日最大20件、TTL 7日）へ`kind`（timeout/error）・エラー文・`stage`（未完了だったステップ）・`generationElapsedMs`・`vocabInitialMs`・`readingInitialMs`（未完了ならnull）を追記する。同じ内容を`[generate] failure detail:`としてログにも出す。語彙・読解は並列実行のため、未完了側の所要時間は「失敗時点の経過時間を超えていた」形で記録される
+- **生成記録のKV保存（v5.17）**: 成功・失敗を問わず、生成1回ごとに`generation_log:{日付}`（配列、1日最大20件、TTL 30日。ローカルは`.cache/generation-log-{日付}.json`）へ、日付・問題タイプ・結果（success/timeout/error）・総所要時間・読解初回生成の`output_tokens`/`stop_reason`/所要時間・設問単位の修正にかけた設問数・本文全体の再生成の回数・読解の各呼び出し（初回/再生成）の値を追記する（`appendGenerationLog`、`app/api/generate/route.ts`）。読解が上限ぎりぎりかどうかを日ごとに追えるようにするため。書き込みに失敗しても警告ログのみで、生成結果の返却は止めない。値は`generateQuestions`の`timings.reading`（`ReadingGenerationStats`）から取る
 - **max_tokens**: 生成系呼び出しは用途ごとに異なる（読解生成 32,000 / 語彙生成 16,000 / 読解アノテーション 20,000 / 語彙アノテーション 8,000。詳細は `lib/claude.ts` 内の各Anthropic API呼び出しを参照）。語彙・読解の両方で`stop_reason === 'max_tokens'`（出力打ち切り）を検知した場合は明示的にエラーログを出す
 - **Cron**: `vercel.json` で毎日 `23:00 UTC`（JST 08:00）に `/api/generate?refresh=true` を叩き、当日分の問題を事前生成（ライティング3機能はオンデマンド生成のみで、cronは設定していない）
 - **`serverExternalPackages: ['pdfkit']`**（`next.config.ts`）: pdfkitは標準14フォントのAFMメトリクスを`fs.readFileSync(__dirname + '/data/...')`で実行時に読み込むが、Turbopackにバンドル・トレースされると`__dirname`が仮想パスに書き換えられ`ENOENT`になるため、ネイティブ`require`のまま解決させて回避している（`lib/pdfKit.ts`を使う`/api/pdf/seidoku`・`/api/pdf/writing`の両方に必要）
@@ -214,7 +217,11 @@
 - 読解: 誤答3つ中2つ以上に絶対表現（always/never/every/entirely/completely/solely/regardless of等）を含んでいないか（内容一致形式のみ。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkWrongChoiceAbsoluteWords`、v5.5）
 - 読解: 誤答の`sourceSpan`（根拠にした本文箇所）が欠落・空でないか（内容一致形式のみ。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkChoiceDraftSourceSpans`、v5.5）
 - 読解: 誤答3つの`distractorType`がすべて同一になっていないか（内容一致形式のみ。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkDistractorTypeDiversity`、v5.5）
-- 読解: 正解選択肢が本文と5語以上の連続語句を共有していないか（簡易文字列一致検査。内容一致形式のみ。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkCorrectChoiceCopiesPassage`、v5.5）
+- 読解: 正解選択肢が本文と5語以上の連続語句を共有していないか（簡易文字列一致検査。内容一致形式のみ。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkCorrectChoiceCopiesPassage`、v5.5。v5.17で正規化を修正し、語中のアポストロフィで語が割れなくなった: "football's"→"footballs"）
+- 読解: 選択肢の偏りの機械チェック（`lib/readingChoiceChecks.ts`の`runReadingChoiceChecks`、v5.17。**両形式・警告ログのみで再生成しない**。1週間ほど集計してからリトライ対象にするか判断する）。1チェック1行で`[ReadingCheck] date=… type=… q=… check=… value=… warn=…`を出力し、`warn=true`の行は`console.warn`
+  - 内容一致: `correct_passage_max_run`（正解と本文の最長連続一致語数。5語以上で警告）、`wrong_extreme_words`/`wrong_extreme_words_total`（誤答中の極端な語。対象語は定数`EXTREME_WORDS`、1セット合計2回超で警告）、`wrong_is_what_caused`/`wrong_is_what_caused_total`（誤答中の「X is what (first/originally) caused/led/prompted/made Y」型。1セット1回超で警告）、`hedge_distribution`（控えめな表現 may/might/can/could/appears/seems/likely/tends to/suggests が正解・誤答に出てくる回数。正解に1回以上・誤答に0回で警告。`generation_log`の`readingHedges`にも記録）
+  - 空所補充: `blank_neighbor_overlap`（正解の内容語のうち、空所を含む文とその直前・直後の文に出てくる割合。ストップワード除去・簡易な語尾処理あり。仮しきい値0.5以上で警告）、`blank_type`・`evidence_sentences`（設問ごとの記録。空所を含む文の番号も併記）、`discourse_blank_count`（0なら警告）、`multi_sentence_evidence_count`（根拠が2文以上の設問数。0なら警告）、`distractor_types`（誤答3つの型。欠落・不正値で警告）、`distractor_opposite_total`・`distractor_off_topic_total`（1セットで2つ以上なら警告）
+  - 空所補充の`blankType`（`content`/`discourse`）と`evidenceSentences`（根拠になる本文の文番号。1始まり・段落をまたいで通し番号・空所を含む文自体は含めない）、`distractorTypes`（誤答の記号→`unsupported`/`contradicts_later`/`relation_error`/`opposite`/`off_topic`）は、このチェックのためにLLMに出力させる内部フィールド。`choiceDrafts`と同じく最終出力から取り除き（`stripInternalFields`）、画面・PDF・KVには残らない
 - 読解: 解説（explanation）が文字数上限（300字）を超えていないか（両形式共通。**リトライ対象・設問単位の軽量修正、v5.12**）（`checkExplanationLength`、v5.10でハードエラー化）
 - 読解: タイトルが空文字でないか・10語以内か（両形式共通。**リトライ対象・本文全体の再生成**）（`checkTitleValid`、v5.7）
 - 読解: 空所補充の本文語数が380〜470語の範囲内か（空所補充形式のみ。**リトライ対象・本文全体の再生成**）（`checkPassageWordCount`、v5.8）
@@ -222,14 +229,17 @@
 
 **プロンプト側（意味的チェック）**
 - 誤答の作り方（ラベルの配分、本文由来の要素の使い方）
+  - 空所補充（v5.17）: 3つのうち最低1つは話の展開を問う空所にする。正解は空所の直前・直後の1文だけでは決まらない形にし、隣の文の内容語を使わない。discourse型は、正解の内容が本文のどの1文にも明示されていないものに限る（"In other words"等の直後で主題文を言い換えるだけの空所は認めない）。誤答は型1「本文の語を使うが支持されない主張」・型2「後の文・段落と矛盾する主張」・型3「文と文の関係の取り違え」で作り、「本文と真逆」「話題と無関係」はそれぞれ1セット最大1つ（旧: 技法A「方向性の逆転」／技法B「部分的整合」。技法Aは真逆の誤答を量産していたため廃止し、技法Bは型1に統合）
+  - 内容一致（v5.17）: 正解に本文と同じ5語以上の連続を含めない。誤答は主語・対象のすり替え／因果の逆転／別段落の混入／前半だけ正しい／本文にない情報の追加で作る。範囲や確信度を言い過ぎた誤答は語の一覧にあるかどうかに関係なく「極端化」に数え、「極端化」型は1セット1つまで、極端な語（`EXTREME_WORDS`）は誤答全体で2回まで（旧: 絶対語を含む選択肢は1問の4択につき1つまで）、「is what caused」型は1セット1回まで。控えめな表現（may/can/often等）は誤答にも使い、表現のトーンで正解が分からないようにする
 - パッセージの論説構成の質、パラフレーズの抽象度
 - 語彙アノテーションの紛らわしい類義語ペア（confusingPairs）の妥当性
+- 選択肢・誤答のルールと解説の形式は、本体の読解生成プロンプトと設問単位の修正プロンプト（`buildReadingQuestionRepairPrompt`）で同じ定数（`CONTENT_CHOICE_RULES_BLOCK`・`FIB_CHOICE_RULES_BLOCK`等、v5.17）を共有する。修正プロンプトには、セット全体で数える上限のうち他の設問ですでに使った回数を差し引いた残り回数も渡す
 
 機械的チェックのうち一部（語数バランス、正解最長、極端語、v5.2で追加した簡体字混入・冠詞排除・ラベルホワイトリスト、内容一致形式の本文語数）は警告ログのみでリトライには乗せず、設問単位の重大な違反（空所欠落・語プール逸脱等。語彙は個別リトライ）や、v5.5で追加した誤答精度チェック・v5.10でハードエラー化した解説の字数超過（v5.12で設問単位の軽量修正に変更）、35語超過チェック・タイトルチェック・v5.8で追加した空所補充の本文語数チェック（いずれも本文全体の再生成が必要）がリトライ対象になる。
 
 ## ルールバージョン
 
-現在の生成ルール（語彙・読解の出題ロジック）は **v5.16**（`/api/generate`に失敗マーカー（`failed_attempt`、15分）による再生成抑制と、失敗イベントのKV記録（`failure_log`）を追加。`generateQuestions`に語彙・読解それぞれの初回生成所要時間を呼び出し元へ返す`timings`引数を追加（出題ロジック自体は変更なし）。旧: v5.15 語彙生成モデル`GENERATION_MODEL`のデフォルトを`claude-opus-5`に変更し、正解語露出チェックの誤検知（先頭5文字の部分一致）を語頭・語幹ベースの判定に修正。旧: v5.14 読解生成専用モデル`READING_MODEL`を追加しデフォルトを`claude-sonnet-5`に固定。Haiku 4.5統一後に不安定化した読解本文の語数エラーへの対処。語彙は`GENERATION_MODEL`＝Haiku 4.5のまま据え置き。加えて`/api/generate`に生成失敗時の過去分フォールバック（`isFallback`/`fallbackDate`）を追加し、当日分が無くエラーになるケースでもエラー画面ではなく前回分を表示できるようにした。旧: v5.13 空所補充の段落ごと空所配置を機械チェック化。`checkFillInBlankParagraphDistribution`を追加し、段落数3・各段落ちょうど1個の空所配置をハードエラー化してリトライ対象に接続。旧: v5.12 読解ハードエラーのリトライを設問単位の軽量修正に変更。本文全体の再生成（150〜260秒）1本のみだったリトライを、エラーメッセージから設問番号を特定できるものは該当設問1問だけを直す軽量修正（`repairReadingQuestions`、数秒程度）に置き換え、時間予算切れによる未リトライ・生成失敗を防止。旧: v5.11 読解explanationの簡素化。不正解の理由説明を廃止し、正解の根拠1文＋4択すべての日本語訳のみに絞った上で上限を450字→300字に短縮。旧: v5.10 品質改善5点セット。`ANNOTATION_MODEL`をSonnet 5に変更、語彙の正解語空所文法バグ修正、読解解説450字上限のリトライ実効化、正解語タイポ検知、解説の誤答参照順整列、簡体字誤検知修正。旧: v5.9 解説への日本語訳の追加。語彙は`explanation`末尾に`【例文和訳】`（例文全体の和訳）を生成し、`remapChoiceLetters`/`verifyChoiceLabelConsistency`が和訳セクションを触らないよう分割。読解は既存の`choiceTranslation`（4択すべての和訳）のプロンプト指示を省略禁止・直訳禁止で補強。旧: v5.8 空所補充形式の本文語数を本番相当の400〜450語（バッファ込み380〜470語）に是正。プロンプトの目標語数を修正した上で、`checkPassageWordCount`の空所補充判定を警告のみからリトライ対象に変更し、既存の読解リトライ機構（項目4・時間予算チェック含む）に接続。旧: v5.7 本番EIKEN Grade 1を再現した読解本文タイトルを追加。読解生成の同一呼び出しで`title`を出力させ、`checkTitleValid`（空文字でない・10語以内）を既存の読解リトライ機構に接続（空所補充形式にもこのチェックに限り拡張）。v5.5 読解の誤答生成に`ReadingChoiceDraft`型（`distractorType`/`sourceSpan`/`falseElement`）を導入し、誤答の精度（絶対表現の集中・本文根拠の欠落・型の単調さ・正解の本文丸写し）を機械チェックしてリトライ対象に追加。正解選択肢のパラフレーズ指示も強化。v5.2 出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定、v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
+現在の生成ルール（語彙・読解の出題ロジック）は **v5.17**（読解選択肢の作り方を本番の過去問に近づけた。空所補充は技法A「方向性の逆転」を廃止し、話の展開を問う空所・2文以上を根拠にする正解・新しい3つの誤答の型を指示。内容一致は極端な語・「極端化」型を1セット2つまでに、「is what caused」型を1セット1回までにし、控えめな表現を誤答にも使うよう指示。few-shot見本を書き直し、選択肢の偏りの機械チェック（警告のみ、`lib/readingChoiceChecks.ts`）と、5語一致チェックの正規化修正を追加。語彙は変更なし。旧: v5.16 `/api/generate`に失敗マーカー（`failed_attempt`、15分）による再生成抑制と、失敗イベントのKV記録（`failure_log`）を追加。`generateQuestions`に語彙・読解それぞれの初回生成所要時間を呼び出し元へ返す`timings`引数を追加（出題ロジック自体は変更なし）。旧: v5.15 語彙生成モデル`GENERATION_MODEL`のデフォルトを`claude-opus-5`に変更し、正解語露出チェックの誤検知（先頭5文字の部分一致）を語頭・語幹ベースの判定に修正。旧: v5.14 読解生成専用モデル`READING_MODEL`を追加しデフォルトを`claude-sonnet-5`に固定。Haiku 4.5統一後に不安定化した読解本文の語数エラーへの対処。語彙は`GENERATION_MODEL`＝Haiku 4.5のまま据え置き。加えて`/api/generate`に生成失敗時の過去分フォールバック（`isFallback`/`fallbackDate`）を追加し、当日分が無くエラーになるケースでもエラー画面ではなく前回分を表示できるようにした。旧: v5.13 空所補充の段落ごと空所配置を機械チェック化。`checkFillInBlankParagraphDistribution`を追加し、段落数3・各段落ちょうど1個の空所配置をハードエラー化してリトライ対象に接続。旧: v5.12 読解ハードエラーのリトライを設問単位の軽量修正に変更。本文全体の再生成（150〜260秒）1本のみだったリトライを、エラーメッセージから設問番号を特定できるものは該当設問1問だけを直す軽量修正（`repairReadingQuestions`、数秒程度）に置き換え、時間予算切れによる未リトライ・生成失敗を防止。旧: v5.11 読解explanationの簡素化。不正解の理由説明を廃止し、正解の根拠1文＋4択すべての日本語訳のみに絞った上で上限を450字→300字に短縮。旧: v5.10 品質改善5点セット。`ANNOTATION_MODEL`をSonnet 5に変更、語彙の正解語空所文法バグ修正、読解解説450字上限のリトライ実効化、正解語タイポ検知、解説の誤答参照順整列、簡体字誤検知修正。旧: v5.9 解説への日本語訳の追加。語彙は`explanation`末尾に`【例文和訳】`（例文全体の和訳）を生成し、`remapChoiceLetters`/`verifyChoiceLabelConsistency`が和訳セクションを触らないよう分割。読解は既存の`choiceTranslation`（4択すべての和訳）のプロンプト指示を省略禁止・直訳禁止で補強。旧: v5.8 空所補充形式の本文語数を本番相当の400〜450語（バッファ込み380〜470語）に是正。プロンプトの目標語数を修正した上で、`checkPassageWordCount`の空所補充判定を警告のみからリトライ対象に変更し、既存の読解リトライ機構（項目4・時間予算チェック含む）に接続。旧: v5.7 本番EIKEN Grade 1を再現した読解本文タイトルを追加。読解生成の同一呼び出しで`title`を出力させ、`checkTitleValid`（空文字でない・10語以内）を既存の読解リトライ機構に接続（空所補充形式にもこのチェックに限り拡張）。v5.5 読解の誤答生成に`ReadingChoiceDraft`型（`distractorType`/`sourceSpan`/`falseElement`）を導入し、誤答の精度（絶対表現の集中・本文根拠の欠落・型の単調さ・正解の本文丸写し）を機械チェックしてリトライ対象に追加。正解選択肢のパラフレーズ指示も強化。v5.2 出題済み語除外・CEFR C1〜C2制約・正解位置分散・誤答型の体系化・解説ラベル5種固定、v5.1.1 語彙固定グループ化、v5.1.3 アノテーション分離・35語超過エスカレーション）。記事取得パイプライン（`lib/rss.ts`）は別途 **v5.4**（3段階フォールバック: ジャンル固有RSS→AI生成→BBC固定。v5.4でジャンル固有フィードの重複を解消）。各バージョンでの変更点・解決した課題は [CHANGELOG.md](./CHANGELOG.md) を参照。週次の品質チェックは [docs/weekly-review-checklist.md](./docs/weekly-review-checklist.md) を参照。
 
 ## ローカル開発
 
@@ -275,6 +285,7 @@ app/
     flashcards/, history/, quiz/[date]/  各機能のデータ取得API
 lib/
   claude.ts                    リーディング（語彙+読解）の生成・バリデーション・アノテーションのコアロジック
+  readingChoiceChecks.ts       読解選択肢の偏りの機械チェック（警告ログのみ、v5.17）と語の正規化
   wordbank.ts                  英検1級単熟語データ（品詞タグ付き）
   rss.ts                       ニュース記事取得（曜日別ジャンルローテーション）
   writingGenerate.ts            ライティング3機能の生成ロジック（lib/claude.tsとは独立）

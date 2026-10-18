@@ -66,44 +66,74 @@
       "explanation": "【正解】\"had no choice but to ____ several kilometers through the snow\"より、雪の中を重い足取りで長距離を歩くというtrudge固有のニュアンスが文脈と合致。trudge through the snowは典型的なコロケーションであり、やむを得ず苦労して歩くという状況描写と一致する。【D: lurk】意味近接・焦点ズレ─移動・所在を表す動詞だが、「こっそり潜む」意であり、目的地へ向かって疲れながら歩く様態を表さない。【A: strain】意味近接・焦点ズレ─懸命に力を入れるという苦労のニュアンスは近いが、歩行の様態そのものを表す語ではなく、距離表現とも結びつかない。【B: condone】文脈と不整合─「容認する」の意で、歩行の文脈に合わない。【紛らわしいペア】trudge vs strain：trudgeは「重い足取りで歩く動作」、strainは「力や神経を張り詰める負荷」を指す。【例文和訳】辺鄙な村へのバス便が運休となったため、高齢の住民たちは週に一度の物資を受け取るために、雪のなかを数キロ重い足取りで歩くほかなかった。"
     }
   ],
-  "readingPassage": "The National Health Service has announced a major upgrade to its smartphone app, which will use artificial intelligence to assess patients' symptoms and direct them to the most suitable service. Rather than automatically arranging a doctor's appointment, the system will analyse the information users provide and recommend options ranging from a pharmacy consultation to urgent care. Health officials say the update, which will be available to all users in England by April 2028, is intended to ( 1 ), allowing clinicians to concentrate on patients who genuinely require face-to-face treatment.\n\nThe plan, however, has drawn scrutiny from parts of the medical community. Patient safety advocates point out that AI triage tools, while promising, can misinterpret symptoms that are vague, unusual, or poorly described. A significant challenge for developers has therefore been ( 2 ), since an algorithm that directs a seriously ill patient to a pharmacist rather than a hospital could have grave consequences. The health service insists that the technology will undergo extensive clinical evaluation before its rollout and that human professionals will continue to supervise how recommendations are made.\n\nBeyond these technical hurdles, the initiative raises broader questions about equitable access to healthcare. Millions of people, particularly the elderly and those on low incomes, do not use smartphones confidently, and critics caution that an increasingly digital-first approach could ( 3 ), even as it streamlines services for everyone else. The government maintains that traditional routes to treatment, such as telephone lines and in-person visits, will remain fully available alongside the app. Nevertheless, the success or failure of this project is likely to shape public attitudes for years to come, as it represents one of the most ambitious attempts yet to embed artificial intelligence in a national healthcare system. If the technology proves both safe and genuinely useful, it may pave the way for AI to take on a far larger role in everyday medicine.",
-  "readingPassageJa": "国民保健サービス（NHS）は、スマートフォンアプリの大規模なアップデートを発表した。このアプリは人工知能を用いて患者の症状を評価し、最も適切なサービスへと案内するものである。自動的に医師の予約を取るのではなく、システムは利用者が提供する情報を分析し、薬局での相談から救急医療まで幅広い選択肢を提案する。保健当局によれば、2028年4月までにイングランドの全利用者が使えるようになるこのアップデートは、__(1)__ことを目的としており、臨床医が対面での治療を真に必要とする患者に集中できるようにするという。\n\nしかし、この計画は医療界の一部から厳しい視線を向けられている。患者安全の擁護団体は、AIトリアージツールは有望ではあるものの、曖昧な症状や珍しい症状、うまく説明されていない症状を誤って解釈する可能性があると指摘する。したがって開発者にとっての大きな課題は__(2)__であった。重篤な患者を病院ではなく薬剤師のもとへ案内するアルゴリズムは、重大な結果を招きかねないからである。NHSは、この技術は導入前に徹底的な臨床評価を受け、推奨の出され方については人間の専門家が引き続き監督すると強調している。\n\nこうした技術的課題を超えて、この取り組みは医療への公平なアクセスをめぐるより広範な問いを提起している。特に高齢者や低所得者層など、何百万もの人々はスマートフォンを自信を持って使えておらず、批判者たちは、デジタル優先の傾向が強まるアプローチは、他の人々にとってサービスを効率化する一方で、__(3)__可能性があると警告する。政府は、電話窓口や対面での受診といった従来の治療への経路は、アプリと並行して完全に利用可能であり続けると主張している。それでも、このプロジェクトの成否は今後何年にもわたって世論を左右する可能性が高い。国家の医療制度に人工知能を組み込む、これまでで最も野心的な試みの一つだからである。この技術が安全かつ真に有用であると証明されれば、AIが日常の医療においてはるかに大きな役割を担う道が開かれるかもしれない。",
+  "readingPassage": "The National Health Service has announced a major upgrade to its smartphone app, which will use artificial intelligence to assess patients' symptoms and direct them to the most suitable service. Rather than automatically arranging a doctor's appointment, the system will analyse the information users provide and recommend options ranging from a pharmacy consultation to urgent care. Health officials say the update, which will be available to all users in England by April 2028, is intended to ( 1 ). At present, they note, a large share of GP appointments are taken up by minor complaints that a pharmacist could resolve, while patients with complex conditions often wait weeks to be seen.\n\nThe plan, however, has drawn scrutiny from parts of the medical community. Patient safety advocates point out that AI triage tools, while promising, can misinterpret symptoms that are vague, unusual, or poorly described. A significant challenge for developers has therefore been ( 2 ). An algorithm that sends someone with an atypical heart attack to a pharmacist could cost a life, yet one that refers every headache to accident and emergency would simply recreate the bottlenecks the app was meant to relieve. The health service insists that the technology will undergo extensive clinical evaluation before its rollout and that human professionals will continue to supervise how recommendations are made.\n\nBeyond these technical hurdles, the initiative raises broader questions about equitable access to healthcare. Millions of people, particularly the elderly and those on low incomes, do not use smartphones confidently, and critics caution that a digital-first approach risks leaving them behind even as it streamlines services for everyone else. Yet the concern, some analysts argue, ( 3 ). Because the NHS allocates funding partly on the basis of recorded demand, a system that logs app users' needs in fine detail while capturing those of offline patients only patchily could gradually steer resources toward communities that are already well served. The government maintains that traditional routes to treatment, such as telephone lines and in-person visits, will remain fully available alongside the app. Nevertheless, the success or failure of this project is likely to shape public attitudes for years to come, as it represents one of the most ambitious attempts yet to embed artificial intelligence in a national healthcare system. If the technology proves both safe and genuinely useful, it may pave the way for AI to take on a far larger role in everyday medicine.",
+  "readingPassageJa": "国民保健サービス（NHS）は、スマートフォンアプリの大規模なアップデートを発表した。このアプリは人工知能を用いて患者の症状を評価し、最も適切なサービスへと案内するものである。自動的に医師の予約を取るのではなく、システムは利用者が提供する情報を分析し、薬局での相談から救急医療まで幅広い選択肢を提案する。保健当局によれば、2028年4月までにイングランドの全利用者が使えるようになるこのアップデートは、__(1)__ことを目的としている。当局の指摘では、現状ではかかりつけ医（GP）の予約の多くが薬剤師で対応できる軽い症状で埋まる一方、複雑な病状の患者は診察まで何週間も待つことが多い。\n\nしかし、この計画は医療界の一部から厳しい視線を向けられている。患者安全の擁護団体は、AIトリアージツールは有望ではあるものの、曖昧な症状や珍しい症状、うまく説明されていない症状を誤って解釈する可能性があると指摘する。したがって開発者にとっての大きな課題は__(2)__ことであった。非典型的な心臓発作の人を薬剤師のもとへ案内するアルゴリズムは命を奪いかねないが、頭痛をすべて救急外来に回すアルゴリズムは、アプリが解消するはずだった混雑をそのまま再現するだけだろう。NHSは、この技術は導入前に徹底的な臨床評価を受け、推奨の出され方については人間の専門家が引き続き監督すると強調している。\n\nこうした技術的課題を超えて、この取り組みは医療への公平なアクセスをめぐるより広範な問いを提起している。特に高齢者や低所得者層など、何百万もの人々はスマートフォンを自信を持って使えておらず、批判者たちは、デジタル優先のアプローチは他の人々にとってサービスを効率化する一方で、彼らを取り残す恐れがあると警告する。だが一部の分析者によれば、この懸念は__(3)__。NHSは記録された需要を一部の根拠として予算を配分するため、アプリ利用者のニーズは細かく記録する一方でオフラインの患者のニーズはまばらにしか捉えないシステムは、すでに十分なサービスを受けている地域へと少しずつ資源を振り向けかねないからである。政府は、電話窓口や対面での受診といった従来の治療への経路は、アプリと並行して完全に利用可能であり続けると主張している。それでも、このプロジェクトの成否は今後何年にもわたって世論を左右する可能性が高い。国家の医療制度に人工知能を組み込む、これまでで最も野心的な試みの一つだからである。この技術が安全かつ真に有用であると証明されれば、AIが日常の医療においてはるかに大きな役割を担う道が開かれるかもしれない。",
   "readingQuestions": [
     {
       "number": 1,
       "question": "Which phrase best completes blank (1)?",
       "choices": {
-        "A": "channel more patients into emergency departments",
-        "B": "accelerate the recruitment of hospital staff",
-        "C": "replace family doctors with automated consultations",
-        "D": "ease the pressure on overstretched frontline services"
+        "A": "send more patients directly to their GP",
+        "B": "remove the need for human clinical judgement",
+        "C": "gather users' information for future research",
+        "D": "ensure scarce clinical resources reach those in need"
       },
       "answer": "D",
-      "explanation": "【正解】臨床医が対面治療を真に必要とする患者に集中できるようにするという記述に対応する。【1: より多くの患者を救急外来へ誘導する】【2: 病院スタッフの採用を加速させる】【3: かかりつけ医を自動診療に置き換える】【4: 逼迫した現場の負担を軽減する】"
+      "explanation": "【正解】症状に応じて薬局から救急まで振り分けるという前の文と、軽症が予約を埋め重症者が待たされているという後の文を合わせると、限られた医療資源を必要な人に回すことが目的だと分かる。【1: より多くの患者をかかりつけ医に直接送る】【2: 人間による臨床判断を不要にする】【3: 将来の研究のために利用者の情報を集める】【4: 乏しい医療資源が必要な人に届くようにする】",
+      "blankType": "content",
+      "evidenceSentences": [
+        2,
+        4
+      ],
+      "distractorTypes": {
+        "A": "relation_error",
+        "B": "contradicts_later",
+        "C": "unsupported"
+      }
     },
     {
       "number": 2,
       "question": "Which phrase best completes blank (2)?",
       "choices": {
-        "A": "convincing doctors to abandon traditional diagnosis",
-        "B": "proving that human oversight is unnecessary",
-        "C": "ensuring the system does not miss serious illness",
-        "D": "reducing the amount of testing the software requires"
+        "A": "keeping clinicians out of the decision process",
+        "B": "convincing advocates that such tools are promising",
+        "C": "balancing caution against the risk of needless referrals",
+        "D": "reducing the cost of the clinical evaluation"
       },
       "answer": "C",
-      "explanation": "【正解】重い病気を見落とさないことが開発者の課題だという記述に対応する。【1: 医師に従来の診断法を放棄させる】【2: 人間の監督が不要であることを証明する】【3: システムが重篤な病気を見落とさないようにする】【4: ソフトウェアに必要な検査の量を減らす】"
+      "explanation": "【正解】曖昧な症状を誤解しうるという前の文と、見逃せば命に関わるが何でも救急に回せば混雑が戻るという後の文から、慎重さと過剰な紹介の兼ね合いが課題だと分かる。【1: 臨床医を判断の過程から外す】【2: そうしたツールが有望だと擁護団体を説得する】【3: 慎重さと不要な紹介の危険との釣り合いをとる】【4: 臨床評価の費用を減らす】",
+      "blankType": "content",
+      "evidenceSentences": [
+        6,
+        8
+      ],
+      "distractorTypes": {
+        "A": "contradicts_later",
+        "B": "relation_error",
+        "D": "unsupported"
+      }
     },
     {
       "number": 3,
       "question": "Which phrase best completes blank (3)?",
       "choices": {
-        "A": "widen the pay gap between doctors and pharmacists",
-        "B": "make services more convenient for older patients",
-        "C": "force the government to subsidise smartphone purchases",
-        "D": "leave vulnerable groups struggling to access care"
+        "A": "centres largely on how the app is funded",
+        "B": "has largely been overstated by critics",
+        "C": "will fade as smartphone use spreads",
+        "D": "reaches beyond the individuals directly affected"
       },
       "answer": "D",
-      "explanation": "【正解】高齢者や低所得者層がスマートフォンを自信を持って使えていないという記述に対応する。【1: 医師と薬剤師の給与格差を広げる】【2: 高齢の患者にとってサービスをより便利にする】【3: 政府にスマートフォン購入を補助させる】【4: 弱い立場の人々を医療へのアクセスに苦しませたままにする】"
+      "explanation": "【正解】前の文はスマートフォンを使えない人が取り残される問題、後の文は記録された需要に基づく予算配分が地域全体の資源を偏らせる問題であり、懸念が個人から制度に広がる展開だと分かる。【1: 主にアプリの財源に関わる】【2: 批判者に大きく誇張されてきた】【3: スマートフォンの普及につれて薄れる】【4: 直接影響を受ける個人を超えて広がる】",
+      "blankType": "discourse",
+      "evidenceSentences": [
+        11,
+        13
+      ],
+      "distractorTypes": {
+        "A": "unsupported",
+        "B": "opposite",
+        "C": "unsupported"
+      }
     }
   ]
 }

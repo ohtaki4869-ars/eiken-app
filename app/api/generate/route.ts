@@ -35,6 +35,32 @@ interface FailureLogEntry {
   readingInitialMs: number | null;
 }
 
+// v5.17: 成功・失敗を問わず、生成1回ごとに読解の出力量・所要時間を記録する（Vercelのログ保持が短く、
+// 上限ぎりぎりかどうかを後から日ごとに追えなかったため）。キーは generation_log:{日付}（配列）
+const GENERATION_LOG_TTL_SEC = 60 * 60 * 24 * 30;
+const GENERATION_LOG_MAX_ENTRIES = 20;
+
+interface GenerationLogEntry {
+  at: string;
+  date: string;
+  format: string;
+  result: 'success' | 'timeout' | 'error';
+  forceRefresh: boolean;
+  generationElapsedMs: number;
+  readingInitialMs: number | null;
+  // 読解の最初の呼び出し（初回生成）の値。呼び出しが終わらなかった場合はnull
+  readingOutputTokens: number | null;
+  readingStopReason: string | null;
+  readingRepairedQuestionCount: number;
+  // 修正にかけた設問ごとの、きっかけになったエラー
+  readingRepairs: { question: number; reasons: string[]; changedChoices?: string[] }[];
+  readingRetryCount: number;
+  // 内容一致のみ: 控えめな表現が正解・誤答に出てくる回数（1セット合計）と警告の有無。空所補充・未完了はnull
+  readingHedges: { correct: number; wrong: number; warn: boolean } | null;
+  // 初回・本文全体の再生成それぞれの呼び出し
+  readingCalls: { kind: 'initial' | 'retry'; outputTokens: number | null; stopReason: string | null; ms: number }[];
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -224,6 +250,52 @@ async function setFailureMarker(dateKey: string) {
   }
 }
 
+// 書き込みに失敗しても生成結果の返却は止めない（警告ログのみ）
+async function appendGenerationLog(dateKey: string, entry: GenerationLogEntry) {
+  try {
+    const kv = await getKV();
+    if (kv) {
+      const entries = (await kv.get<GenerationLogEntry[]>(`generation_log:${dateKey}`)) || [];
+      const updated = [...entries, entry].slice(-GENERATION_LOG_MAX_ENTRIES);
+      await kv.set(`generation_log:${dateKey}`, updated, { ex: GENERATION_LOG_TTL_SEC });
+      return;
+    }
+    const fs = await import('fs');
+    const path = await import('path');
+    const dir = path.join(process.cwd(), '.cache');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const logFile = path.join(dir, `generation-log-${dateKey}.json`);
+    const entries: GenerationLogEntry[] = fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf-8')) : [];
+    fs.writeFileSync(logFile, JSON.stringify([...entries, entry].slice(-GENERATION_LOG_MAX_ENTRIES)));
+  } catch (e) {
+    console.warn('[appendGenerationLog] failed:', e);
+  }
+}
+
+function buildGenerationLogEntry(
+  dateKey: string, format: string, result: GenerationLogEntry['result'], forceRefresh: boolean,
+  generationElapsedMs: number, timings: GenerationTimings
+): GenerationLogEntry {
+  const calls = timings.reading?.calls ?? [];
+  const initial = calls.find(c => c.kind === 'initial');
+  return {
+    at: new Date().toISOString(),
+    date: dateKey,
+    format,
+    result,
+    forceRefresh,
+    generationElapsedMs,
+    readingInitialMs: timings.readingInitialMs ?? null,
+    readingOutputTokens: initial?.outputTokens ?? null,
+    readingStopReason: initial?.stopReason ?? null,
+    readingRepairedQuestionCount: timings.reading?.repairedQuestionCount ?? 0,
+    readingRepairs: timings.reading?.repairs ?? [],
+    readingRetryCount: timings.reading?.retryCount ?? 0,
+    readingHedges: timings.reading?.hedges ?? null,
+    readingCalls: calls,
+  };
+}
+
 async function appendFailureLog(dateKey: string, entry: FailureLogEntry) {
   try {
     const kv = await getKV();
@@ -288,8 +360,8 @@ export async function GET(request: Request) {
 
   const timings: GenerationTimings = {};
   let generationStart: number | null = null;
+  const format = getTodayFormat();
   try {
-    const format = getTodayFormat();
     const article = await fetchNewsArticle();
     const attempt = forceRefresh ? await getAndIncrementRefreshAttempt(todayKey) : 0;
     const recentlyUsedWords = await getRecentlyUsedWords();
@@ -299,6 +371,7 @@ export async function GET(request: Request) {
       SOFT_TIMEOUT_MS
     );
     await saveQuestions(todayKey, questions);
+    await appendGenerationLog(todayKey, buildGenerationLogEntry(todayKey, format, 'success', forceRefresh, Date.now() - generationStart, timings));
     return NextResponse.json(questions);
   } catch (e) {
     const isTimeout = e instanceof GenerationTimeoutError;
@@ -329,6 +402,9 @@ export async function GET(request: Request) {
       vocabInitialMs: timings.vocabInitialMs ?? null,
       readingInitialMs: timings.readingInitialMs ?? null,
     });
+    if (generationStart !== null) {
+      await appendGenerationLog(todayKey, buildGenerationLogEntry(todayKey, format, isTimeout ? 'timeout' : 'error', forceRefresh, generationElapsedMs, timings));
+    }
 
     // 生成失敗時は当日分のキャッシュがあればそれを返す
     // （forceRefreshでの再生成失敗時、上書き前の当日分が残っているケース）
