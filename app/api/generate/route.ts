@@ -57,6 +57,12 @@ interface GenerationLogEntry {
   readingRetryCount: number;
   // 内容一致のみ: 控えめな表現が正解・誤答に出てくる回数（1セット合計）と警告の有無。空所補充・未完了はnull
   readingHedges: { correct: number; wrong: number; warn: boolean } | null;
+  // 選択肢の偏りの機械チェック（[ReadingCheck]）の全項目と、warn=trueの項目一覧（"q=N check"）。
+  // 生成がチェックまで進まなかった場合（失敗・タイムアウト）はnull
+  readingChecks: { q: number | 'set'; check: string; value: string | number; warn: boolean }[] | null;
+  readingCheckWarnings: string[] | null;
+  // 読解の既存の警告（正解が単独最長・選択肢の語数・本文語数など）
+  readingLegacyWarnings: string[];
   // 初回・本文全体の再生成それぞれの呼び出し
   readingCalls: { kind: 'initial' | 'retry'; outputTokens: number | null; stopReason: string | null; ms: number }[];
 }
@@ -292,6 +298,9 @@ function buildGenerationLogEntry(
     readingRepairs: timings.reading?.repairs ?? [],
     readingRetryCount: timings.reading?.retryCount ?? 0,
     readingHedges: timings.reading?.hedges ?? null,
+    readingChecks: timings.reading?.checks ?? null,
+    readingCheckWarnings: timings.reading?.checkWarnings ?? null,
+    readingLegacyWarnings: timings.reading?.legacyWarnings ?? [],
     readingCalls: calls,
   };
 }

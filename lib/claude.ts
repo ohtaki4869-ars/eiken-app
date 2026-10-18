@@ -2551,6 +2551,12 @@ export interface ReadingGenerationStats {
   retryCount: number;            // 本文全体の再生成の回数
   // 内容一致のみ: 控えめな表現が正解・誤答に出てくる回数（1セット合計）。正解に1回以上・誤答に0回ならwarn
   hedges?: { correct: number; wrong: number; warn: boolean };
+  // v5.17: 選択肢の偏りの機械チェック（[ReadingCheck]）の全項目と、そのうちwarn=trueになった項目（"q=N check"）
+  checks?: { q: number | 'set'; check: string; value: string | number; warn: boolean }[];
+  checkWarnings?: string[];
+  // 読解の既存の警告（正解が単独最長・選択肢の語数・絶対語・本文語数・冠詞・簡体字・解説の字数）。
+  // 選択肢の記号を含むもの（選択肢の語数）はシャッフル前の記号
+  legacyWarnings: string[];
 }
 
 export async function generateQuestions(
@@ -2572,7 +2578,7 @@ export async function generateQuestions(
   // ===== Step 1: 語彙・読解を並列で独立生成（v5.1: 記事に依存しない語彙は別呼び出しにして
   // タイムアウトリスクを下げつつ、互いに独立なので並列実行でレイテンシも短縮する） =====
   const genStart = Date.now();
-  const readingStats: ReadingGenerationStats = { calls: [], repairedQuestionCount: 0, repairs: [], retryCount: 0 };
+  const readingStats: ReadingGenerationStats = { calls: [], repairedQuestionCount: 0, repairs: [], retryCount: 0, legacyWarnings: [] };
   if (timings) timings.reading = readingStats;
   const [vocabDraft, readingDraft] = await Promise.all([
     generateVocabOnly(wordSet.groups, undefined, excludedWords).then(r => {
@@ -2721,14 +2727,17 @@ export async function generateQuestions(
       const lengthValidation = validateChoiceLength(finalReading.readingQuestions);
       if (!lengthValidation.valid) {
         console.warn('[Reading] choice length issues (continuing anyway):', lengthValidation.errors);
+        readingStats.legacyWarnings.push(...lengthValidation.errors);
       }
       const longestValidation = checkCorrectIsLongest(finalReading.readingQuestions);
       if (!longestValidation.valid) {
         console.warn('[Reading] correct-is-longest issues (continuing anyway):', longestValidation.errors);
+        readingStats.legacyWarnings.push(...longestValidation.errors);
       }
       const absoluteWordsValidation = checkAbsoluteWords(finalReading.readingQuestions);
       if (!absoluteWordsValidation.valid) {
         console.warn('[Reading] absolute-word issues (continuing anyway):', absoluteWordsValidation.errors);
+        readingStats.legacyWarnings.push(...absoluteWordsValidation.errors);
       }
     }
 
@@ -2739,11 +2748,13 @@ export async function generateQuestions(
   const wordCountValidation = checkPassageWordCount(finalReading.readingPassage, format);
   if (!wordCountValidation.valid) {
     console.warn('[Reading] word count issues (continuing anyway):', wordCountValidation.errors);
+    readingStats.legacyWarnings.push(...wordCountValidation.errors);
   }
   if (format === 'fill-in-blank') {
     const fibArticleValidation = checkFillInBlankArticleAgreement(finalReading.readingPassage, finalReading.readingQuestions);
     if (!fibArticleValidation.valid) {
       console.warn('[Reading] article agreement issues (continuing anyway):', fibArticleValidation.errors);
+      readingStats.legacyWarnings.push(...fibArticleValidation.errors);
     }
   }
   const vocabArticleValidation = checkVocabArticleAgreement(vocabQuestions);
@@ -2756,6 +2767,7 @@ export async function generateQuestions(
   ];
   if (cjkWarnings.length > 0) {
     console.warn('[Reading/Vocab] CJK simplified char issues (continuing anyway):', cjkWarnings);
+    readingStats.legacyWarnings.push(...cjkWarnings.filter(w => w.startsWith('読解')));
   }
   const explanationLengthWarnings = [
     ...vocabQuestions.flatMap((q, i) => checkExplanationLength(`語彙(${i + 1})解説`, q.explanation, 550)),
@@ -2763,6 +2775,7 @@ export async function generateQuestions(
   ];
   if (explanationLengthWarnings.length > 0) {
     console.warn('[Reading/Vocab] explanation length issues (continuing anyway):', explanationLengthWarnings);
+    readingStats.legacyWarnings.push(...explanationLengthWarnings.filter(w => w.startsWith('読解')));
   }
 
   // ===== Step 4: 選択肢シャッフル =====
@@ -2780,11 +2793,14 @@ export async function generateQuestions(
   // v5.17: 選択肢の偏りの機械チェック（両形式。警告ログのみで再生成はしない）。
   // ログの記号が画面と一致するよう、シャッフル後に行う（distractorTypesはshuffleChoicesで記号を付け替え済み）
   const dateKey = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  for (const r of runReadingChoiceChecks(shuffled.readingPassage, shuffled.readingQuestions, format)) {
+  const checkRecords = runReadingChoiceChecks(shuffled.readingPassage, shuffled.readingQuestions, format);
+  for (const r of checkRecords) {
     const line = formatReadingCheckRecord(dateKey, format, r);
     if (r.warn) console.warn(line);
     else console.log(line);
   }
+  readingStats.checks = checkRecords.map(r => ({ q: r.question, check: r.check, value: r.value, warn: r.warn }));
+  readingStats.checkWarnings = checkRecords.filter(r => r.warn).map(r => `q=${r.question} ${r.check}`);
   if (format === 'content') readingStats.hedges = countHedgeDistribution(shuffled.readingQuestions);
 
   // 内部用メタデータ（choiceDrafts・blankType・evidenceSentences・distractorTypes）は最終出力に含めない
